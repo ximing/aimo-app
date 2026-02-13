@@ -42,7 +42,6 @@ const CreateMemoContent = view(() => {
     clearError: clearMediaError,
   } = useMediaPicker();
 
-  const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,11 +73,8 @@ const CreateMemoContent = view(() => {
         attachmentIds.push(attachment.id);
       }
 
-      // 构建 memo 内容（如果有 title，添加到 content 前面）
-      let memoContent = content.trim();
-      if (title.trim()) {
-        memoContent = `${title.trim()}\n\n${memoContent}`;
-      }
+      // 构建 memo 内容
+      const memoContent = content.trim();
 
       // 创建 Memo - 严格按照 CreateMemoRequest 接口
       const memo = await createMemo({
@@ -100,11 +96,10 @@ const CreateMemoContent = view(() => {
     } finally {
       setSubmitting(false);
     }
-  }, [title, content, selectedMedia, router, memoService]);
+  }, [content, selectedMedia, router, memoService]);
 
   // 处理清空
   const handleClear = useCallback(() => {
-    setTitle("");
     setContent("");
     clearMedia();
     setError(null);
@@ -163,40 +158,6 @@ const CreateMemoContent = view(() => {
         contentContainerStyle={styles.contentContainer}
         keyboardShouldPersistTaps="handled"
       >
-        {/* 标题输入 */}
-        <View
-          style={[
-            styles.inputSection,
-            {
-              backgroundColor: theme.colors.card,
-              borderBottomColor: theme.colors.border,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.placeholder,
-              { color: theme.colors.foregroundTertiary },
-            ]}
-          >
-            标题（可选）
-          </Text>
-          <TextInput
-            style={[
-              styles.titleInput,
-              {
-                color: title
-                  ? theme.colors.foreground
-                  : theme.colors.foregroundTertiary,
-              },
-            ]}
-            placeholder="输入标题..."
-            placeholderTextColor={theme.colors.foregroundTertiary}
-            onChangeText={setTitle}
-            value={title}
-          />
-        </View>
-
         {/* 内容输入 */}
         <View
           style={[
