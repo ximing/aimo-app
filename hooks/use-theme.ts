@@ -4,6 +4,7 @@
  */
 
 import { useColorScheme as useRNColorScheme } from 'react-native';
+import { useService } from '@rabjs/react';
 import {
   Colors,
   Fonts,
@@ -20,15 +21,25 @@ import {
   type ThemeColors,
   type ColorKey,
 } from '@/constants/theme-colors';
+import ThemeService from '@/services/theme-service';
 
 /**
  * 获取当前主题配置
  * 
- * 注意：如果应用中使用了 ThemeService，主题会由服务管理
+ * 如果应用中使用了 ThemeService，主题会由服务管理
  * 否则会自动跟随系统主题设置
  */
 export function useTheme() {
-  const colorScheme = useRNColorScheme() ?? 'light';
+  const systemColorScheme = useRNColorScheme() ?? 'light';
+  
+  // 获取 ThemeService 来实现主题切换
+  // useService 会自动使 Hook 响应服务的可观测属性变化
+  const themeService = useService(ThemeService);
+  
+  // 获取实际的颜色方案（考虑 ThemeService 的设置）
+  // colorScheme 是计算属性，会根据 mode 动态改变
+  const colorScheme = themeService.colorScheme;
+
   const colors = Colors[colorScheme];
 
   return {

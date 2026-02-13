@@ -6,6 +6,7 @@
 
 import { useTheme } from "@/hooks/use-theme";
 import { MaterialIcons } from "@expo/vector-icons";
+import { view } from "@rabjs/react";
 import React, { useState } from "react";
 import {
   StyleSheet,
@@ -20,7 +21,7 @@ interface SearchHeaderProps {
   onDrawerToggle: () => void;
 }
 
-export const SearchHeader = ({ onDrawerToggle }: SearchHeaderProps) => {
+export const SearchHeader = view(({ onDrawerToggle }: SearchHeaderProps) => {
   const theme = useTheme();
   const [searchQuery, setSearchQuery] = useState("");
   const insets = useSafeAreaInsets();
@@ -31,7 +32,6 @@ export const SearchHeader = ({ onDrawerToggle }: SearchHeaderProps) => {
         styles.headerContainer,
         {
           backgroundColor: theme.colors.background,
-          borderBottomColor: theme.colors.border,
           paddingTop: Math.max(insets.top, theme.spacing.md),
         },
       ]}
@@ -46,8 +46,7 @@ export const SearchHeader = ({ onDrawerToggle }: SearchHeaderProps) => {
           style={[
             styles.searchContainer,
             { 
-              borderColor: theme.colors.border,
-              backgroundColor: theme.colors.backgroundSecondary,
+              backgroundColor: theme.colors.card,
             },
           ]}
         >
@@ -72,11 +71,10 @@ export const SearchHeader = ({ onDrawerToggle }: SearchHeaderProps) => {
       </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   headerContainer: {
-    borderBottomWidth: 1,
     paddingHorizontal: 16,
     paddingBottom: 12,
   },
@@ -96,7 +94,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
-    borderWidth: 1,
     marginHorizontal: 8,
   },
   searchInput: {

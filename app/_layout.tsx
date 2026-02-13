@@ -14,33 +14,43 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import AuthService from "@/services/auth-service";
 import MemoService from "@/services/memo-service";
+import ThemeService from "@/services/theme-service";
 register(AuthService);
 register(MemoService);
+register(ThemeService);
 
 const Layout = view(() => {
-  const colorScheme = useColorScheme();
+  const systemColorScheme = useColorScheme();
   const authService = useService(AuthService);
+  const themeService = useService(ThemeService);
   const router = useRouter();
   const navigationState = useRootNavigationState();
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // 初始化时检查是否已登录（仅执行一次）
+  // 获取实际使用的颜色方案（考虑 ThemeService 的设置）
+  const colorScheme = themeService.colorScheme;
+
+  // 初始化时检查是否已登录并初始化主题（仅执行一次）
   useEffect(() => {
-    const initAuth = async () => {
+    const initApp = async () => {
       try {
+        // 初始化主题服务
+        await themeService.initialize();
+        
+        // 检查是否已登录
         const token = await getTokenAsync();
         if (token) {
           // 如果有存储的 token，标记为已认证
           authService.isAuthenticated = true;
         }
       } catch (err) {
-        console.error("Failed to check authentication:", err);
+        console.error("Failed to initialize app:", err);
       } finally {
         setIsInitialized(true);
       }
     };
 
-    initAuth();
+    initApp();
   }, []);
 
   // 监听 401 未授权错误（仅在挂载时注册一次）

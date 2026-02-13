@@ -1,13 +1,26 @@
 /**
  * Sidebar Drawer Component - 侧边栏抽屉
- * 包含用户信息、菜单项、登出功能
+ * 包含用户信息、菜单项、登出功能、主题切换
+ * 
+ * 功能：
+ * - 用户信息展示
+ * - 个人资料、设置、帮助等菜单项
+ * - 深色/浅色主题切换（基于 ThemeService）
+ * - 登出功能
+ * 
+ * 主题切换原理：
+ * - 点击"深色模式"/"浅色模式"菜单项触发 themeService.toggleTheme()
+ * - ThemeService 管理主题状态并持久化到 AsyncStorage
+ * - useTheme() Hook 会响应主题变化，自动更新所有组件的颜色
+ * 
  * 页面特定组件：仅在 (memos) 页面使用
  */
 
 import { useTheme } from "@/hooks/use-theme";
 import AuthService from "@/services/auth-service";
+import ThemeService from "@/services/theme-service";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useService } from "@rabjs/react";
+import { useService, view } from "@rabjs/react";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
@@ -23,9 +36,10 @@ interface SidebarDrawerProps {
   onClose: () => void;
 }
 
-export const SidebarDrawer = ({ visible, onClose }: SidebarDrawerProps) => {
+export const SidebarDrawer = view(({ visible, onClose }: SidebarDrawerProps) => {
   const theme = useTheme();
   const authService = useService(AuthService);
+  const themeService = useService(ThemeService);
   const insets = useSafeAreaInsets();
 
   // 动画值
@@ -93,7 +107,6 @@ export const SidebarDrawer = ({ visible, onClose }: SidebarDrawerProps) => {
           styles.drawerContainer,
           {
             backgroundColor: theme.colors.background,
-            borderRightColor: theme.colors.border,
             transform: [{ translateX: slideAnim }],
           },
         ]}
@@ -102,7 +115,7 @@ export const SidebarDrawer = ({ visible, onClose }: SidebarDrawerProps) => {
         <View
           style={[
             styles.userInfoSection,
-            { borderBottomColor: theme.colors.border, paddingTop: insets.top + theme.spacing.lg },
+            { paddingTop: insets.top + theme.spacing.lg },
           ]}
         >
           <View style={[styles.avatarContainer, { backgroundColor: theme.colors.primary }]}>
@@ -152,6 +165,21 @@ export const SidebarDrawer = ({ visible, onClose }: SidebarDrawerProps) => {
           </Text>
         </TouchableOpacity>
 
+        {/* 主题切换菜单项 */}
+        <TouchableOpacity 
+          style={styles.drawerMenuItem}
+          onPress={() => themeService.toggleTheme()}
+        >
+          <MaterialIcons
+            name={theme.isDark ? "light-mode" : "dark-mode"}
+            size={20}
+            color={theme.colors.foregroundSecondary}
+          />
+          <Text style={[styles.drawerMenuText, { color: theme.colors.foreground }]}>
+            {theme.isDark ? "浅色模式" : "深色模式"}
+          </Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.drawerMenuItem}>
           <MaterialIcons
             name="help"
@@ -165,7 +193,7 @@ export const SidebarDrawer = ({ visible, onClose }: SidebarDrawerProps) => {
 
         {/* 分隔线 */}
         <View
-          style={[styles.drawerDivider, { backgroundColor: theme.colors.border }]}
+          style={[styles.drawerDivider, { backgroundColor: 'transparent' }]}
         />
 
         {/* 登出按钮 */}
@@ -178,7 +206,7 @@ export const SidebarDrawer = ({ visible, onClose }: SidebarDrawerProps) => {
       </Animated.View>
     </>
   );
-};
+});
 
 const styles = StyleSheet.create({
   drawerOverlay: {
@@ -196,14 +224,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: "70%",
     maxWidth: 280,
-    borderRightWidth: 1,
     zIndex: 201,
   },
   userInfoSection: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-    borderBottomWidth: 1,
   },
   avatarContainer: {
     width: 48,

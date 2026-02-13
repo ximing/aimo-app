@@ -21,8 +21,8 @@ export const Colors = {
     primary: '#22c55e',
     primaryForeground: '#ffffff',
     
-    // 背景色
-    background: '#ffffff',
+    // 背景色（浅灰色，用于 memo 列表背景）
+    background: '#f3f4f6',
     backgroundSecondary: '#f9fafb',
     backgroundTertiary: '#f3f4f6',
     
@@ -31,7 +31,7 @@ export const Colors = {
     foregroundSecondary: '#6b7280',
     foregroundTertiary: '#9ca3af',
     
-    // 卡片
+    // 卡片（白色，与背景形成对比）
     card: '#ffffff',
     cardForeground: '#111827',
     
@@ -83,8 +83,8 @@ export const Colors = {
     primary: '#22c55e',
     primaryForeground: '#ffffff',
     
-    // 背景色
-    background: '#0a0a0a',
+    // 背景色（深灰色，用于 memo 列表背景）
+    background: '#1a1a1a',
     backgroundSecondary: '#171717',
     backgroundTertiary: '#262626',
     
@@ -93,8 +93,8 @@ export const Colors = {
     foregroundSecondary: '#a1a1aa',
     foregroundTertiary: '#71717a',
     
-    // 卡片
-    card: '#171717',
+    // 卡片（深卡片色，与背景形成对比）
+    card: '#262626',
     cardForeground: '#fafafa',
     
     // 输入框

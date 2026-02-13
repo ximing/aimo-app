@@ -1,9 +1,10 @@
 /**
  * Memo Item Component - 备忘录列表项
- * 使用 memo 优化性能，避免不必要的重新渲染
+ * 使用 @rabjs/react 的 view 装饰器以响应响应式数据变化（包括主题）
+ * 同时保持性能优化
  */
 
-import React, { memo } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -11,6 +12,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { view } from '@rabjs/react';
 import { useTheme } from '@/hooks/use-theme';
 import type { Memo } from '@/types/memo';
 
@@ -19,7 +21,7 @@ interface MemoItemProps {
   onPress?: (memoId: string) => void;
 }
 
-const MemoItemComponent = ({ memo, onPress }: MemoItemProps) => {
+const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
   const theme = useTheme();
 
   // 格式化时间显示
@@ -61,7 +63,6 @@ const MemoItemComponent = ({ memo, onPress }: MemoItemProps) => {
         styles.card, 
         { 
           backgroundColor: theme.colors.card,
-          borderColor: theme.colors.border,
         }
       ]}>
         {/* 卡片头部 */}
@@ -93,7 +94,7 @@ const MemoItemComponent = ({ memo, onPress }: MemoItemProps) => {
         </View>
 
         {/* 卡片页脚 */}
-        <View style={[styles.cardFooter, { borderTopColor: theme.colors.borderSecondary }]}>
+        <View style={styles.cardFooter}>
           <View style={styles.metaInfo}>
             <Text style={[styles.date, { color: theme.colors.foregroundTertiary }]}>
               {formatDate(memo.updatedAt)}
@@ -112,20 +113,12 @@ const MemoItemComponent = ({ memo, onPress }: MemoItemProps) => {
       </View>
     </TouchableOpacity>
   );
-};
+});
 
-// 使用 memo 包装组件以优化性能
-// 仅当 memo 数据或 onPress 回调实际改变时才重新渲染
-export const MemoItem = memo(
-  MemoItemComponent,
-  (prevProps, nextProps) => {
-    return (
-      prevProps.memo.memoId === nextProps.memo.memoId &&
-      prevProps.memo.updatedAt === nextProps.memo.updatedAt &&
-      prevProps.onPress === nextProps.onPress
-    );
-  }
-);
+// 导出使用 view 包装的组件
+// view 会自动跟踪组件中使用的响应式数据（包括 useTheme）
+// 当这些数据变化时，组件会自动重新渲染
+export const MemoItem = MemoItemComponent;
 
 MemoItem.displayName = 'MemoItem';
 
@@ -135,7 +128,6 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: 12,
-    borderWidth: 1,
     overflow: 'hidden',
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -166,7 +158,6 @@ const styles = StyleSheet.create({
   },
   cardFooter: {
     paddingTop: 8,
-    borderTopWidth: 1,
   },
   metaInfo: {
     flexDirection: 'row',

@@ -38,13 +38,13 @@
 ### 主色系
 
 ```typescript
-import { useTheme } from '@/hooks/use-theme';
+import { useTheme } from "@/hooks/use-theme";
 
 const MyComponent = () => {
   const theme = useTheme();
-  
+
   // 主色
-  const primary = theme.colors.primary;          // #22c55e
+  const primary = theme.colors.primary; // #22c55e
   const primaryFg = theme.colors.primaryForeground; // #ffffff
 };
 ```
@@ -52,31 +52,84 @@ const MyComponent = () => {
 ### 背景色
 
 ```typescript
-background           // #ffffff (light) / #0a0a0a (dark)
-backgroundSecondary  // #f9fafb (light) / #171717 (dark)
-backgroundTertiary   // #f3f4f6 (light) / #262626 (dark)
+background; // #f3f4f6 (light - 浅灰色) / #1a1a1a (dark - 深灰色)
+backgroundSecondary; // #f9fafb (light) / #171717 (dark)
+backgroundTertiary; // #f3f4f6 (light) / #262626 (dark)
 ```
+
+**设计说明**：
+
+- 浅色模式：背景使用浅灰色 `#f3f4f6`，为卡片提供对比空间
+- 深色模式：背景使用深灰色 `#1a1a1a`，与卡片色形成对比
+- 通过背景与卡片的颜色对比来区分，减少边框使用
+
+### 卡片色
+
+```typescript
+card; // #ffffff (light - 白色) / #262626 (dark - 深卡片色)
+cardForeground; // #111827 (light) / #fafafa (dark)
+```
+
+**设计说明**：
+
+- 卡片通过与背景色的对比度来区分，而非边框
+- 浅色模式：白色卡片在浅灰色背景上形成清晰对比
+- 深色模式：深卡片色 `#262626` 在深灰色背景 `#1a1a1a` 上形成微妙对比
+- 搜索框、输入框等交互元素使用卡片色背景
 
 ### 前景色/文本色
 
 ```typescript
-foreground           // #111827 (light) / #fafafa (dark)
-foregroundSecondary  // #6b7280 (light) / #a1a1aa (dark)
-foregroundTertiary   // #9ca3af (light) / #71717a (dark)
+foreground; // #111827 (light) / #fafafa (dark)
+foregroundSecondary; // #6b7280 (light) / #a1a1aa (dark)
+foregroundTertiary; // #9ca3af (light) / #71717a (dark)
 ```
 
 ### 状态色
 
 ```typescript
-destructive          // 危险操作（删除等）
-success              // 成功状态
-warning              // 警告状态
-info                 // 信息提示
+destructive; // 危险操作（删除等）
+success; // 成功状态
+warning; // 警告状态
+info; // 信息提示
 ```
 
 ### 完整颜色列表
 
 参见 `constants/theme-colors.ts` 中的 `Colors` 定义。
+
+## 卡片设计原则
+
+### 核心理念：对比度优于边框
+
+本应用采用**基于对比度的卡片设计**而不是依赖边框。这带来以下优势：
+
+- 🎨 **现代感**：符合当代 UI 设计趋势
+- 🌓 **自适应**：浅色/深色主题自动优化对比度
+- 📱 **简洁**：减少视觉杂乱，提升内容优先级
+- ♿ **可访问性**：充分的颜色对比度满足 WCAG 标准
+
+### 色彩对比参考
+
+| 模式 | 背景      | 卡片      | 对比度 | 应用场景         |
+| ---- | --------- | --------- | ------ | ---------------- |
+| 浅色 | `#f3f4f6` | `#ffffff` | 明显   | 列表卡片、对话框 |
+| 深色 | `#1a1a1a` | `#262626` | 微妙   | 列表卡片、对话框 |
+
+### 搜索框与输入框设计
+
+- 搜索框使用 **card 背景色**，而不是 border
+- 通过背景色与页面背景的对比实现视觉分离
+- 保留圆角 (`borderRadius: 20`) 以保持友好的外观
+- 移除 `borderWidth` 和 `borderColor`
+
+### 列表卡片设计
+
+- 每个卡片使用 **card 背景色**
+- 卡片之间通过小间距（`marginVertical: xs`）分离
+- 内容使用合适的 `padding` 和 `borderRadius`
+- 可选添加 `shadows.sm` 增强层级感
+- 移除卡片内部的分隔线（如页脚与内容间的 borderTop）
 
 ## 使用主题
 
@@ -85,27 +138,31 @@ info                 // 信息提示
 获取完整的主题配置：
 
 ```tsx
-import { useTheme } from '@/hooks/use-theme';
-import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from "@/hooks/use-theme";
+import { View, Text, StyleSheet } from "react-native";
 
 export function MyComponent() {
   const theme = useTheme();
-  
+
   return (
-    <View style={[
-      styles.container,
-      {
-        backgroundColor: theme.colors.background,
-        padding: theme.spacing.md,
-        borderRadius: theme.borderRadius.lg,
-      },
-      theme.shadows?.md,
-    ]}>
-      <Text style={{
-        color: theme.colors.foreground,
-        fontSize: theme.fontSizes.base,
-        fontWeight: theme.fontWeights.semibold,
-      }}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.colors.background,
+          padding: theme.spacing.md,
+          borderRadius: theme.borderRadius.lg,
+        },
+        theme.shadows?.md,
+      ]}
+    >
+      <Text
+        style={{
+          color: theme.colors.foreground,
+          fontSize: theme.fontSizes.base,
+          fontWeight: theme.fontWeights.semibold,
+        }}
+      >
         Hello Theme!
       </Text>
     </View>
@@ -124,14 +181,14 @@ const styles = StyleSheet.create({
 仅获取特定颜色，支持 props 覆盖：
 
 ```tsx
-import { useThemeColor } from '@/hooks/use-theme';
+import { useThemeColor } from "@/hooks/use-theme";
 
 export function MyComponent({ lightColor, darkColor }) {
   const backgroundColor = useThemeColor(
     { light: lightColor, dark: darkColor },
-    'background'
+    "background",
   );
-  
+
   return <View style={{ backgroundColor }} />;
 }
 ```
@@ -141,14 +198,12 @@ export function MyComponent({ lightColor, darkColor }) {
 获取当前主题模式：
 
 ```tsx
-import { useColorScheme } from '@/hooks/use-theme';
+import { useColorScheme } from "@/hooks/use-theme";
 
 export function MyComponent() {
   const colorScheme = useColorScheme(); // 'light' | 'dark'
-  
-  return (
-    <Text>当前主题: {colorScheme}</Text>
-  );
+
+  return <Text>当前主题: {colorScheme}</Text>;
 }
 ```
 
@@ -226,7 +281,12 @@ import { Button } from '@/components/ui/button';
 主题化卡片组件：
 
 ```tsx
-import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 
 <Card>
   <CardHeader>
@@ -238,12 +298,14 @@ import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'
   <CardFooter>
     <Button>操作</Button>
   </CardFooter>
-</Card>
+</Card>;
 
-{/* 自定义样式 */}
+{
+  /* 自定义样式 */
+}
 <Card shadow={false} bordered padding="lg">
   {/* 无阴影、有边框、大内边距 */}
-</Card>
+</Card>;
 ```
 
 ### Input
@@ -253,19 +315,19 @@ import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'
 ```tsx
 import { Input } from '@/components/ui/input';
 
-<Input 
+<Input
   label="用户名"
   placeholder="请输入用户名"
 />
 
-<Input 
+<Input
   label="密码"
   placeholder="请输入密码"
   secureTextEntry
   error="密码不能为空"
 />
 
-<Input 
+<Input
   label="备注"
   placeholder="请输入备注"
   multiline
@@ -278,12 +340,12 @@ import { Input } from '@/components/ui/input';
 ### 使用主题创建自定义组件
 
 ```tsx
-import { useTheme } from '@/hooks/use-theme';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useTheme } from "@/hooks/use-theme";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 
 export function CustomCard({ title, onPress }) {
   const theme = useTheme();
-  
+
   return (
     <TouchableOpacity
       style={[
@@ -292,8 +354,7 @@ export function CustomCard({ title, onPress }) {
           backgroundColor: theme.colors.card,
           borderRadius: theme.borderRadius.lg,
           padding: theme.spacing.md,
-          borderWidth: 1,
-          borderColor: theme.colors.border,
+          // 通过卡片背景色与页面背景色对比来区分，无需边框
         },
         theme.shadows?.sm,
       ]}
@@ -320,6 +381,13 @@ const styles = StyleSheet.create({
 });
 ```
 
+**设计特点**：
+
+- 卡片使用 `card` 背景色与页面背景形成对比
+- 移除 `borderWidth` 和 `borderColor`，依靠颜色对比实现视觉分离
+- 保留 `borderRadius` 和阴影以维持层级感
+- 浅色和深色主题自动适配卡片对比度
+
 ## 平台适配
 
 ### iOS vs Android 差异
@@ -332,7 +400,7 @@ const theme = useTheme();
 // theme.shadows 会根据平台自动返回正确的样式
 // iOS: shadowColor, shadowOffset, shadowOpacity, shadowRadius
 // Android: elevation
-<View style={[styles.card, theme.shadows?.md]} />
+<View style={[styles.card, theme.shadows?.md]} />;
 ```
 
 #### 触控尺寸
@@ -346,7 +414,7 @@ const theme = useTheme();
     minHeight: theme.touchTargets.minHeight,
     minWidth: theme.touchTargets.minWidth,
   }}
-/>
+/>;
 ```
 
 #### 字体
@@ -355,9 +423,7 @@ const theme = useTheme();
 const theme = useTheme();
 
 // 使用平台特定的系统字体
-<Text style={{ fontFamily: theme.fonts.sans }}>
-  Platform Font
-</Text>
+<Text style={{ fontFamily: theme.fonts.sans }}>Platform Font</Text>;
 ```
 
 ### 安全区域
@@ -365,16 +431,16 @@ const theme = useTheme();
 使用 `react-native-safe-area-context` 处理安全区域：
 
 ```tsx
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from '@/hooks/use-theme';
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useTheme } from "@/hooks/use-theme";
 
 export function Screen() {
   const theme = useTheme();
-  
+
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: theme.colors.background }}
-      edges={['top', 'left', 'right']}
+      edges={["top", "left", "right"]}
     >
       {/* 内容 */}
     </SafeAreaView>
@@ -387,35 +453,42 @@ export function Screen() {
 ### 1. 使用语义化颜色
 
 ❌ **不好**：
+
 ```tsx
-<View style={{ backgroundColor: '#22c55e' }} />
+<View style={{ backgroundColor: "#22c55e" }} />
 ```
 
 ✅ **好**：
+
 ```tsx
 const theme = useTheme();
-<View style={{ backgroundColor: theme.colors.primary }} />
+<View style={{ backgroundColor: theme.colors.primary }} />;
 ```
 
 ### 2. 使用设计令牌
 
 ❌ **不好**：
+
 ```tsx
 <View style={{ padding: 16, borderRadius: 8 }} />
 ```
 
 ✅ **好**：
+
 ```tsx
 const theme = useTheme();
-<View style={{
-  padding: theme.spacing.lg,
-  borderRadius: theme.borderRadius.md,
-}} />
+<View
+  style={{
+    padding: theme.spacing.lg,
+    borderRadius: theme.borderRadius.md,
+  }}
+/>;
 ```
 
 ### 3. 确保触控友好
 
 ❌ **不好**：
+
 ```tsx
 <TouchableOpacity style={{ height: 30, width: 30 }}>
   <Icon />
@@ -423,30 +496,33 @@ const theme = useTheme();
 ```
 
 ✅ **好**：
+
 ```tsx
 const theme = useTheme();
-<TouchableOpacity style={{
-  minHeight: theme.touchTargets.minHeight,
-  minWidth: theme.touchTargets.minWidth,
-  alignItems: 'center',
-  justifyContent: 'center',
-}}>
+<TouchableOpacity
+  style={{
+    minHeight: theme.touchTargets.minHeight,
+    minWidth: theme.touchTargets.minWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  }}
+>
   <Icon />
-</TouchableOpacity>
+</TouchableOpacity>;
 ```
 
 ### 4. 使用主题化组件
 
 ❌ **不好**：
+
 ```tsx
 <View style={{ backgroundColor: Colors[colorScheme].background }}>
-  <Text style={{ color: Colors[colorScheme].foreground }}>
-    Text
-  </Text>
+  <Text style={{ color: Colors[colorScheme].foreground }}>Text</Text>
 </View>
 ```
 
 ✅ **好**：
+
 ```tsx
 <ThemedView>
   <ThemedText>Text</ThemedText>
@@ -456,31 +532,69 @@ const theme = useTheme();
 ### 5. 平台特定样式
 
 ```tsx
-import { Platform } from 'react-native';
+import { Platform } from "react-native";
 
 const theme = useTheme();
 
-<View style={{
-  ...Platform.select({
-    ios: {
-      paddingTop: 20, // 状态栏
-    },
-    android: {
-      paddingTop: 0,
-    },
-  }),
-}} />
+<View
+  style={{
+    ...Platform.select({
+      ios: {
+        paddingTop: 20, // 状态栏
+      },
+      android: {
+        paddingTop: 0,
+      },
+    }),
+  }}
+/>;
 ```
 
-### 6. 性能优化
+### 6. 卡片设计 - 使用对比度而非边框
+
+❌ **不好**：
 
 ```tsx
-import { useMemo } from 'react';
-import { useTheme } from '@/hooks/use-theme';
+const theme = useTheme();
+<View
+  style={{
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.lg,
+  }}
+/>;
+```
+
+✅ **好**：
+
+```tsx
+const theme = useTheme();
+<View
+  style={{
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.md,
+  }}
+/>;
+```
+
+**原理**：
+
+- 浅色模式：白色卡片 `#ffffff` 在浅灰色背景 `#f3f4f6` 上形成对比
+- 深色模式：深卡片色 `#262626` 在深灰色背景 `#1a1a1a` 上形成对比
+- 充分利用颜色系统，减少不必要的边框
+- 可选添加阴影增强层级感
+
+### 7. 性能优化
+
+```tsx
+import { useMemo } from "react";
+import { useTheme } from "@/hooks/use-theme";
 
 export function MyComponent() {
   const theme = useTheme();
-  
+
   // 缓存复杂的样式计算
   const styles = useMemo(
     () => ({
@@ -490,9 +604,9 @@ export function MyComponent() {
         borderRadius: theme.borderRadius.md,
       },
     }),
-    [theme]
+    [theme],
   );
-  
+
   return <View style={styles.container} />;
 }
 ```
@@ -506,7 +620,7 @@ import type {
   ColorScheme,
   ThemeColors,
   ColorKey,
-} from '@/constants/theme-colors';
+} from "@/constants/theme-colors";
 
 // ColorScheme = 'light' | 'dark'
 // ThemeColors = 完整的颜色定义类型
@@ -569,12 +683,12 @@ A: 目前主题系统自动跟随系统设置。如需强制模式，可以实�
 
 ```typescript
 // services/theme-service.ts
-import { Service } from '@rabjs/react';
+import { Service } from "@rabjs/react";
 
 class ThemeService extends Service {
-  mode: 'light' | 'dark' | 'auto' = 'auto';
-  
-  setMode(mode: 'light' | 'dark' | 'auto') {
+  mode: "light" | "dark" | "auto" = "auto";
+
+  setMode(mode: "light" | "dark" | "auto") {
     this.mode = mode;
   }
 }
@@ -590,21 +704,54 @@ A: 直接在 `constants/theme-colors.ts` 中的 `Colors` 对象里添加：
 export const Colors = {
   light: {
     // 现有颜色...
-    customColor: '#your-color',
+    customColor: "#your-color",
   },
   dark: {
     // 现有颜色...
-    customColor: '#your-dark-color',
+    customColor: "#your-dark-color",
   },
 };
 ```
+
+### Q: 为什么移除了卡片边框？
+
+A: 新设计采用**对比度优于边框**的原则：
+
+1. **更现代**：符合当代 UI 设计趋势（如 iOS 16+）
+2. **更简洁**：减少视觉杂乱，让内容成为焦点
+3. **更自适应**：浅色/深色主题都能自动实现合适的对比度
+4. **可访问性**：充分的色彩对比度满足无障碍要求
+
+具体地：
+
+- 浅色模式：白色卡片在浅灰色背景上形成**明显对比**
+- 深色模式：深卡片色在深灰色背景上形成**微妙对比**
+
+### Q: 如何在卡片中添加分隔线？
+
+A: **建议不添加**分隔线，以保持设计的简洁性。如必要，使用 `divider` 颜色：
+
+```tsx
+const theme = useTheme();
+<View
+  style={{
+    height: 1,
+    backgroundColor: theme.colors.divider,
+  }}
+/>;
+```
+
+但更好的做法是通过 padding 和 spacing 来组织卡片内容。
 
 ### Q: Web 端和 App 端如何共享主题？
 
 A: 保持颜色值一致，但使用平台特定的实现方式。Web 端使用 CSS Variables，App 端使用本主题系统。
 
+对于卡片设计，Web 端也应采用对比度优于边框的原则，确保设计一致性。
+
 ---
 
 更多信息请参考：
+
 - [Web 端主题指南](./web-theme-guide.md)
 - [项目规范](../.catpaw/rules/base.md)
