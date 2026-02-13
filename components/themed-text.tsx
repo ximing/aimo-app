@@ -1,21 +1,30 @@
 import { StyleSheet, Text, type TextProps } from 'react-native';
-
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { useTheme, useThemeColor } from '@/hooks/use-theme';
+import type { ColorKey } from '@/constants/theme-colors';
 
 export type ThemedTextProps = TextProps & {
   lightColor?: string;
   darkColor?: string;
-  type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
+  /**
+   * 使用主题颜色名称
+   */
+  colorKey?: ColorKey;
+  /**
+   * 文本类型预设样式
+   */
+  type?: 'default' | 'title' | 'subtitle' | 'caption' | 'link' | 'semibold' | 'bold';
 };
 
 export function ThemedText({
   style,
   lightColor,
   darkColor,
+  colorKey = 'foreground',
   type = 'default',
   ...rest
 }: ThemedTextProps) {
-  const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
+  const theme = useTheme();
+  const color = useThemeColor({ light: lightColor, dark: darkColor }, colorKey);
 
   return (
     <Text
@@ -23,9 +32,13 @@ export function ThemedText({
         { color },
         type === 'default' ? styles.default : undefined,
         type === 'title' ? styles.title : undefined,
-        type === 'defaultSemiBold' ? styles.defaultSemiBold : undefined,
         type === 'subtitle' ? styles.subtitle : undefined,
-        type === 'link' ? styles.link : undefined,
+        type === 'caption' ? styles.caption : undefined,
+        type === 'semibold' ? styles.semibold : undefined,
+        type === 'bold' ? styles.bold : undefined,
+        type === 'link'
+          ? [styles.link, { color: theme.colors.primary }]
+          : undefined,
         style,
       ]}
       {...rest}
@@ -35,26 +48,39 @@ export function ThemedText({
 
 const styles = StyleSheet.create({
   default: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 15, // 使用 FontSizes.base
+    lineHeight: 22.5, // 15 * 1.5
+    fontWeight: '400',
   },
-  defaultSemiBold: {
-    fontSize: 16,
-    lineHeight: 24,
+  semibold: {
+    fontSize: 15,
+    lineHeight: 22.5,
     fontWeight: '600',
   },
+  bold: {
+    fontSize: 15,
+    lineHeight: 22.5,
+    fontWeight: '700',
+  },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    lineHeight: 32,
+    fontSize: 28, // 使用 FontSizes['3xl']
+    fontWeight: '700',
+    lineHeight: 35, // 28 * 1.25 (tight)
   },
   subtitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 19, // 使用 FontSizes.xl
+    fontWeight: '600',
+    lineHeight: 28.5, // 19 * 1.5
+  },
+  caption: {
+    fontSize: 13, // 使用 FontSizes.sm
+    lineHeight: 19.5, // 13 * 1.5
+    fontWeight: '400',
   },
   link: {
-    lineHeight: 30,
-    fontSize: 16,
-    color: '#0a7ea4',
+    fontSize: 15,
+    lineHeight: 22.5,
+    fontWeight: '500',
+    textDecorationLine: 'underline',
   },
 });

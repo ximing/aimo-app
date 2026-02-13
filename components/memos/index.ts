@@ -1,0 +1,8 @@
+/**
+ * Memos 页面特定组件导出
+ * 页面特定组件应在多页面使用时迁移到根 components/ 目录
+ */
+
+export { SearchHeader } from "./search-header";
+export { SidebarDrawer } from "./sidebar-drawer";
+export { FloatingActionBar } from "./floating-action-bar";

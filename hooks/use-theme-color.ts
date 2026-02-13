@@ -1,21 +1,9 @@
 /**
- * Learn more about light and dark modes:
- * https://docs.expo.dev/guides/color-schemes/
+ * 主题颜色 Hook
+ * 
+ * 提供主题颜色访问能力，支持 props 覆盖
+ * 
+ * @deprecated 推荐使用 '@/hooks/use-theme' 中的 useThemeColor 或 useTheme
  */
 
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export function useThemeColor(
-  props: { light?: string; dark?: string },
-  colorName: keyof typeof Colors.light & keyof typeof Colors.dark
-) {
-  const theme = useColorScheme() ?? 'light';
-  const colorFromProps = props[theme];
-
-  if (colorFromProps) {
-    return colorFromProps;
-  } else {
-    return Colors[theme][colorName];
-  }
-}
+export { useThemeColor } from './use-theme';
