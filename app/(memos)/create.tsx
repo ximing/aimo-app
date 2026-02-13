@@ -3,28 +3,28 @@
  * 提供编辑标题、内容、上传媒体等功能
  */
 
-import React, { useState, useCallback } from 'react';
+import { uploadAttachment } from "@/api/attachment";
+import { createMemo } from "@/api/memo";
+import { MediaPicker } from "@/components/memos/media-picker";
+import { MediaPreview } from "@/components/memos/media-preview";
+import { useMediaPicker } from "@/hooks/use-media-picker";
+import { useTheme } from "@/hooks/use-theme";
+import MemoService from "@/services/memo-service";
+import { MaterialIcons } from "@expo/vector-icons";
+import { useService, view } from "@rabjs/react";
+import { useRouter } from "expo-router";
+import React, { useCallback, useState } from "react";
 import {
-  View,
-  KeyboardAvoidingView,
-  StyleSheet,
-  TouchableOpacity,
-  Text,
-  TextInput,
-  Platform,
-  ScrollView,
-  ActivityIndicator,
-} from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { view, useService } from '@rabjs/react';
-import { useTheme } from '@/hooks/use-theme';
-import { useMediaPicker } from '@/hooks/use-media-picker';
-import { MediaPicker } from '@/components/memos/media-picker';
-import { MediaPreview } from '@/components/memos/media-preview';
-import { createMemo } from '@/api/memo';
-import { uploadAttachment } from '@/api/attachment';
-import MemoService from '@/services/memo-service';
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
 
 const CreateMemoContent = view(() => {
   const theme = useTheme();
@@ -42,8 +42,8 @@ const CreateMemoContent = view(() => {
     clearError: clearMediaError,
   } = useMediaPicker();
 
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,7 +55,7 @@ const CreateMemoContent = view(() => {
   // 处理提交
   const handleSubmit = useCallback(async () => {
     if (!content.trim()) {
-      setError('请输入内容');
+      setError("请输入内容");
       return;
     }
 
@@ -63,25 +63,32 @@ const CreateMemoContent = view(() => {
     setError(null);
 
     try {
-      // 上传媒体文件
+      // 上传媒体文件（如果有的话）
       const attachmentIds: string[] = [];
-      for (const media of selectedMedia) {
-        const attachment = await uploadAttachment({
-          file: { uri: media.uri, type: media.mimeType },
-          fileName: media.name,
-          createdAt: Date.now(),
-        });
-        attachmentIds.push(attachment.id);
+      if (selectedMedia.length > 0) {
+        for (const media of selectedMedia) {
+          try {
+            const attachment = await uploadAttachment({
+              file: { uri: media.uri, type: media.mimeType },
+              fileName: media.name,
+              createdAt: Date.now(),
+            });
+            attachmentIds.push(attachment.id);
+          } catch (uploadErr) {
+            const errorMsg = uploadErr instanceof Error ? uploadErr.message : `上传 ${media.name} 失败`;
+            throw new Error(`媒体上传失败: ${errorMsg}`);
+          }
+        }
       }
 
-      // 创建 Memo
+      // 创建 Memo - 按照 CreateMemoRequest 接口
       const memo = await createMemo({
         content: content.trim(),
         title: title.trim() || undefined,
-        attachments: attachmentIds,
+        attachments: attachmentIds.length > 0 ? attachmentIds : undefined,
       });
 
-      console.log('Memo created:', memo);
+      console.log("Memo created successfully:", memo);
 
       // 刷新列表
       await memoService.refreshMemos();
@@ -89,9 +96,9 @@ const CreateMemoContent = view(() => {
       // 返回列表
       router.back();
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : '创建失败';
+      const errorMsg = err instanceof Error ? err.message : "创建失败，请重试";
       setError(errorMsg);
-      console.error('Failed to create memo:', err);
+      console.error("Failed to create memo:", err);
     } finally {
       setSubmitting(false);
     }
@@ -99,31 +106,37 @@ const CreateMemoContent = view(() => {
 
   // 处理清空
   const handleClear = useCallback(() => {
-    setTitle('');
-    setContent('');
+    setTitle("");
+    setContent("");
     clearMedia();
     setError(null);
   }, [clearMedia]);
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       {/* 头部 */}
-      <View style={[
-        styles.header,
-        {
-          backgroundColor: theme.colors.card,
-          borderBottomColor: theme.colors.border,
-        }
-      ]}>
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: theme.colors.card,
+            borderBottomColor: theme.colors.border,
+          },
+        ]}
+      >
         <TouchableOpacity
           style={styles.headerButton}
           onPress={handleGoBack}
           disabled={submitting}
         >
-          <MaterialIcons name="close" size={24} color={theme.colors.foreground} />
+          <MaterialIcons
+            name="close"
+            size={24}
+            color={theme.colors.foreground}
+          />
         </TouchableOpacity>
 
         <Text style={[styles.headerTitle, { color: theme.colors.foreground }]}>
@@ -138,7 +151,11 @@ const CreateMemoContent = view(() => {
           {submitting ? (
             <ActivityIndicator size="small" color={theme.colors.primary} />
           ) : (
-            <MaterialIcons name="check" size={24} color={theme.colors.primary} />
+            <MaterialIcons
+              name="check"
+              size={24}
+              color={theme.colors.primary}
+            />
           )}
         </TouchableOpacity>
       </View>
@@ -149,22 +166,31 @@ const CreateMemoContent = view(() => {
         keyboardShouldPersistTaps="handled"
       >
         {/* 标题输入 */}
-        <View style={[
-          styles.inputSection,
-          {
-            backgroundColor: theme.colors.card,
-            borderBottomColor: theme.colors.border,
-          }
-        ]}>
-          <Text style={[styles.placeholder, { color: theme.colors.foregroundTertiary }]}>
+        <View
+          style={[
+            styles.inputSection,
+            {
+              backgroundColor: theme.colors.card,
+              borderBottomColor: theme.colors.border,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.placeholder,
+              { color: theme.colors.foregroundTertiary },
+            ]}
+          >
             标题（可选）
           </Text>
           <TextInput
             style={[
               styles.titleInput,
               {
-                color: title ? theme.colors.foreground : theme.colors.foregroundTertiary,
-              }
+                color: title
+                  ? theme.colors.foreground
+                  : theme.colors.foregroundTertiary,
+              },
             ]}
             placeholder="输入标题..."
             placeholderTextColor={theme.colors.foregroundTertiary}
@@ -174,20 +200,24 @@ const CreateMemoContent = view(() => {
         </View>
 
         {/* 内容输入 */}
-        <View style={[
-          styles.inputSection,
-          styles.contentSection,
-          {
-            backgroundColor: theme.colors.card,
-            borderBottomColor: theme.colors.border,
-          }
-        ]}>
+        <View
+          style={[
+            styles.inputSection,
+            styles.contentSection,
+            {
+              backgroundColor: theme.colors.card,
+              borderBottomColor: theme.colors.border,
+            },
+          ]}
+        >
           <TextInput
             style={[
               styles.contentInput,
               {
-                color: content ? theme.colors.foreground : theme.colors.foregroundTertiary,
-              }
+                color: content
+                  ? theme.colors.foreground
+                  : theme.colors.foregroundTertiary,
+              },
             ]}
             placeholder="输入内容..."
             placeholderTextColor={theme.colors.foregroundTertiary}
@@ -205,10 +235,12 @@ const CreateMemoContent = view(() => {
 
         {/* 错误信息 */}
         {(error || mediaError) && (
-          <View style={[
-            styles.errorContainer,
-            { backgroundColor: theme.colors.destructive }
-          ]}>
+          <View
+            style={[
+              styles.errorContainer,
+              { backgroundColor: theme.colors.destructive },
+            ]}
+          >
             <MaterialIcons name="error" size={18} color="#fff" />
             <Text style={styles.errorText}>{error || mediaError}</Text>
             <TouchableOpacity
@@ -233,20 +265,31 @@ const CreateMemoContent = view(() => {
       />
 
       {/* 底部操作栏 */}
-      <View style={[
-        styles.footer,
-        {
-          backgroundColor: theme.colors.card,
-          borderTopColor: theme.colors.border,
-        }
-      ]}>
+      <View
+        style={[
+          styles.footer,
+          {
+            backgroundColor: theme.colors.card,
+            borderTopColor: theme.colors.border,
+          },
+        ]}
+      >
         <TouchableOpacity
           style={[styles.footerButton, { opacity: submitting ? 0.5 : 1 }]}
           onPress={handleClear}
           disabled={submitting}
         >
-          <MaterialIcons name="clear-all" size={20} color={theme.colors.foregroundSecondary} />
-          <Text style={[styles.footerButtonText, { color: theme.colors.foregroundSecondary }]}>
+          <MaterialIcons
+            name="clear-all"
+            size={20}
+            color={theme.colors.foregroundSecondary}
+          />
+          <Text
+            style={[
+              styles.footerButtonText,
+              { color: theme.colors.foregroundSecondary },
+            ]}
+          >
             清空
           </Text>
         </TouchableOpacity>
@@ -255,7 +298,7 @@ const CreateMemoContent = view(() => {
   );
 });
 
-export default view(CreateMemoContent);
+export default CreateMemoContent;
 
 const styles = StyleSheet.create({
   container: {
@@ -263,9 +306,9 @@ const styles = StyleSheet.create({
   },
   // 头部
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -275,7 +318,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   // 内容区域
   content: {
@@ -296,7 +339,7 @@ const styles = StyleSheet.create({
   },
   titleInput: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     padding: 0,
     minHeight: 40,
   },
@@ -307,12 +350,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     padding: 0,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   // 错误提示
   errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginHorizontal: 16,
     marginTop: 12,
     paddingHorizontal: 12,
@@ -323,19 +366,19 @@ const styles = StyleSheet.create({
   errorText: {
     flex: 1,
     fontSize: 13,
-    color: '#fff',
+    color: "#fff",
   },
   // 底部
   footer: {
     borderTopWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "flex-start",
   },
   footerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,

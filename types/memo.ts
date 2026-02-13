@@ -19,6 +19,7 @@ export interface Memo {
 
 export interface CreateMemoRequest {
   content: string;
+  title?: string;
   categoryId?: string;
   attachments?: string[];
   relationIds?: string[];

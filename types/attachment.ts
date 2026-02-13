@@ -17,7 +17,7 @@ export interface Attachment {
 }
 
 export interface UploadAttachmentRequest {
-  file: File | Blob;
+  file: File | Blob | { uri: string; type?: string };
   fileName: string;
   createdAt?: number;
 }
