@@ -292,14 +292,27 @@ export const apiDelete = <T = any>(
 
 /**
  * 上传文件表单数据
+ * 支持 Web File、Blob 和 React Native URI
  */
 export const createFormData = (
-  file: File | Blob,
+  file: File | Blob | { uri: string; type?: string },
   fileName: string,
   additionalFields?: Record<string, string | number>,
 ): FormData => {
   const formData = new FormData();
-  formData.append("file", file, fileName);
+  
+  // 检查是否是 React Native 的 URI 对象
+  if (typeof file === 'object' && 'uri' in file && !('slice' in file)) {
+    // React Native 的文件对象（来自 ImagePicker）
+    formData.append('file', {
+      uri: file.uri,
+      type: file.type || 'application/octet-stream',
+      name: fileName,
+    } as any);
+  } else {
+    // Web 的 File 或 Blob
+    formData.append("file", file as File | Blob, fileName);
+  }
 
   if (additionalFields) {
     Object.entries(additionalFields).forEach(([key, value]) => {

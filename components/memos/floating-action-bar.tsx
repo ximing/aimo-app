@@ -7,6 +7,7 @@
 
 import { useTheme } from "@/hooks/use-theme";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { view } from "@rabjs/react";
 import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
@@ -23,6 +24,16 @@ export const FloatingActionBar = view(({
   onEditPress,
 }: FloatingActionBarProps) => {
   const theme = useTheme();
+  const router = useRouter();
+
+  const handleAddPress = React.useCallback(() => {
+    if (onAddPress) {
+      onAddPress();
+    } else {
+      // 默认行为：导航到创建页面
+      router.push("/(memos)/create");
+    }
+  }, [onAddPress, router]);
 
   return (
     <View style={styles.floatingActionBarWrapper}>
@@ -45,7 +56,7 @@ export const FloatingActionBar = view(({
           <MaterialIcons name="mic" size={24} color={theme.colors.info} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton} onPress={onAddPress}>
+        <TouchableOpacity style={styles.actionButton} onPress={handleAddPress}>
           <MaterialIcons name="add" size={28} color={theme.colors.primary} />
         </TouchableOpacity>
 
