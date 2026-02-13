@@ -2,8 +2,12 @@
  * Memos List Page - 备忘录列表页面
  */
 
-import { SearchHeader, SidebarDrawer, FloatingActionBar } from "@/components/memos";
-import { MemoItem } from "@/components/memo-item";
+import {
+  FloatingActionBar,
+  SearchHeader,
+  SidebarDrawer,
+} from "@/components/memos";
+import { MemoItem } from "@/components/memos/memo-item";
 import { useTheme } from "@/hooks/use-theme";
 import MemoService from "@/services/memo-service";
 import type { Memo } from "@/types/memo";
@@ -49,10 +53,17 @@ const MemosListContent = () => {
   // 渲染空状态
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Text style={[styles.emptyText, { color: theme.colors.foregroundTertiary }]}>
+      <Text
+        style={[styles.emptyText, { color: theme.colors.foregroundTertiary }]}
+      >
         暂无备忘录
       </Text>
-      <Text style={[styles.emptySubText, { color: theme.colors.foregroundSecondary }]}>
+      <Text
+        style={[
+          styles.emptySubText,
+          { color: theme.colors.foregroundSecondary },
+        ]}
+      >
         下拉刷新或创建新的备忘录
       </Text>
     </View>
@@ -76,7 +87,9 @@ const MemosListContent = () => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
       {/* 搜索头部 */}
       <SearchHeader onDrawerToggle={() => setDrawerVisible(!drawerVisible)} />
 
@@ -111,7 +124,12 @@ const MemosListContent = () => {
 
       {/* 显示错误信息 */}
       {memoService.error && (
-        <View style={[styles.errorContainer, { backgroundColor: theme.colors.destructive }]}>
+        <View
+          style={[
+            styles.errorContainer,
+            { backgroundColor: theme.colors.destructive },
+          ]}
+        >
           <Text style={styles.errorText}>{memoService.error}</Text>
         </View>
       )}
