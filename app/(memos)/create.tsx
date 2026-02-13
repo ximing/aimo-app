@@ -25,10 +25,12 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const CreateMemoContent = view(() => {
   const theme = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const memoService = useService(MemoService);
   const {
     selectedMedia,
@@ -117,6 +119,7 @@ const CreateMemoContent = view(() => {
           {
             backgroundColor: theme.colors.card,
             borderBottomColor: theme.colors.border,
+            paddingTop: Math.max(insets.top, theme.spacing.md),
           },
         ]}
       >
@@ -230,6 +233,7 @@ const CreateMemoContent = view(() => {
           {
             backgroundColor: theme.colors.card,
             borderTopColor: theme.colors.border,
+            paddingBottom: Math.max(insets.bottom, theme.spacing.md),
           },
         ]}
       >

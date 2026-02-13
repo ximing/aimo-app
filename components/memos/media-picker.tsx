@@ -13,6 +13,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { view } from '@rabjs/react';
 import { useTheme } from '@/hooks/use-theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SelectedMedia } from '@/hooks/use-media-picker';
 
 interface MediaPickerProps {
@@ -31,6 +32,7 @@ export const MediaPicker = view(({
   error,
 }: MediaPickerProps) => {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
 
   const handlePress = async (action?: () => Promise<void>) => {
     if (action && !loading) {
@@ -45,6 +47,7 @@ export const MediaPicker = view(({
         {
           backgroundColor: theme.colors.card,
           borderTopColor: theme.colors.border,
+          paddingBottom: Math.max(insets.bottom, theme.spacing.md),
         }
       ]}>
         {/* 拍照按钮 */}
