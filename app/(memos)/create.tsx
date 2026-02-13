@@ -63,32 +63,30 @@ const CreateMemoContent = view(() => {
     setError(null);
 
     try {
-      // 上传媒体文件（如果有的话）
+      // 上传媒体文件
       const attachmentIds: string[] = [];
-      if (selectedMedia.length > 0) {
-        for (const media of selectedMedia) {
-          try {
-            const attachment = await uploadAttachment({
-              file: { uri: media.uri, type: media.mimeType },
-              fileName: media.name,
-              createdAt: Date.now(),
-            });
-            attachmentIds.push(attachment.id);
-          } catch (uploadErr) {
-            const errorMsg = uploadErr instanceof Error ? uploadErr.message : `上传 ${media.name} 失败`;
-            throw new Error(`媒体上传失败: ${errorMsg}`);
-          }
-        }
+      for (const media of selectedMedia) {
+        const attachment = await uploadAttachment({
+          file: { uri: media.uri, type: media.mimeType },
+          fileName: media.name,
+          createdAt: Date.now(),
+        });
+        attachmentIds.push(attachment.id);
       }
 
-      // 创建 Memo - 按照 CreateMemoRequest 接口
+      // 构建 memo 内容（如果有 title，添加到 content 前面）
+      let memoContent = content.trim();
+      if (title.trim()) {
+        memoContent = `${title.trim()}\n\n${memoContent}`;
+      }
+
+      // 创建 Memo - 严格按照 CreateMemoRequest 接口
       const memo = await createMemo({
-        content: content.trim(),
-        title: title.trim() || undefined,
+        content: memoContent,
         attachments: attachmentIds.length > 0 ? attachmentIds : undefined,
       });
 
-      console.log("Memo created successfully:", memo);
+      console.log("Memo created:", memo);
 
       // 刷新列表
       await memoService.refreshMemos();
@@ -96,7 +94,7 @@ const CreateMemoContent = view(() => {
       // 返回列表
       router.back();
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "创建失败，请重试";
+      const errorMsg = err instanceof Error ? err.message : "创建失败";
       setError(errorMsg);
       console.error("Failed to create memo:", err);
     } finally {

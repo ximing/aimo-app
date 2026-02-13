@@ -52,13 +52,14 @@ export function useMediaPicker() {
         quality: 0.8,
       });
 
-      if (!result.cancelled) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
         const media: SelectedMedia = {
           type: 'image',
           uri: asset.uri,
           name: `photo-${Date.now()}.jpg`,
           mimeType: 'image/jpeg',
+          size: asset.fileSize,
         };
         setSelectedMedia(prev => [...prev, media]);
       }
@@ -86,15 +87,15 @@ export function useMediaPicker() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: false,
         quality: 0.8,
-        allowsMultiple: true,
       });
 
-      if (!result.cancelled) {
-        const newMedia = result.assets.map(asset => ({
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const newMedia = result.assets.map((asset, index) => ({
           type: 'image' as const,
           uri: asset.uri,
-          name: `image-${Date.now()}.jpg`,
+          name: `image-${Date.now()}-${index}.jpg`,
           mimeType: 'image/jpeg',
+          size: asset.fileSize,
         }));
         setSelectedMedia(prev => [...prev, ...newMedia]);
       }
@@ -124,13 +125,14 @@ export function useMediaPicker() {
         quality: 0.8,
       });
 
-      if (!result.cancelled) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
         const media: SelectedMedia = {
           type: 'video',
           uri: asset.uri,
           name: `video-${Date.now()}.mp4`,
           mimeType: 'video/mp4',
+          size: asset.fileSize,
         };
         setSelectedMedia(prev => [...prev, media]);
       }
