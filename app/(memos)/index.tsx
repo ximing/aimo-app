@@ -47,9 +47,12 @@ const MemosListContent = () => {
   }, [memoService]);
 
   // 处理列表项点击
-  const handleMemoPress = useCallback((memoId: string) => {
-    router.push(`/(memos)/${memoId}`);
-  }, [router]);
+  const handleMemoPress = useCallback(
+    (memoId: string) => {
+      router.push(`/(memos)/${memoId}`);
+    },
+    [router],
+  );
 
   // 渲染空状态
   const renderEmpty = () => (
@@ -72,10 +75,7 @@ const MemosListContent = () => {
 
   // 渲染列表项
   const renderItem = ({ item }: { item: Memo }) => (
-    <MemoItem 
-      memo={item} 
-      onPress={handleMemoPress}
-    />
+    <MemoItem memo={item} onPress={handleMemoPress} />
   );
 
   // 渲染页脚（加载更多指示器）
@@ -120,7 +120,7 @@ const MemosListContent = () => {
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         scrollEnabled={true}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingBottom: 8 }}
       />
 
       {/* 底部悬浮操作栏 */}
