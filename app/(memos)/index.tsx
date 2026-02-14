@@ -71,7 +71,10 @@ const MemosListContent = () => {
 
   // 渲染列表项
   const renderItem = ({ item }: { item: Memo }) => (
-    <MemoItem memo={item} onPress={handleMemoPress} />
+    <MemoItem 
+      memo={item} 
+      onPress={handleMemoPress}
+    />
   );
 
   // 渲染页脚（加载更多指示器）

@@ -4,7 +4,7 @@
  */
 
 import { Service } from '@rabjs/react';
-import { getMemos as apiGetMemos } from '@/api/memo';
+import { getMemos as apiGetMemos, deleteMemo as apiDeleteMemo } from '@/api/memo';
 import type { Memo, ListMemosParams } from '@/types/memo';
 
 class MemoService extends Service {
@@ -65,6 +65,20 @@ class MemoService extends Service {
     if (!this.hasMore || this.loading) return;
 
     await this.fetchMemos({ page: this.currentPage, limit: this.pageSize });
+  }
+
+  /**
+   * 删除 memo
+   */
+  async deleteMemo(memoId: string): Promise<void> {
+    try {
+      await apiDeleteMemo(memoId);
+      // 从列表中删除
+      this.memos = this.memos.filter(memo => memo.memoId !== memoId);
+    } catch (err) {
+      this.error = err instanceof Error ? err.message : '删除 memo 失败';
+      throw err;
+    }
   }
 
   /**

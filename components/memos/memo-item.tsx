@@ -4,7 +4,7 @@
  * 同时保持性能优化
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,11 +13,19 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  Modal,
+  Pressable,
+  Alert,
+  Clipboard,
+  Animated,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { view } from '@rabjs/react';
+import { view, useService } from '@rabjs/react';
 import { useTheme } from '@/hooks/use-theme';
 import type { Memo } from '@/types/memo';
+import { useRouter } from 'expo-router';
+import MemoService from '@/services/memo-service';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // 启用 LayoutAnimation (Android 需要特殊处理)
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -31,7 +39,46 @@ interface MemoItemProps {
 
 const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
   const theme = useTheme();
+  const router = useRouter();
+  const memoService = useService(MemoService);
+  const insets = useSafeAreaInsets();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
+  
+  // 动画值
+  const slideAnim = useRef(new Animated.Value(300)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  // 触发动画
+  useEffect(() => {
+    if (menuVisible) {
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: 300,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [menuVisible, slideAnim, opacityAnim]);
 
   // 格式化时间显示
   const formatDate = (timestamp: number): string => {
@@ -98,6 +145,65 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
   };
 
   const contentDisplay = getContentDisplay();
+
+  // 处理更多按钮点击
+  const handleMorePress = (e: any) => {
+    e.stopPropagation?.();
+    setMenuVisible(true);
+  };
+
+  // 处理编辑
+  const handleEdit = () => {
+    setMenuVisible(false);
+    // 导航到编辑页面
+    router.push(`/(memos)/create?memoId=${memo.memoId}`);
+  };
+
+  // 处理删除
+  const handleDelete = () => {
+    setMenuVisible(false);
+    Alert.alert(
+      '确认删除',
+      '确定要删除这条备忘录吗？',
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '删除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await memoService.deleteMemo(memo.memoId);
+            } catch (error) {
+              console.error('删除失败:', error);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  // 处理复制
+  const handleCopy = () => {
+    setMenuVisible(false);
+    const copyText = memo.title 
+      ? `${memo.title}\n\n${memo.content}`
+      : memo.content;
+    Clipboard.setString(copyText);
+    // 可以添加一个 Toast 提示
+    Alert.alert('成功', '已复制到剪贴板');
+  };
+
+  // 格式化完整时间
+  const formatFullDate = (timestamp: number): string => {
+    const date = new Date(timestamp);
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   return (
     <TouchableOpacity
@@ -184,12 +290,106 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
             </View>
 
             {/* 右侧菜单按钮 */}
-            <TouchableOpacity style={styles.moreButton}>
+            <TouchableOpacity style={styles.moreButton} onPress={handleMorePress}>
               <MaterialIcons name="more-horiz" size={20} color={theme.colors.foregroundSecondary} />
             </TouchableOpacity>
           </View>
         </View>
+
       </View>
+
+      {/* 底部抽屉菜单 */}
+      {menuVisible && (
+        <Modal
+          visible={menuVisible}
+          transparent
+          animationType="none"
+          onRequestClose={() => setMenuVisible(false)}
+        >
+          {/* 背景覆盖层 */}
+          <Animated.View
+            style={[
+              styles.drawerOverlay,
+              {
+                opacity: opacityAnim,
+                backgroundColor: theme.colors.overlay,
+              },
+            ]}
+          >
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => setMenuVisible(false)}
+            />
+          </Animated.View>
+
+          {/* 抽屉内容 */}
+          <Animated.View
+            style={[
+              styles.drawerContainer,
+              {
+                backgroundColor: theme.colors.background,
+                paddingBottom: insets.bottom || 16,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            {/* 时间信息区域 - 独立色块 */}
+            <View style={[styles.timeInfoSection, { backgroundColor: theme.colors.card }]}>
+              <Text style={[styles.timeInfoText, { color: theme.colors.foregroundSecondary }]}>
+                创建于 {formatFullDate(memo.createdAt)}
+              </Text>
+              {memo.updatedAt !== memo.createdAt && (
+                <Text style={[styles.timeInfoText, { color: theme.colors.foregroundSecondary }]}>
+                  最后编辑于 {formatFullDate(memo.updatedAt)}
+                </Text>
+              )}
+            </View>
+
+            {/* 操作区域 - 独立色块 */}
+            <View style={[styles.actionSection, { backgroundColor: theme.colors.card }]}>
+              <TouchableOpacity
+                style={[styles.actionButton, { borderBottomColor: theme.colors.border }]}
+                onPress={handleEdit}
+              >
+                <MaterialIcons name="edit" size={22} color={theme.colors.foreground} />
+                <Text style={[styles.actionButtonText, { color: theme.colors.foreground }]}>
+                  编辑
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionButton, { borderBottomColor: theme.colors.border }]}
+                onPress={handleCopy}
+              >
+                <MaterialIcons name="content-copy" size={22} color={theme.colors.foreground} />
+                <Text style={[styles.actionButtonText, { color: theme.colors.foreground }]}>
+                  复制
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={handleDelete}
+              >
+                <MaterialIcons name="delete" size={22} color={theme.colors.destructive} />
+                <Text style={[styles.actionButtonText, { color: theme.colors.destructive }]}>
+                  删除
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* 取消按钮 - 独立色块 */}
+            <TouchableOpacity
+              style={[styles.cancelButton, { backgroundColor: theme.colors.card }]}
+              onPress={() => setMenuVisible(false)}
+            >
+              <Text style={[styles.cancelButtonText, { color: theme.colors.foreground }]}>
+                取消
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </Modal>
+      )}
     </TouchableOpacity>
   );
 });
@@ -270,5 +470,75 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
     marginLeft: 4,
+  },
+  // 底部抽屉样式
+  drawerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 200,
+  },
+  drawerContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    zIndex: 201,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  // 时间信息区域（抽屉顶部）
+  timeInfoSection: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 12,
+  },
+  timeInfoText: {
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  // 操作区域容器
+  actionSection: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  // 操作按钮
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  actionButtonText: {
+    fontSize: 16,
+    marginLeft: 16,
+    fontWeight: '500',
+  },
+  // 取消按钮
+  cancelButton: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 16,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

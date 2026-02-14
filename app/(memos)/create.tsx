@@ -5,7 +5,6 @@
 
 import { uploadAttachment } from "@/api/attachment";
 import { createMemo } from "@/api/memo";
-import { MediaPicker } from "@/components/memos/media-picker";
 import { MediaPreview } from "@/components/memos/media-preview";
 import { useMediaPicker } from "@/hooks/use-media-picker";
 import { useTheme } from "@/hooks/use-theme";
@@ -156,105 +155,143 @@ const CreateMemoContent = view(() => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        keyboardShouldPersistTaps="handled"
+      {/* 内容输入区域 - 铺满中间区域 */}
+      <View
+        style={[
+          styles.inputSection,
+          {
+            flex: 1,
+            backgroundColor: theme.colors.card,
+            borderBottomColor: theme.colors.border,
+          },
+        ]}
       >
-        {/* 内容输入 */}
-        <View
+        <TextInput
           style={[
-            styles.inputSection,
-            styles.contentSection,
+            styles.contentInput,
             {
-              backgroundColor: theme.colors.card,
-              borderBottomColor: theme.colors.border,
+              flex: 1,
+              color: content
+                ? theme.colors.foreground
+                : theme.colors.foregroundTertiary,
             },
           ]}
+          placeholder="输入内容..."
+          placeholderTextColor={theme.colors.foregroundTertiary}
+          onChangeText={setContent}
+          value={content}
+          multiline
+          scrollEnabled
+        />
+      </View>
+
+      {/* 媒体预览 */}
+      {selectedMedia.length > 0 && (
+        <View
+          style={{
+            backgroundColor: theme.colors.background,
+            borderTopColor: theme.colors.border,
+            borderTopWidth: 1,
+          }}
         >
-          <TextInput
-            style={[
-              styles.contentInput,
-              {
-                color: content
-                  ? theme.colors.foreground
-                  : theme.colors.foregroundTertiary,
-              },
-            ]}
-            placeholder="输入内容..."
-            placeholderTextColor={theme.colors.foregroundTertiary}
-            onChangeText={setContent}
-            value={content}
-            multiline
-            numberOfLines={10}
-          />
-        </View>
-
-        {/* 媒体预览 */}
-        {selectedMedia.length > 0 && (
           <MediaPreview media={selectedMedia} onRemove={removeMedia} />
-        )}
+        </View>
+      )}
 
-        {/* 错误信息 */}
-        {(error || mediaError) && (
-          <View
-            style={[
-              styles.errorContainer,
-              { backgroundColor: theme.colors.destructive },
-            ]}
+      {/* 错误信息 */}
+      {(error || mediaError) && (
+        <View
+          style={[
+            styles.errorContainer,
+            { backgroundColor: theme.colors.destructive },
+          ]}
+        >
+          <MaterialIcons name="error" size={18} color="#fff" />
+          <Text style={styles.errorText}>{error || mediaError}</Text>
+          <TouchableOpacity
+            onPress={() => {
+              setError(null);
+              clearMediaError();
+            }}
           >
-            <MaterialIcons name="error" size={18} color="#fff" />
-            <Text style={styles.errorText}>{error || mediaError}</Text>
-            <TouchableOpacity
-              onPress={() => {
-                setError(null);
-                clearMediaError();
-              }}
-            >
-              <MaterialIcons name="close" size={18} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        )}
-      </ScrollView>
+            <MaterialIcons name="close" size={18} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      )}
 
-      {/* 媒体选择器 */}
-      <MediaPicker
-        onTakePicture={takePicture}
-        onPickImage={pickImage}
-        onPickVideo={pickVideo}
-        loading={mediaLoading}
-        error={mediaError}
-      />
-
-      {/* 底部操作栏 */}
+      {/* 底部操作栏 - 贴着键盘显示 */}
       <View
         style={[
           styles.footer,
           {
             backgroundColor: theme.colors.card,
             borderTopColor: theme.colors.border,
-            paddingBottom: Math.max(insets.bottom, theme.spacing.md),
+            paddingBottom: Math.max(insets.bottom, theme.spacing.sm),
           },
         ]}
       >
+        {/* 清空按钮 */}
         <TouchableOpacity
-          style={[styles.footerButton, { opacity: submitting ? 0.5 : 1 }]}
+          style={[styles.actionButton, { opacity: submitting ? 0.5 : 1 }]}
           onPress={handleClear}
           disabled={submitting}
         >
           <MaterialIcons
-            name="clear-all"
+            name="delete"
             size={20}
             color={theme.colors.foregroundSecondary}
           />
-          <Text
-            style={[
-              styles.footerButtonText,
-              { color: theme.colors.foregroundSecondary },
-            ]}
-          >
-            清空
-          </Text>
+        </TouchableOpacity>
+
+        {/* 分隔符 */}
+        <View
+          style={[
+            styles.divider,
+            { backgroundColor: theme.colors.border },
+          ]}
+        />
+
+        {/* 拍照按钮 */}
+        <TouchableOpacity
+          style={[styles.actionButton, { opacity: mediaLoading ? 0.5 : 1 }]}
+          onPress={takePicture}
+          disabled={mediaLoading}
+        >
+          {mediaLoading ? (
+            <ActivityIndicator size="small" color={theme.colors.foregroundSecondary} />
+          ) : (
+            <MaterialIcons
+              name="camera-alt"
+              size={20}
+              color={theme.colors.foregroundSecondary}
+            />
+          )}
+        </TouchableOpacity>
+
+        {/* 图片按钮 */}
+        <TouchableOpacity
+          style={[styles.actionButton, { opacity: mediaLoading ? 0.5 : 1 }]}
+          onPress={pickImage}
+          disabled={mediaLoading}
+        >
+          <MaterialIcons
+            name="image"
+            size={20}
+            color={theme.colors.foregroundSecondary}
+          />
+        </TouchableOpacity>
+
+        {/* 视频按钮 */}
+        <TouchableOpacity
+          style={[styles.actionButton, { opacity: mediaLoading ? 0.5 : 1 }]}
+          onPress={pickVideo}
+          disabled={mediaLoading}
+        >
+          <MaterialIcons
+            name="videocam"
+            size={20}
+            color={theme.colors.foregroundSecondary}
+          />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -283,36 +320,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  // 内容区域
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingBottom: 16,
-  },
   // 输入框
   inputSection: {
-    borderBottomWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 12,
-  },
-  placeholder: {
-    fontSize: 12,
-    marginBottom: 8,
-  },
-  titleInput: {
-    fontSize: 18,
-    fontWeight: "600",
-    padding: 0,
-    minHeight: 40,
-  },
-  contentSection: {
-    minHeight: 150,
   },
   contentInput: {
     fontSize: 15,
     lineHeight: 22,
-    padding: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
     textAlignVertical: "top",
   },
   // 错误提示
@@ -320,7 +337,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginHorizontal: 16,
-    marginTop: 12,
+    marginVertical: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 8,
@@ -331,23 +348,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#fff",
   },
-  // 底部
+  // 底部操作栏
   footer: {
     borderTopWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    flexDirection: "row",
-    justifyContent: "flex-start",
-  },
-  footerButton: {
-    flexDirection: "row",
-    alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 6,
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
-  footerButtonText: {
-    fontSize: 13,
+  actionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  divider: {
+    width: 1,
+    height: 24,
+    marginHorizontal: 4,
   },
 });
