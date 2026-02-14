@@ -46,11 +46,46 @@ jobs:
         run: |
           gh release create "v${{ steps.version.outputs.version }}-${{ github.run_number }}" --title "Release v${{ steps.version.outputs.version }}-${{ github.run_number }}" --notes "Building Android APK and iOS IPA on EAS Cloud..." || echo "Release already exists"
 
-      - name: 🚀 Build Android
+      - name: 🚀 Build Android on EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EAS_TOKEN }}
         env:
           EAS_BUILD_NO_EXPO_GO_WARNING: "true"
-        run: eas build --platform android --non-interactive
+
+      - name: 📦 Build and Download APK
+        id: build_android
+        run: |
+          echo "Starting Android build..."
+          eas build --platform android --profile production --non-interactive --wait --json > build-output.json
+          
+          # Extract build ID and artifact URL
+          BUILD_ID=$(cat build-output.json | jq -r '.[0].id')
+          ARTIFACT_URL=$(cat build-output.json | jq -r '.[0].artifacts.buildUrl')
+          
+          echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
+          echo "artifact_url=$ARTIFACT_URL" >> $GITHUB_OUTPUT
+          echo "Android build completed: $BUILD_ID"
+          
+          # Download APK
+          echo "Downloading APK from EAS..."
+          curl -L -o app-release.apk "$ARTIFACT_URL"
+          ls -lh app-release.apk
+
+      - name: 📤 Upload APK to GitHub Release
+        if: steps.build_android.outputs.artifact_url != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "v${{ steps.version.outputs.version }}-${{ github.run_number }}" \
+            app-release.apk \
+            --clobber
 
       - name: 📦 Build Summary
         if: always()
-        run: echo "Build completed. Check EAS Dashboard at https://eas.dev"
+        run: |
+          echo "✅ Build completed!"
+          echo "📱 Build ID: ${{ steps.build_android.outputs.build_id }}"
+          echo "🔗 EAS Dashboard: https://expo.dev/accounts/$(whoami)/projects/aimo-app/builds/${{ steps.build_android.outputs.build_id }}"
+          echo "📦 Release: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}-${{ github.run_number }}"
