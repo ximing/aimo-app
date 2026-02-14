@@ -245,7 +245,7 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
         styles.cardContainer,
         {
           marginHorizontal: theme.spacing.md,
-          marginVertical: theme.spacing.xs,
+          marginVertical: theme.spacing.xs / 2,
         },
       ]}
       onPress={() => onPress?.(memo.memoId)}
