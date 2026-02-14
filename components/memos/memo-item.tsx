@@ -4,9 +4,12 @@
  * 同时保持性能优化
  */
 
+import { AttachmentGrid, ImageViewer, VideoPlayer } from "@/components/memos";
 import { useTheme } from "@/hooks/use-theme";
 import MemoService from "@/services/memo-service";
-import type { Memo, AttachmentDto } from "@/types/memo";
+import type { AttachmentDto, Memo } from "@/types/memo";
+import { getFileTypeFromMime } from "@/utils/attachment";
+import { showSuccess } from "@/utils/toast";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useService, view } from "@rabjs/react";
 import { useRouter } from "expo-router";
@@ -26,8 +29,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AttachmentGrid, ImageViewer, VideoPlayer } from "@/components/memos";
-import { getFileTypeFromMime } from "@/utils/attachment";
 
 // 启用 LayoutAnimation (Android 需要特殊处理)
 if (
@@ -53,7 +54,9 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [videoPlayerVisible, setVideoPlayerVisible] = useState(false);
-  const [selectedVideo, setSelectedVideo] = useState<AttachmentDto | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<AttachmentDto | null>(
+    null,
+  );
 
   // 动画值
   const slideAnim = useRef(new Animated.Value(300)).current;
@@ -194,7 +197,7 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
   const handleCopy = () => {
     setMenuVisible(false);
     Clipboard.setString(memo.content);
-    // TODO: 可以添加一个 Toast 提示
+    showSuccess("已复制到剪贴板");
   };
 
   // 格式化完整时间
@@ -215,11 +218,12 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
 
     if (fileType === "image") {
       // 图片：打开图片查看器
-      const imageAttachments = memo.attachments?.filter(
-        (att) => getFileTypeFromMime(att.type) === "image"
-      ) || [];
+      const imageAttachments =
+        memo.attachments?.filter(
+          (att) => getFileTypeFromMime(att.type) === "image",
+        ) || [];
       const imageIndex = imageAttachments.findIndex(
-        (att) => att.attachmentId === attachment.attachmentId
+        (att) => att.attachmentId === attachment.attachmentId,
       );
       setSelectedImageIndex(imageIndex >= 0 ? imageIndex : 0);
       setImageViewerVisible(true);
@@ -230,7 +234,7 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
     } else {
       // 其他文件类型：直接下载
       Linking.openURL(attachment.url).catch((err) =>
-        console.error("下载附件失败:", err)
+        console.error("下载附件失败:", err),
       );
     }
   };
@@ -616,9 +620,11 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
       {/* 图片查看器 */}
       <ImageViewer
         visible={imageViewerVisible}
-        images={memo.attachments?.filter(
-          (att) => getFileTypeFromMime(att.type) === "image"
-        ) || []}
+        images={
+          memo.attachments?.filter(
+            (att) => getFileTypeFromMime(att.type) === "image",
+          ) || []
+        }
         initialIndex={selectedImageIndex}
         onClose={() => setImageViewerVisible(false)}
       />
@@ -657,7 +663,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 8,
+    marginBottom: 2,
   },
   cardTitleContent: {
     flex: 1,
@@ -681,7 +687,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   cardFooter: {
-    paddingTop: 8,
+    paddingTop: 2,
   },
   metaInfo: {
     flexDirection: "row",
@@ -833,15 +839,15 @@ const styles = StyleSheet.create({
   },
   // 关联Memo样式
   relatedMemosContainer: {
-    marginTop: 8,
-    gap: 6,
+    marginTop: 2,
+    gap: 2,
   },
   relatedMemoItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: 4,
     paddingHorizontal: 0,
-    gap: 8,
+    gap: 6,
   },
   relatedMemoIcon: {
     flexShrink: 0,

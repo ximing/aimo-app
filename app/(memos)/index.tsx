@@ -12,6 +12,7 @@ import { useTheme } from "@/hooks/use-theme";
 import MemoService from "@/services/memo-service";
 import type { Memo } from "@/types/memo";
 import { bindServices, useService } from "@rabjs/react";
+import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -24,6 +25,7 @@ import {
 
 const MemosListContent = () => {
   const theme = useTheme();
+  const router = useRouter();
   const memoService = useService(MemoService);
   const [drawerVisible, setDrawerVisible] = useState(false);
 
@@ -46,9 +48,8 @@ const MemosListContent = () => {
 
   // 处理列表项点击
   const handleMemoPress = useCallback((memoId: string) => {
-    // TODO: 导航到详情页
-    console.log("选中 memo:", memoId);
-  }, []);
+    router.push(`/(memos)/${memoId}`);
+  }, [router]);
 
   // 渲染空状态
   const renderEmpty = () => (

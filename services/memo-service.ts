@@ -4,8 +4,13 @@
  */
 
 import { Service } from '@rabjs/react';
-import { getMemos as apiGetMemos, deleteMemo as apiDeleteMemo } from '@/api/memo';
-import type { Memo, ListMemosParams } from '@/types/memo';
+import { 
+  getMemos as apiGetMemos, 
+  deleteMemo as apiDeleteMemo,
+  getMemo as apiGetMemo,
+  getRelatedMemos as apiGetRelatedMemos
+} from '@/api/memo';
+import type { Memo, ListMemosParams, MemoWithSimilarity } from '@/types/memo';
 
 class MemoService extends Service {
   // 响应式属性
@@ -15,6 +20,12 @@ class MemoService extends Service {
   hasMore = true;
   currentPage = 1;
   pageSize = 20;
+  
+  // 详情页相关属性
+  currentMemo: Memo | null = null;
+  relatedMemos: MemoWithSimilarity[] = [];
+  detailLoading = false;
+  detailError: string | null = null;
 
   /**
    * 获取 memo 列表
@@ -82,6 +93,38 @@ class MemoService extends Service {
   }
 
   /**
+   * 获取 memo 详情及相关笔记
+   */
+  async fetchMemoDetail(memoId: string): Promise<void> {
+    this.detailLoading = true;
+    this.detailError = null;
+
+    try {
+      const [memo, relatedData] = await Promise.all([
+        apiGetMemo(memoId),
+        apiGetRelatedMemos(memoId, 10)
+      ]);
+
+      this.currentMemo = memo;
+      this.relatedMemos = relatedData.items;
+    } catch (err) {
+      this.detailError = err instanceof Error ? err.message : '获取 memo 详情失败';
+      throw err;
+    } finally {
+      this.detailLoading = false;
+    }
+  }
+
+  /**
+   * 清除详情页状态
+   */
+  clearDetail(): void {
+    this.currentMemo = null;
+    this.relatedMemos = [];
+    this.detailError = null;
+  }
+
+  /**
    * 清除错误信息
    */
   clearError(): void {
@@ -97,6 +140,7 @@ class MemoService extends Service {
     this.error = null;
     this.hasMore = true;
     this.currentPage = 1;
+    this.clearDetail();
   }
 }
 
