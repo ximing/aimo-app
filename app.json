@@ -9,11 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "bundleIdentifier": "com.aimo.app",
+      "bundleIdentifier": "com.delu.aimo",
       "supportsTablet": true
     },
     "android": {
-      "package": "com.aimo.app",
+      "package": "com.delu.aimo",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
