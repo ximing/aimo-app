@@ -27,6 +27,7 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EAS_TOKEN }}
+          packager: npm
 
       - name: Install dependencies
         run: npm install
