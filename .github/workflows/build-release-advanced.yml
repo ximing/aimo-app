@@ -46,8 +46,11 @@ jobs:
         run: |
           gh release create "v${{ steps.version.outputs.version }}-${{ github.run_number }}" --title "Release v${{ steps.version.outputs.version }}-${{ github.run_number }}" --notes "Building Android APK and iOS IPA on EAS Cloud..." || echo "Release already exists"
 
-      - name: 🚀 Build app (Android & iOS)
-        run: eas build --non-interactive
+      - name: 🚀 Build Android
+        run: eas build --platform android --non-interactive
+
+      - name: 🚀 Build iOS
+        run: eas build --platform ios --non-interactive
 
       - name: 📦 Build Summary
         if: always()
