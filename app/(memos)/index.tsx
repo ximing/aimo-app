@@ -20,14 +20,18 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 
 const MemosListContent = () => {
   const theme = useTheme();
   const router = useRouter();
   const memoService = useService(MemoService);
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const [showScrollToTop, setShowScrollToTop] = useState(false);
+  const flatListRef = React.useRef<FlatList>(null);
 
   // 初始化加载列表
   useEffect(() => {
@@ -45,6 +49,18 @@ const MemosListContent = () => {
       memoService.loadNextPage();
     }
   }, [memoService]);
+
+  // 处理滚动事件
+  const handleScroll = useCallback((event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    // 滚动距离超过 300 像素时显示回到顶部按钮
+    setShowScrollToTop(offsetY > 300);
+  }, []);
+
+  // 回到顶部
+  const handleScrollToTop = useCallback(() => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, []);
 
   // 处理列表项点击
   const handleMemoPress = useCallback(
@@ -80,14 +96,21 @@ const MemosListContent = () => {
 
   // 渲染页脚（加载更多指示器）
   const renderFooter = () => {
-    if (!memoService.loading || memoService.memos.length === 0) {
+    // 只在有列表项且正在加载时显示
+    if (memoService.memos.length === 0) {
       return null;
     }
-    return (
-      <View style={styles.footer}>
-        <ActivityIndicator color={theme.colors.info} />
-      </View>
-    );
+    
+    // 只在加载更多时显示（不是初始加载）
+    if (memoService.loading && memoService.currentPage > 1) {
+      return (
+        <View style={styles.footer}>
+          <ActivityIndicator color={theme.colors.info} />
+        </View>
+      );
+    }
+    
+    return null;
   };
 
   return (
@@ -105,6 +128,7 @@ const MemosListContent = () => {
 
       {/* 列表 */}
       <FlatList
+        ref={flatListRef}
         data={memoService.memos}
         renderItem={renderItem}
         keyExtractor={(item) => item.memoId}
@@ -112,16 +136,32 @@ const MemosListContent = () => {
         ListFooterComponent={renderFooter}
         refreshControl={
           <RefreshControl
-            refreshing={memoService.loading && memoService.memos.length > 0}
+            refreshing={memoService.loading && memoService.currentPage === 1}
             onRefresh={handleRefresh}
             tintColor={theme.colors.info}
           />
         }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
         scrollEnabled={true}
         contentContainerStyle={{ paddingBottom: 20 }}
       />
+
+      {/* 回到顶部按钮 */}
+      {showScrollToTop && (
+        <TouchableOpacity
+          style={[
+            styles.scrollToTopButton,
+            { backgroundColor: theme.colors.primary },
+          ]}
+          onPress={handleScrollToTop}
+          activeOpacity={0.8}
+        >
+          <MaterialIcons name="arrow-upward" size={24} color="#fff" />
+        </TouchableOpacity>
+      )}
 
       {/* 底部悬浮操作栏 */}
       <FloatingActionBar />
@@ -180,5 +220,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
     color: "#fff", // 错误文本用白色显示在错误背景上
+  },
+  // 回到顶部按钮
+  scrollToTopButton: {
+    position: "absolute",
+    bottom: 100,
+    right: 16,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    zIndex: 100,
   },
 });

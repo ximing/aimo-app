@@ -461,7 +461,7 @@ const MemoDetailContent = view(() => {
             <Text
               style={[
                 styles.contentText,
-                { color: theme.colors.foregroundSecondary },
+                { color: theme.colors.foreground },
               ]}
             >
               {memo.content}
@@ -613,15 +613,15 @@ const MemoDetailContent = view(() => {
                   activeOpacity={0.7}
                 >
                   <View style={styles.relatedMemoContent}>
-                    <Text
-                      style={[
-                        styles.relatedMemoText,
-                        { color: theme.colors.foregroundSecondary },
-                      ]}
-                      numberOfLines={2}
-                    >
-                      {relatedMemo.content}
-                    </Text>
+                  <Text
+                       style={[
+                         styles.relatedMemoText,
+                         { color: theme.colors.foregroundQuaternary },
+                       ]}
+                       numberOfLines={2}
+                     >
+                       {relatedMemo.content}
+                     </Text>
                     {relatedMemo.similarity && (
                       <View style={styles.similarityBadge}>
                         <Text

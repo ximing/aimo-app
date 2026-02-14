@@ -266,7 +266,7 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
               <Text
                 style={[
                   styles.text,
-                  { color: theme.colors.foregroundSecondary },
+                  { color: theme.colors.foreground },
                 ]}
               >
                 {contentDisplay.text}
@@ -338,7 +338,7 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
                 <Text
                   style={[
                     styles.relatedMemoText,
-                    { color: theme.colors.relatedMemo },
+                    { color: theme.colors.foregroundQuaternary },
                   ]}
                   numberOfLines={1}
                 >

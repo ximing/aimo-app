@@ -30,6 +30,7 @@ export const Colors = {
     foreground: '#111827',
     foregroundSecondary: '#6b7280',
     foregroundTertiary: '#9ca3af',
+    foregroundQuaternary: '#4b5563', // 次要文本（介于主文字和次文字之间）
     
     // 卡片（白色，与背景形成对比）
     card: '#ffffff',
@@ -95,6 +96,7 @@ export const Colors = {
     foreground: '#fafafa',
     foregroundSecondary: '#a1a1aa',
     foregroundTertiary: '#71717a',
+    foregroundQuaternary: '#c9c9d2', // 次要文本（介于主文字和次文字之间）
     
     // 卡片（深卡片色，与背景形成对比）
     card: '#262626',
