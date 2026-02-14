@@ -10,10 +10,22 @@
       "channel": "development"
     },
     "preview": {
+      "android": {
+        "credentialsSource": "remote"
+      },
+      "ios": {
+        "credentialsSource": "remote"
+      },
       "distribution": "internal",
       "channel": "preview"
     },
     "production": {
+      "android": {
+        "credentialsSource": "remote"
+      },
+      "ios": {
+        "credentialsSource": "remote"
+      },
       "autoIncrement": true,
       "channel": "production"
     }
