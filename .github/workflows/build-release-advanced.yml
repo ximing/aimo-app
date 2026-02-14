@@ -1,0 +1,206 @@
+name: Build and Release (Advanced EAS)
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EAS_TOKEN }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Get version from package.json
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Create release info
+        id: release_info
+        run: |
+          TAG="v${{ steps.version.outputs.version }}-${{ github.run_number }}"
+          TIMESTAMP=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          COMMIT_SHA=${{ github.sha }}
+          COMMIT_MSG=$(git log --oneline -1)
+          
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+          echo "commit_sha=${COMMIT_SHA:0:7}" >> $GITHUB_OUTPUT
+          echo "commit_msg=$COMMIT_MSG" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        run: |
+          RELEASE_NOTES="# Release ${{ steps.release_info.outputs.tag }}
+          
+          **Build Information:**
+          - Build Date: ${{ steps.release_info.outputs.timestamp }}
+          - Commit: ${{ steps.release_info.outputs.commit_sha }}
+          - Message: ${{ steps.release_info.outputs.commit_msg }}
+          
+          ## Build Artifacts
+          
+          - **Android APK**: Building with EAS...
+          - **iOS IPA**: Building with EAS...
+          
+          Built with [Expo](https://expo.dev) and [EAS Build](https://eas.dev)"
+          
+          gh release create "${{ steps.release_info.outputs.tag }}" \
+            --title "Release ${{ steps.release_info.outputs.tag }}" \
+            --notes "$RELEASE_NOTES" \
+            || echo "Release already exists, updating..."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Android with EAS
+        id: android_build
+        run: |
+          echo "Starting Android build with EAS..."
+          BUILD_ID=$(eas build \
+            --platform android \
+            --non-interactive \
+            --json 2>/dev/null | jq -r '.builds[0].id' || echo "")
+          
+          if [ -n "$BUILD_ID" ]; then
+            echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
+            echo "Android build initiated: $BUILD_ID"
+          else
+            echo "Failed to get build ID"
+          fi
+
+      - name: Build iOS with EAS
+        id: ios_build
+        run: |
+          echo "Starting iOS build with EAS..."
+          BUILD_ID=$(eas build \
+            --platform ios \
+            --non-interactive \
+            --json 2>/dev/null | jq -r '.builds[0].id' || echo "")
+          
+          if [ -n "$BUILD_ID" ]; then
+            echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
+            echo "iOS build initiated: $BUILD_ID"
+          else
+            echo "Failed to get build ID"
+          fi
+
+      - name: Wait and download Android artifact
+        if: steps.android_build.outputs.build_id != ''
+        id: android_artifact
+        continue-on-error: true
+        run: |
+          BUILD_ID="${{ steps.android_build.outputs.build_id }}"
+          echo "Waiting for Android build: $BUILD_ID"
+          
+          # Wait for build with timeout (max 60 minutes)
+          for i in {1..120}; do
+            STATUS=$(eas build:view "$BUILD_ID" --json 2>/dev/null | jq -r '.status' || echo "")
+            
+            if [ "$STATUS" = "FINISHED" ]; then
+              echo "Android build finished"
+              # Download artifact
+              eas build:view "$BUILD_ID" --json 2>/dev/null | jq -r '.artifacts.buildUrl' > android_url.txt
+              URL=$(cat android_url.txt)
+              if [ -n "$URL" ] && [ "$URL" != "null" ]; then
+                echo "Downloading APK from: $URL"
+                curl -L "$URL" -o "app-android.apk" || echo "Download failed"
+                if [ -f "app-android.apk" ]; then
+                  echo "artifact_path=app-android.apk" >> $GITHUB_OUTPUT
+                fi
+              fi
+              break
+            elif [ "$STATUS" = "ERRORED" ]; then
+              echo "Android build failed"
+              break
+            fi
+            
+            echo "Build status: $STATUS (attempt $i/120)"
+            sleep 30
+          done
+
+      - name: Wait and download iOS artifact
+        if: steps.ios_build.outputs.build_id != ''
+        id: ios_artifact
+        continue-on-error: true
+        run: |
+          BUILD_ID="${{ steps.ios_build.outputs.build_id }}"
+          echo "Waiting for iOS build: $BUILD_ID"
+          
+          # Wait for build with timeout (max 60 minutes)
+          for i in {1..120}; do
+            STATUS=$(eas build:view "$BUILD_ID" --json 2>/dev/null | jq -r '.status' || echo "")
+            
+            if [ "$STATUS" = "FINISHED" ]; then
+              echo "iOS build finished"
+              # Download artifact
+              eas build:view "$BUILD_ID" --json 2>/dev/null | jq -r '.artifacts.buildUrl' > ios_url.txt
+              URL=$(cat ios_url.txt)
+              if [ -n "$URL" ] && [ "$URL" != "null" ]; then
+                echo "Downloading IPA from: $URL"
+                curl -L "$URL" -o "app-ios.ipa" || echo "Download failed"
+                if [ -f "app-ios.ipa" ]; then
+                  echo "artifact_path=app-ios.ipa" >> $GITHUB_OUTPUT
+                fi
+              fi
+              break
+            elif [ "$STATUS" = "ERRORED" ]; then
+              echo "iOS build failed"
+              break
+            fi
+            
+            echo "Build status: $STATUS (attempt $i/120)"
+            sleep 30
+          done
+
+      - name: Upload Android APK to Release
+        if: steps.android_artifact.outputs.artifact_path != ''
+        run: |
+          gh release upload ${{ steps.release_info.outputs.tag }} \
+            ${{ steps.android_artifact.outputs.artifact_path }} \
+            --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload iOS IPA to Release
+        if: steps.ios_artifact.outputs.artifact_path != ''
+        run: |
+          gh release upload ${{ steps.release_info.outputs.tag }} \
+            ${{ steps.ios_artifact.outputs.artifact_path }} \
+            --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Summary
+        if: always()
+        run: |
+          echo "=== Build Summary ==="
+          echo "Release: ${{ steps.release_info.outputs.tag }}"
+          echo "Commit: ${{ steps.release_info.outputs.commit_sha }}"
+          echo "Timestamp: ${{ steps.release_info.outputs.timestamp }}"
+          echo ""
+          echo "Android Build ID: ${{ steps.android_build.outputs.build_id || 'N/A' }}"
+          echo "Android Artifact: ${{ steps.android_artifact.outputs.artifact_path || 'Not available' }}"
+          echo ""
+          echo "iOS Build ID: ${{ steps.ios_build.outputs.build_id || 'N/A' }}"
+          echo "iOS Artifact: ${{ steps.ios_artifact.outputs.artifact_path || 'Not available' }}"
+          echo ""
+          echo "View release: https://github.com/${{ github.repository }}/releases/tag/${{ steps.release_info.outputs.tag }}"

@@ -1,0 +1,169 @@
+name: Build and Release (Local Build)
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: "temurin"
+          java-version: "11"
+          cache: "gradle"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Get version info
+        id: version_info
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v${VERSION}-${{ github.run_number }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Build Android APK
+        id: build_android
+        continue-on-error: true
+        run: |
+          echo "Building Android APK..."
+          npx expo prebuild --clean --platform android --no-install || true
+
+          cd android
+          ./gradlew assembleRelease || (
+            echo "Release build failed, trying debug build..."
+            ./gradlew assembleDebug
+          )
+          cd ..
+
+          # Find APK file
+          APK=$(find android -name "*.apk" -type f | head -1)
+          if [ -n "$APK" ]; then
+            echo "apk_path=$APK" >> $GITHUB_OUTPUT
+            echo "Android APK built successfully: $APK"
+          fi
+
+      - name: Create or Update Release
+        id: create_release
+        run: |
+          TAG="${{ steps.version_info.outputs.tag }}"
+
+          if gh release view "$TAG" &>/dev/null; then
+            echo "Release $TAG already exists"
+            echo "release_created=false" >> $GITHUB_OUTPUT
+          else
+            gh release create "$TAG" \
+              --title "Release $TAG" \
+              --notes "Automated release for build ${{ github.run_number }}"
+            echo "release_created=true" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Android APK
+        if: steps.build_android.outputs.apk_path != ''
+        run: |
+          gh release upload ${{ steps.version_info.outputs.tag }} \
+            "${{ steps.build_android.outputs.apk_path }}" \
+            --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-ios:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Get version info
+        id: version_info
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v${VERSION}-${{ github.run_number }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Build iOS IPA
+        id: build_ios
+        continue-on-error: true
+        run: |
+          echo "Building iOS IPA..."
+          npx expo prebuild --clean --platform ios --no-install || true
+
+          cd ios
+          xcodebuild -workspace aimo_app.xcworkspace \
+            -scheme aimo_app \
+            -configuration Release \
+            -derivedDataPath build \
+            -archivePath build/aimo_app.xcarchive \
+            archive || (
+            echo "Archive failed, attempting alternative build..."
+            xcodebuild -workspace aimo_app.xcworkspace \
+              -scheme aimo_app \
+              -configuration Debug \
+              -derivedDataPath build \
+              -archivePath build/aimo_app.xcarchive \
+              archive
+          )
+
+          # Export IPA
+          xcodebuild -exportArchive \
+            -archivePath build/aimo_app.xcarchive \
+            -exportOptionsPlist ../ios-export-options.plist \
+            -exportPath build/ipa || echo "IPA export skipped"
+
+          cd ..
+
+          # Find IPA file
+          IPA=$(find . -name "*.ipa" -type f | head -1)
+          if [ -n "$IPA" ]; then
+            echo "ipa_path=$IPA" >> $GITHUB_OUTPUT
+            echo "iOS IPA built successfully: $IPA"
+          fi
+
+      - name: Upload iOS IPA
+        if: steps.build_ios.outputs.ipa_path != ''
+        run: |
+          gh release upload ${{ steps.version_info.outputs.tag }} \
+            "${{ steps.build_ios.outputs.ipa_path }}" \
+            --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
