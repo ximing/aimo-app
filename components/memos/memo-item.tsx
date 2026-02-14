@@ -186,10 +186,7 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
   // 处理复制
   const handleCopy = () => {
     setMenuVisible(false);
-    const copyText = memo.title
-      ? `${memo.title}\n\n${memo.content}`
-      : memo.content;
-    Clipboard.setString(copyText);
+    Clipboard.setString(memo.content);
     // TODO: 可以添加一个 Toast 提示
   };
 
@@ -225,17 +222,9 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
           },
         ]}
       >
-        {/* 卡片头部 - 只有标题和内容 */}
+        {/* 卡片头部 - 内容部分 */}
         <View style={styles.cardHeader}>
           <View style={styles.cardTitleContent}>
-            {memo.title && (
-              <Text
-                style={[styles.title, { color: theme.colors.foreground }]}
-                numberOfLines={2}
-              >
-                {memo.title}
-              </Text>
-            )}
             <View style={styles.contentWrapper}>
               <Text
                 style={[
@@ -283,6 +272,36 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
           </View>
         </View>
 
+        {/* 关联Memo列表 - 在内容和页脚之间 */}
+        {memo.relations && memo.relations.length > 0 && (
+          <View style={styles.relatedMemosContainer}>
+            {memo.relations.slice(0, 5).map((relatedMemo) => (
+              <TouchableOpacity
+                key={relatedMemo.memoId}
+                style={styles.relatedMemoItem}
+                onPress={() => onPress?.(relatedMemo.memoId)}
+                activeOpacity={0.7}
+              >
+                <MaterialIcons
+                  name="link"
+                  size={16}
+                  color={theme.colors.relatedMemo}
+                  style={styles.relatedMemoIcon}
+                />
+                <Text
+                  style={[
+                    styles.relatedMemoText,
+                    { color: theme.colors.relatedMemo },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {relatedMemo.content.substring(0, 50)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
         {/* 卡片页脚 - 时间和更多按钮放在一排 */}
         <View style={styles.cardFooter}>
           <View style={styles.metaInfo}>
@@ -296,7 +315,7 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
                 {formatDate(memo.updatedAt)}
               </Text>
 
-              {memo.attachments.length > 0 && (
+              {memo.attachments && memo.attachments.length > 0 && (
                 <View style={styles.attachmentBadge}>
                   <MaterialIcons
                     name="attach-file"
@@ -583,12 +602,6 @@ const styles = StyleSheet.create({
   moreButton: {
     padding: 4,
   },
-  title: {
-    fontSize: 15,
-    fontWeight: "600",
-    marginBottom: 6,
-    lineHeight: 20,
-  },
   text: {
     fontSize: 13,
     lineHeight: 18,
@@ -749,5 +762,25 @@ const styles = StyleSheet.create({
   confirmButtonText: {
     fontSize: 16,
     fontWeight: "600",
+  },
+  // 关联Memo样式
+  relatedMemosContainer: {
+    marginTop: 8,
+    gap: 6,
+  },
+  relatedMemoItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 0,
+    gap: 8,
+  },
+  relatedMemoIcon: {
+    flexShrink: 0,
+  },
+  relatedMemoText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
   },
 });

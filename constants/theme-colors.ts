@@ -75,6 +75,9 @@ export const Colors = {
     overlay: 'rgba(0, 0, 0, 0.5)',
     overlayLight: 'rgba(0, 0, 0, 0.3)',
     
+    // 关联Memo（无背景，使用浅灰色文字做区分）
+    relatedMemo: '#9ca3af', // 浅灰色，与主内容文字有区分
+    
     // 阴影（React Native 用于 elevation）
     shadow: '#000000',
   },
@@ -136,6 +139,9 @@ export const Colors = {
     // 覆盖层
     overlay: 'rgba(0, 0, 0, 0.7)',
     overlayLight: 'rgba(0, 0, 0, 0.5)',
+    
+    // 关联Memo（无背景，使用浅灰色文字做区分）
+    relatedMemo: '#71717a', // 浅灰色，与主内容文字有区分
     
     // 阴影
     shadow: '#000000',
