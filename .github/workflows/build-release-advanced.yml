@@ -28,6 +28,7 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EAS_TOKEN }}
           packager: npm
+          eas-cache: false
 
       - name: Install dependencies
         run: npm install
@@ -72,36 +73,69 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Verify EAS authentication
+        run: |
+          echo "Checking EAS authentication..."
+          eas whoami || echo "Not authenticated"
+          
+          echo ""
+          echo "=== Diagnostic Information ==="
+          echo "EAS CLI version:"
+          eas --version || true
+          echo ""
+          echo "Project configuration:"
+          eas config || true
+
       - name: Build Android with EAS
         id: android_build
+        continue-on-error: true
         run: |
           echo "Starting Android build with EAS..."
-          BUILD_ID=$(eas build \
+          
+          # Run build and capture full output
+          BUILD_OUTPUT=$(eas build \
             --platform android \
             --non-interactive \
-            --json 2>/dev/null | jq -r '.builds[0].id' || echo "")
+            --json 2>&1)
+          
+          echo "Build output:"
+          echo "$BUILD_OUTPUT"
+          
+          # Extract build ID from JSON response
+          BUILD_ID=$(echo "$BUILD_OUTPUT" | jq -r '.builds[0].id // empty' 2>/dev/null || echo "")
           
           if [ -n "$BUILD_ID" ]; then
             echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
             echo "Android build initiated: $BUILD_ID"
           else
-            echo "Failed to get build ID"
+            echo "Failed to get build ID from response"
+            echo "Full response: $BUILD_OUTPUT"
           fi
 
       - name: Build iOS with EAS
         id: ios_build
+        continue-on-error: true
         run: |
           echo "Starting iOS build with EAS..."
-          BUILD_ID=$(eas build \
+          
+          # Run build and capture full output
+          BUILD_OUTPUT=$(eas build \
             --platform ios \
             --non-interactive \
-            --json 2>/dev/null | jq -r '.builds[0].id' || echo "")
+            --json 2>&1)
+          
+          echo "Build output:"
+          echo "$BUILD_OUTPUT"
+          
+          # Extract build ID from JSON response
+          BUILD_ID=$(echo "$BUILD_OUTPUT" | jq -r '.builds[0].id // empty' 2>/dev/null || echo "")
           
           if [ -n "$BUILD_ID" ]; then
             echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
             echo "iOS build initiated: $BUILD_ID"
           else
-            echo "Failed to get build ID"
+            echo "Failed to get build ID from response"
+            echo "Full response: $BUILD_OUTPUT"
           fi
 
       - name: Wait and download Android artifact
