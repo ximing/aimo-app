@@ -4,17 +4,25 @@
  * 同时保持性能优化
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { view } from '@rabjs/react';
 import { useTheme } from '@/hooks/use-theme';
 import type { Memo } from '@/types/memo';
+
+// 启用 LayoutAnimation (Android 需要特殊处理)
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 interface MemoItemProps {
   memo: Memo;
@@ -23,6 +31,7 @@ interface MemoItemProps {
 
 const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
   const theme = useTheme();
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // 格式化时间显示
   const formatDate = (timestamp: number): string => {
@@ -45,13 +54,50 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
     }
   };
 
-  // 截断内容显示
-  const truncateContent = (content: string, maxLength: number = 100): string => {
-    if (content.length > maxLength) {
-      return content.substring(0, maxLength) + '...';
-    }
-    return content;
+  // 处理展开/收起动画
+  const toggleExpanded = (e: any) => {
+    e.stopPropagation?.();
+    
+    // 使用 LayoutAnimation 实现平滑过渡
+    LayoutAnimation.configureNext(
+      LayoutAnimation.create(
+        200,
+        LayoutAnimation.Types.easeInEaseOut,
+        LayoutAnimation.Properties.opacity,
+      ),
+    );
+    
+    setIsExpanded(!isExpanded);
   };
+
+  // 计算是否需要截断（超过150个字符）
+  const getContentDisplay = () => {
+    const contentLength = memo.content.length;
+    const shouldTruncate = contentLength > 150;
+    
+    if (isExpanded) {
+      return {
+        text: memo.content,
+        shouldTruncate,
+      };
+    }
+    
+    if (shouldTruncate) {
+      // 截断到150个字符
+      const truncatedContent = memo.content.substring(0, 150);
+      return {
+        text: truncatedContent,
+        shouldTruncate: true,
+      };
+    }
+    
+    return {
+      text: memo.content,
+      shouldTruncate: false,
+    };
+  };
+
+  const contentDisplay = getContentDisplay();
 
   return (
     <TouchableOpacity
@@ -65,7 +111,7 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
           backgroundColor: theme.colors.card,
         }
       ]}>
-        {/* 卡片头部 */}
+        {/* 卡片头部 - 只有标题和内容 */}
         <View style={styles.cardHeader}>
           <View style={styles.cardTitleContent}>
             {memo.title && (
@@ -76,38 +122,71 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
                 {memo.title}
               </Text>
             )}
-            <Text
-              style={[
-                styles.text,
-                { color: theme.colors.foregroundSecondary },
-              ]}
-              numberOfLines={3}
-            >
-              {truncateContent(memo.content, 150)}
-            </Text>
+            <View style={styles.contentWrapper}>
+              <Text
+                style={[
+                  styles.text,
+                  { color: theme.colors.foregroundSecondary },
+                ]}
+              >
+                {contentDisplay.text}
+                {!isExpanded && contentDisplay.shouldTruncate && (
+                  <>
+                    <Text style={[styles.expandText, { color: theme.colors.primary }]}>...</Text>
+                    <Text
+                      onPress={toggleExpanded}
+                      style={[
+                        styles.expandText,
+                        { color: theme.colors.primary },
+                      ]}
+                    >
+                      展开
+                    </Text>
+                  </>
+                )}
+              </Text>
+              {isExpanded && contentDisplay.shouldTruncate && (
+                <TouchableOpacity 
+                  onPress={toggleExpanded}
+                  activeOpacity={0.7}
+                  style={styles.collapseButton}
+                >
+                  <Text
+                    style={[
+                      styles.expandText,
+                      { color: theme.colors.primary },
+                    ]}
+                  >
+                    收起
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
-
-          {/* 右侧菜单按钮 */}
-          <TouchableOpacity style={styles.moreButton}>
-            <MaterialIcons name="more-vert" size={20} color={theme.colors.foregroundSecondary} />
-          </TouchableOpacity>
         </View>
 
-        {/* 卡片页脚 */}
+        {/* 卡片页脚 - 时间和更多按钮放在一排 */}
         <View style={styles.cardFooter}>
           <View style={styles.metaInfo}>
-            <Text style={[styles.date, { color: theme.colors.foregroundTertiary }]}>
-              {formatDate(memo.updatedAt)}
-            </Text>
+            <View style={styles.leftMeta}>
+              <Text style={[styles.date, { color: theme.colors.foregroundTertiary }]}>
+                {formatDate(memo.updatedAt)}
+              </Text>
 
-            {memo.attachments.length > 0 && (
-              <View style={styles.attachmentBadge}>
-                <MaterialIcons name="attach-file" size={12} color={theme.colors.info} />
-                <Text style={[styles.attachmentCount, { color: theme.colors.info }]}>
-                  {memo.attachments.length}
-                </Text>
-              </View>
-            )}
+              {memo.attachments.length > 0 && (
+                <View style={styles.attachmentBadge}>
+                  <MaterialIcons name="attach-file" size={12} color={theme.colors.info} />
+                  <Text style={[styles.attachmentCount, { color: theme.colors.info }]}>
+                    {memo.attachments.length}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* 右侧菜单按钮 */}
+            <TouchableOpacity style={styles.moreButton}>
+              <MaterialIcons name="more-horiz" size={20} color={theme.colors.foregroundSecondary} />
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -140,11 +219,9 @@ const styles = StyleSheet.create({
   },
   cardTitleContent: {
     flex: 1,
-    marginRight: 8,
   },
   moreButton: {
     padding: 4,
-    marginTop: -4,
   },
   title: {
     fontSize: 15,
@@ -156,6 +233,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
+  contentWrapper: {
+    flex: 1,
+  },
+  expandText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+  collapseButton: {
+    marginTop: 6,
+  },
   cardFooter: {
     paddingTop: 8,
   },
@@ -163,6 +251,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  leftMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   date: {
     fontSize: 12,
