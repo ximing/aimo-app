@@ -1,7 +1,8 @@
 {
   "name": "aimo-app",
-  "main": "expo-router/entry",
   "version": "1.0.0",
+  "description": "一款简洁、高效的跨平台备忘录应用，支持富媒体记录、智能搜索和分类管理，帮助你随时随地记录生活中的点滴灵感与重要事项。",
+  "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
