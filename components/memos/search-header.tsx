@@ -64,10 +64,6 @@ export const SearchHeader = view(({ onDrawerToggle }: SearchHeaderProps) => {
           />
           <MaterialIcons name="mic" size={18} color={theme.colors.info} />
         </View>
-
-        <TouchableOpacity style={styles.giftButton}>
-          <MaterialIcons name="card-giftcard" size={24} color={theme.colors.foreground} />
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -101,8 +97,5 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     fontSize: 14,
     paddingVertical: 0,
-  },
-  giftButton: {
-    padding: 8,
   },
 });

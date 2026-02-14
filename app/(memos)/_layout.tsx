@@ -19,6 +19,13 @@ export default function MemosLayout() {
         }}
       />
       <Stack.Screen
+        name="[id]"
+        options={{
+          headerShown: false,
+          presentation: "card",
+        }}
+      />
+      <Stack.Screen
         name="create"
         options={{
           headerShown: false,

@@ -11,6 +11,7 @@ import "react-native-reanimated";
 
 import { getTokenAsync, onUnauthorized } from "@/api/common";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { Toast } from "@/components/ui/toast";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import AuthService from "@/services/auth-service";
 import MemoService from "@/services/memo-service";
@@ -105,6 +106,7 @@ const Layout = view(() => {
             options={{ presentation: "modal" }}
           />
         </Stack>
+        <Toast />
         <StatusBar style="auto" />
       </ErrorBoundary>
     </ThemeProvider>

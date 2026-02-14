@@ -19,6 +19,7 @@ export interface PaginatedResponse<T = any> {
   total: number;
   page: number;
   limit: number;
+  totalPages: number;
 }
 
 /**

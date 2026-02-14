@@ -4,16 +4,16 @@
  */
 
 import { uploadAttachment } from "@/api/attachment";
-import { createMemo } from "@/api/memo";
-import { MediaPicker } from "@/components/memos/media-picker";
+import { createMemo, updateMemo } from "@/api/memo";
 import { MediaPreview } from "@/components/memos/media-preview";
 import { useMediaPicker } from "@/hooks/use-media-picker";
 import { useTheme } from "@/hooks/use-theme";
+import { showSuccess, showError } from "@/utils/toast";
 import MemoService from "@/services/memo-service";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useService, view } from "@rabjs/react";
-import { useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import React, { useCallback, useState, useEffect } from "react";
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
@@ -32,6 +32,7 @@ const CreateMemoContent = view(() => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const memoService = useService(MemoService);
+  const { memoId: queryMemoId } = useLocalSearchParams<{ memoId: string }>();
   const {
     selectedMedia,
     loading: mediaLoading,
@@ -47,6 +48,42 @@ const CreateMemoContent = view(() => {
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  // 初始化加载编辑数据
+  useEffect(() => {
+    const initEditData = async () => {
+      if (queryMemoId) {
+        setIsLoading(true);
+        try {
+          // 从 Service 获取已缓存的数据或直接调用 API
+          const memo = memoService.currentMemo;
+          if (memo && memo.memoId === queryMemoId) {
+            // 使用已缓存的数据
+            setContent(memo.content);
+            setIsEditMode(true);
+          } else {
+            // 需要重新加载数据
+            await memoService.fetchMemoDetail(queryMemoId);
+            const freshMemo = memoService.currentMemo;
+            if (freshMemo) {
+              setContent(freshMemo.content);
+              setIsEditMode(true);
+            }
+          }
+        } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : "加载数据失败";
+          setError(errorMsg);
+          console.error("Failed to load memo:", err);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    initEditData();
+  }, [queryMemoId, memoService]);
 
   // 处理返回
   const handleGoBack = useCallback(() => {
@@ -78,27 +115,44 @@ const CreateMemoContent = view(() => {
       // 构建 memo 内容
       const memoContent = content.trim();
 
-      // 创建 Memo - 严格按照 CreateMemoRequest 接口
-      const memo = await createMemo({
-        content: memoContent,
-        attachments: attachmentIds.length > 0 ? attachmentIds : undefined,
-      });
+      if (isEditMode && queryMemoId) {
+        // 编辑模式
+        const memo = await updateMemo(queryMemoId, {
+          content: memoContent,
+          attachments: attachmentIds.length > 0 ? attachmentIds : undefined,
+        });
 
-      console.log("Memo created:", memo);
+        console.log("Memo updated:", memo);
+        showSuccess("编辑成功");
 
-      // 刷新列表
-      await memoService.refreshMemos();
+        // 刷新列表和详情
+        await memoService.refreshMemos();
+        await memoService.fetchMemoDetail(queryMemoId);
+      } else {
+        // 创建模式
+        const memo = await createMemo({
+          content: memoContent,
+          attachments: attachmentIds.length > 0 ? attachmentIds : undefined,
+        });
 
-      // 返回列表
+        console.log("Memo created:", memo);
+        showSuccess("创建成功");
+
+        // 刷新列表
+        await memoService.refreshMemos();
+      }
+
+      // 返回
       router.back();
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "创建失败";
+      const errorMsg = err instanceof Error ? err.message : isEditMode ? "编辑失败" : "创建失败";
       setError(errorMsg);
-      console.error("Failed to create memo:", err);
+      showError(errorMsg);
+      console.error(isEditMode ? "Failed to update memo:" : "Failed to create memo:", err);
     } finally {
       setSubmitting(false);
     }
-  }, [content, selectedMedia, router, memoService]);
+  }, [content, selectedMedia, router, memoService, isEditMode, queryMemoId]);
 
   // 处理清空
   const handleClear = useCallback(() => {
@@ -106,6 +160,23 @@ const CreateMemoContent = view(() => {
     clearMedia();
     setError(null);
   }, [clearMedia]);
+
+  if (isLoading && isEditMode) {
+    return (
+      <View
+        style={[
+          styles.container,
+          {
+            backgroundColor: theme.colors.background,
+            justifyContent: "center",
+            alignItems: "center",
+          },
+        ]}
+      >
+        <ActivityIndicator size="large" color={theme.colors.info} />
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -136,7 +207,7 @@ const CreateMemoContent = view(() => {
         </TouchableOpacity>
 
         <Text style={[styles.headerTitle, { color: theme.colors.foreground }]}>
-          新建备忘录
+          {isEditMode ? "编辑备忘录" : "新建备忘录"}
         </Text>
 
         <TouchableOpacity
@@ -156,105 +227,143 @@ const CreateMemoContent = view(() => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        keyboardShouldPersistTaps="handled"
+      {/* 内容输入区域 - 铺满中间区域 */}
+      <View
+        style={[
+          styles.inputSection,
+          {
+            flex: 1,
+            backgroundColor: theme.colors.card,
+            borderBottomColor: theme.colors.border,
+          },
+        ]}
       >
-        {/* 内容输入 */}
-        <View
+        <TextInput
           style={[
-            styles.inputSection,
-            styles.contentSection,
+            styles.contentInput,
             {
-              backgroundColor: theme.colors.card,
-              borderBottomColor: theme.colors.border,
+              flex: 1,
+              color: content
+                ? theme.colors.foreground
+                : theme.colors.foregroundTertiary,
             },
           ]}
+          placeholder="输入内容..."
+          placeholderTextColor={theme.colors.foregroundTertiary}
+          onChangeText={setContent}
+          value={content}
+          multiline
+          scrollEnabled
+        />
+      </View>
+
+      {/* 媒体预览 */}
+      {selectedMedia.length > 0 && (
+        <View
+          style={{
+            backgroundColor: theme.colors.background,
+            borderTopColor: theme.colors.border,
+            borderTopWidth: 1,
+          }}
         >
-          <TextInput
-            style={[
-              styles.contentInput,
-              {
-                color: content
-                  ? theme.colors.foreground
-                  : theme.colors.foregroundTertiary,
-              },
-            ]}
-            placeholder="输入内容..."
-            placeholderTextColor={theme.colors.foregroundTertiary}
-            onChangeText={setContent}
-            value={content}
-            multiline
-            numberOfLines={10}
-          />
-        </View>
-
-        {/* 媒体预览 */}
-        {selectedMedia.length > 0 && (
           <MediaPreview media={selectedMedia} onRemove={removeMedia} />
-        )}
+        </View>
+      )}
 
-        {/* 错误信息 */}
-        {(error || mediaError) && (
-          <View
-            style={[
-              styles.errorContainer,
-              { backgroundColor: theme.colors.destructive },
-            ]}
+      {/* 错误信息 */}
+      {(error || mediaError) && (
+        <View
+          style={[
+            styles.errorContainer,
+            { backgroundColor: theme.colors.destructive },
+          ]}
+        >
+          <MaterialIcons name="error" size={18} color="#fff" />
+          <Text style={styles.errorText}>{error || mediaError}</Text>
+          <TouchableOpacity
+            onPress={() => {
+              setError(null);
+              clearMediaError();
+            }}
           >
-            <MaterialIcons name="error" size={18} color="#fff" />
-            <Text style={styles.errorText}>{error || mediaError}</Text>
-            <TouchableOpacity
-              onPress={() => {
-                setError(null);
-                clearMediaError();
-              }}
-            >
-              <MaterialIcons name="close" size={18} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        )}
-      </ScrollView>
+            <MaterialIcons name="close" size={18} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      )}
 
-      {/* 媒体选择器 */}
-      <MediaPicker
-        onTakePicture={takePicture}
-        onPickImage={pickImage}
-        onPickVideo={pickVideo}
-        loading={mediaLoading}
-        error={mediaError}
-      />
-
-      {/* 底部操作栏 */}
+      {/* 底部操作栏 - 贴着键盘显示 */}
       <View
         style={[
           styles.footer,
           {
             backgroundColor: theme.colors.card,
             borderTopColor: theme.colors.border,
-            paddingBottom: Math.max(insets.bottom, theme.spacing.md),
+            paddingBottom: Math.max(insets.bottom, theme.spacing.sm),
           },
         ]}
       >
+        {/* 清空按钮 */}
         <TouchableOpacity
-          style={[styles.footerButton, { opacity: submitting ? 0.5 : 1 }]}
+          style={[styles.actionButton, { opacity: submitting ? 0.5 : 1 }]}
           onPress={handleClear}
           disabled={submitting}
         >
           <MaterialIcons
-            name="clear-all"
+            name="delete"
             size={20}
             color={theme.colors.foregroundSecondary}
           />
-          <Text
-            style={[
-              styles.footerButtonText,
-              { color: theme.colors.foregroundSecondary },
-            ]}
-          >
-            清空
-          </Text>
+        </TouchableOpacity>
+
+        {/* 分隔符 */}
+        <View
+          style={[
+            styles.divider,
+            { backgroundColor: theme.colors.border },
+          ]}
+        />
+
+        {/* 拍照按钮 */}
+        <TouchableOpacity
+          style={[styles.actionButton, { opacity: mediaLoading ? 0.5 : 1 }]}
+          onPress={takePicture}
+          disabled={mediaLoading}
+        >
+          {mediaLoading ? (
+            <ActivityIndicator size="small" color={theme.colors.foregroundSecondary} />
+          ) : (
+            <MaterialIcons
+              name="camera-alt"
+              size={20}
+              color={theme.colors.foregroundSecondary}
+            />
+          )}
+        </TouchableOpacity>
+
+        {/* 图片按钮 */}
+        <TouchableOpacity
+          style={[styles.actionButton, { opacity: mediaLoading ? 0.5 : 1 }]}
+          onPress={pickImage}
+          disabled={mediaLoading}
+        >
+          <MaterialIcons
+            name="image"
+            size={20}
+            color={theme.colors.foregroundSecondary}
+          />
+        </TouchableOpacity>
+
+        {/* 视频按钮 */}
+        <TouchableOpacity
+          style={[styles.actionButton, { opacity: mediaLoading ? 0.5 : 1 }]}
+          onPress={pickVideo}
+          disabled={mediaLoading}
+        >
+          <MaterialIcons
+            name="videocam"
+            size={20}
+            color={theme.colors.foregroundSecondary}
+          />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -283,36 +392,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  // 内容区域
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingBottom: 16,
-  },
   // 输入框
   inputSection: {
-    borderBottomWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 12,
-  },
-  placeholder: {
-    fontSize: 12,
-    marginBottom: 8,
-  },
-  titleInput: {
-    fontSize: 18,
-    fontWeight: "600",
-    padding: 0,
-    minHeight: 40,
-  },
-  contentSection: {
-    minHeight: 150,
   },
   contentInput: {
     fontSize: 15,
     lineHeight: 22,
-    padding: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
     textAlignVertical: "top",
   },
   // 错误提示
@@ -320,7 +409,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginHorizontal: 16,
-    marginTop: 12,
+    marginVertical: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 8,
@@ -331,23 +420,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#fff",
   },
-  // 底部
+  // 底部操作栏
   footer: {
     borderTopWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    flexDirection: "row",
-    justifyContent: "flex-start",
-  },
-  footerButton: {
-    flexDirection: "row",
-    alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 6,
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
-  footerButtonText: {
-    fontSize: 13,
+  actionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  divider: {
+    width: 1,
+    height: 24,
+    marginHorizontal: 4,
   },
 });

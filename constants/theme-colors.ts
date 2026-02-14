@@ -30,6 +30,7 @@ export const Colors = {
     foreground: '#111827',
     foregroundSecondary: '#6b7280',
     foregroundTertiary: '#9ca3af',
+    foregroundQuaternary: '#4b5563', // 次要文本（介于主文字和次文字之间）
     
     // 卡片（白色，与背景形成对比）
     card: '#ffffff',
@@ -75,6 +76,9 @@ export const Colors = {
     overlay: 'rgba(0, 0, 0, 0.5)',
     overlayLight: 'rgba(0, 0, 0, 0.3)',
     
+    // 关联Memo（无背景，使用浅灰色文字做区分）
+    relatedMemo: '#9ca3af', // 浅灰色，与主内容文字有区分
+    
     // 阴影（React Native 用于 elevation）
     shadow: '#000000',
   },
@@ -92,6 +96,7 @@ export const Colors = {
     foreground: '#fafafa',
     foregroundSecondary: '#a1a1aa',
     foregroundTertiary: '#71717a',
+    foregroundQuaternary: '#c9c9d2', // 次要文本（介于主文字和次文字之间）
     
     // 卡片（深卡片色，与背景形成对比）
     card: '#262626',
@@ -136,6 +141,9 @@ export const Colors = {
     // 覆盖层
     overlay: 'rgba(0, 0, 0, 0.7)',
     overlayLight: 'rgba(0, 0, 0, 0.5)',
+    
+    // 关联Memo（无背景，使用浅灰色文字做区分）
+    relatedMemo: '#71717a', // 浅灰色，与主内容文字有区分
     
     // 阴影
     shadow: '#000000',
