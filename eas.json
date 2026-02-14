@@ -21,7 +21,8 @@
     },
     "production": {
       "android": {
-        "credentialsSource": "remote"
+        "credentialsSource": "remote",
+        "buildType": "apk"
       },
       "ios": {
         "credentialsSource": "remote"
