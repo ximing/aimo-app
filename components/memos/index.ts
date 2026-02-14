@@ -8,3 +8,6 @@ export { SidebarDrawer } from "./sidebar-drawer";
 export { FloatingActionBar } from "./floating-action-bar";
 export { MediaPicker } from "./media-picker";
 export { MediaPreview } from "./media-preview";
+export { AttachmentGrid } from "./attachment-grid";
+export { ImageViewer } from "./image-viewer";
+export { VideoPlayer } from "./video-player";

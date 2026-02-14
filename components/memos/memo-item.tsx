@@ -6,7 +6,7 @@
 
 import { useTheme } from "@/hooks/use-theme";
 import MemoService from "@/services/memo-service";
-import type { Memo } from "@/types/memo";
+import type { Memo, AttachmentDto } from "@/types/memo";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useService, view } from "@rabjs/react";
 import { useRouter } from "expo-router";
@@ -15,6 +15,7 @@ import {
   Animated,
   Clipboard,
   LayoutAnimation,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -25,6 +26,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AttachmentGrid, ImageViewer, VideoPlayer } from "@/components/memos";
+import { getFileTypeFromMime } from "@/utils/attachment";
 
 // 启用 LayoutAnimation (Android 需要特殊处理)
 if (
@@ -47,6 +50,10 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [videoPlayerVisible, setVideoPlayerVisible] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<AttachmentDto | null>(null);
 
   // 动画值
   const slideAnim = useRef(new Animated.Value(300)).current;
@@ -202,6 +209,32 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
     });
   };
 
+  // 处理附件点击
+  const handleAttachmentPress = (attachment: AttachmentDto) => {
+    const fileType = getFileTypeFromMime(attachment.type);
+
+    if (fileType === "image") {
+      // 图片：打开图片查看器
+      const imageAttachments = memo.attachments?.filter(
+        (att) => getFileTypeFromMime(att.type) === "image"
+      ) || [];
+      const imageIndex = imageAttachments.findIndex(
+        (att) => att.attachmentId === attachment.attachmentId
+      );
+      setSelectedImageIndex(imageIndex >= 0 ? imageIndex : 0);
+      setImageViewerVisible(true);
+    } else if (fileType === "video") {
+      // 视频：打开视频播放器
+      setSelectedVideo(attachment);
+      setVideoPlayerVisible(true);
+    } else {
+      // 其他文件类型：直接下载
+      Linking.openURL(attachment.url).catch((err) =>
+        console.error("下载附件失败:", err)
+      );
+    }
+  };
+
   return (
     <TouchableOpacity
       style={[
@@ -271,6 +304,16 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
             </View>
           </View>
         </View>
+
+        {/* 附件展示 - 在内容和关联备忘录之间 */}
+        {memo.attachments && memo.attachments.length > 0 && (
+          <View style={styles.attachmentsContainer}>
+            <AttachmentGrid
+              attachments={memo.attachments}
+              onAttachmentPress={handleAttachmentPress}
+            />
+          </View>
+        )}
 
         {/* 关联Memo列表 - 在内容和页脚之间 */}
         {memo.relations && memo.relations.length > 0 && (
@@ -569,6 +612,26 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
           </View>
         </Modal>
       )}
+
+      {/* 图片查看器 */}
+      <ImageViewer
+        visible={imageViewerVisible}
+        images={memo.attachments?.filter(
+          (att) => getFileTypeFromMime(att.type) === "image"
+        ) || []}
+        initialIndex={selectedImageIndex}
+        onClose={() => setImageViewerVisible(false)}
+      />
+
+      {/* 视频播放器 */}
+      <VideoPlayer
+        visible={videoPlayerVisible}
+        video={selectedVideo}
+        onClose={() => {
+          setVideoPlayerVisible(false);
+          setSelectedVideo(null);
+        }}
+      />
     </TouchableOpacity>
   );
 });
@@ -762,6 +825,11 @@ const styles = StyleSheet.create({
   confirmButtonText: {
     fontSize: 16,
     fontWeight: "600",
+  },
+  // 附件容器样式
+  attachmentsContainer: {
+    marginTop: 12,
+    marginBottom: 4,
   },
   // 关联Memo样式
   relatedMemosContainer: {
