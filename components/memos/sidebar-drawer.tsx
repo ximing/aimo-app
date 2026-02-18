@@ -18,6 +18,7 @@
 
 import { useTheme } from "@/hooks/use-theme";
 import AuthService from "@/services/auth-service";
+import MemoService from "@/services/memo-service";
 import ThemeService from "@/services/theme-service";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useService, view } from "@rabjs/react";
@@ -30,6 +31,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ActivityHeatmap } from "./activity-heatmap";
 
 interface SidebarDrawerProps {
   visible: boolean;
@@ -39,8 +41,16 @@ interface SidebarDrawerProps {
 export const SidebarDrawer = view(({ visible, onClose }: SidebarDrawerProps) => {
   const theme = useTheme();
   const authService = useService(AuthService);
+  const memoService = useService(MemoService);
   const themeService = useService(ThemeService);
   const insets = useSafeAreaInsets();
+
+  // 获取活动统计数据
+  useEffect(() => {
+    if (visible) {
+      memoService.fetchActivityStats(90);
+    }
+  }, [visible, memoService]);
 
   // 动画值
   const slideAnim = useRef(new Animated.Value(-280)).current;
@@ -141,6 +151,17 @@ export const SidebarDrawer = view(({ visible, onClose }: SidebarDrawerProps) => 
             </Text>
           </View>
         </View>
+
+        {/* 活动热力图 */}
+        <ActivityHeatmap
+          data={memoService.activityStats?.items || []}
+          isLoading={memoService.activityStatsLoading}
+        />
+
+        {/* 分隔线 */}
+        <View
+          style={[styles.drawerDivider, { backgroundColor: theme.colors.border }]}
+        />
 
         {/* 菜单项 */}
         <TouchableOpacity style={styles.drawerMenuItem}>

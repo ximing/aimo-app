@@ -5,7 +5,7 @@
 
 export interface User {
   uid: string;
-  email: string;
+  email?: string;
   nickname?: string;
   phone?: string;
 }

@@ -82,6 +82,8 @@ const styles = StyleSheet.create({
   menuButton: {
     padding: 8,
     marginRight: 8,
+    justifyContent: "center",
+    alignItems: "center",
   },
   searchContainer: {
     flex: 1,

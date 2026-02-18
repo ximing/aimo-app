@@ -8,9 +8,10 @@ import {
   getMemos as apiGetMemos, 
   deleteMemo as apiDeleteMemo,
   getMemo as apiGetMemo,
-  getRelatedMemos as apiGetRelatedMemos
+  getRelatedMemos as apiGetRelatedMemos,
+  getActivityStats as apiGetActivityStats
 } from '@/api/memo';
-import type { Memo, ListMemosParams, MemoWithSimilarity } from '@/types/memo';
+import type { Memo, ListMemosParams, MemoWithSimilarity, MemoActivityStatsDto } from '@/types/memo';
 
 class MemoService extends Service {
   // 响应式属性
@@ -26,6 +27,11 @@ class MemoService extends Service {
   relatedMemos: MemoWithSimilarity[] = [];
   detailLoading = false;
   detailError: string | null = null;
+
+  // 活动统计相关属性
+  activityStats: MemoActivityStatsDto | null = null;
+  activityStatsLoading = false;
+  activityStatsError: string | null = null;
 
   /**
    * 获取 memo 列表
@@ -122,6 +128,23 @@ class MemoService extends Service {
     this.currentMemo = null;
     this.relatedMemos = [];
     this.detailError = null;
+  }
+
+  /**
+   * 获取活动统计（用于热力图）
+   */
+  async fetchActivityStats(days: number = 90): Promise<void> {
+    this.activityStatsLoading = true;
+    this.activityStatsError = null;
+
+    try {
+      const stats = await apiGetActivityStats(days);
+      this.activityStats = stats;
+    } catch (err) {
+      this.activityStatsError = err instanceof Error ? err.message : '获取活动统计失败';
+    } finally {
+      this.activityStatsLoading = false;
+    }
   }
 
   /**

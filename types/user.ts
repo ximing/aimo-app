@@ -5,15 +5,13 @@
 
 export interface UserInfo {
   uid: string;
-  email: string;
+  email?: string;
   nickname?: string;
-  phone?: string;
 }
 
 export interface UpdateUserRequest {
-  email?: string;
   nickname?: string;
-  phone?: string;
+  avatar?: string;
 }
 
 export interface UpdateUserResponse {

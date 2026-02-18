@@ -14,6 +14,9 @@ import type {
   VectorSearchRequest,
   VectorSearchResponse,
   RelatedMemosResponse,
+  BacklinksResponse,
+  MemoActivityStatsDto,
+  OnThisDayResponseDto,
 } from '@/types/memo';
 
 /**
@@ -134,6 +137,62 @@ export const getRelatedMemos = async (
 
   if (response.code !== 0) {
     throw new Error(response.message || '获取相关笔记失败');
+  }
+
+  return response.data;
+};
+
+/**
+ * 获取反向链接
+ * GET /api/v1/memos/:memoId/backlinks
+ */
+export const getBacklinks = async (
+  memoId: string,
+  page?: number,
+  limit?: number
+): Promise<BacklinksResponse> => {
+  const queryParams = new URLSearchParams();
+  if (page) queryParams.append('page', String(page));
+  if (limit) queryParams.append('limit', String(limit));
+
+  const queryString = queryParams.toString();
+  const url = `/memos/${memoId}/backlinks${queryString ? `?${queryString}` : ''}`;
+
+  const response = await apiGet<BacklinksResponse>(url);
+
+  if (response.code !== 0) {
+    throw new Error(response.message || '获取反向链接失败');
+  }
+
+  return response.data;
+};
+
+/**
+ * 获取活动统计
+ * GET /api/v1/memos/stats/activity
+ */
+export const getActivityStats = async (
+  days?: number
+): Promise<MemoActivityStatsDto> => {
+  const url = days ? `/memos/stats/activity?days=${days}` : '/memos/stats/activity';
+  const response = await apiGet<MemoActivityStatsDto>(url);
+
+  if (response.code !== 0) {
+    throw new Error(response.message || '获取活动统计失败');
+  }
+
+  return response.data;
+};
+
+/**
+ * 获取历史上的今天
+ * GET /api/v1/memos/on-this-day
+ */
+export const getOnThisDayMemos = async (): Promise<OnThisDayResponseDto> => {
+  const response = await apiGet<OnThisDayResponseDto>('/memos/on-this-day');
+
+  if (response.code !== 0) {
+    throw new Error(response.message || '获取历史上的今天失败');
   }
 
   return response.data;

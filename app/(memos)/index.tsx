@@ -11,6 +11,7 @@ import { MemoItem } from "@/components/memos/memo-item";
 import { useTheme } from "@/hooks/use-theme";
 import MemoService from "@/services/memo-service";
 import type { Memo } from "@/types/memo";
+import { MaterialIcons } from "@expo/vector-icons";
 import { bindServices, useService } from "@rabjs/react";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -23,7 +24,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { MaterialIcons } from "@expo/vector-icons";
 
 const MemosListContent = () => {
   const theme = useTheme();
@@ -100,7 +100,7 @@ const MemosListContent = () => {
     if (memoService.memos.length === 0) {
       return null;
     }
-    
+
     // 只在加载更多时显示（不是初始加载）
     if (memoService.loading && memoService.currentPage > 1) {
       return (
@@ -109,7 +109,7 @@ const MemosListContent = () => {
         </View>
       );
     }
-    
+
     return null;
   };
 

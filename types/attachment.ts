@@ -5,15 +5,16 @@
 
 import type { PaginatedResponse } from '@/types/common';
 
+/**
+ * 附件数据传输对象
+ */
 export interface Attachment {
-  id: string;
-  filename: string;
-  size: number;
-  mimeType: string;
-  uid: string;
-  url?: string;
-  createdAt: number;
-  updatedAt: number;
+  attachmentId: string;  // 附件唯一标识符
+  filename: string;      // 文件名
+  url: string;          // 访问 URL
+  type: string;         // MIME 类型
+  size: number;         // 文件大小（字节）
+  createdAt: number;    // 创建时间戳（毫秒）
 }
 
 export interface UploadAttachmentRequest {

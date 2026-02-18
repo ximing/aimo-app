@@ -3,14 +3,14 @@
  * 对应文档: /docs/api/backup.md
  */
 
+/**
+ * 备份状态数据传输对象
+ */
 export interface BackupStatus {
-  lastBackupTime: number;
-  lastBackupStatus: 'success' | 'failed';
-  backupCount: number;
-  nextScheduledBackup: number;
-  isRunning: boolean;
-  backupPath: string;
-  retentionDays: number;
+  enabled: boolean;           // 备份是否启用
+  inProgress: boolean;       // 备份是否正在进行
+  lastBackupTime: number;    // 上次备份时间戳（毫秒）
+  throttleInterval: number;   // 备份节流间隔（毫秒）
 }
 
 export interface BackupStatusResponse {

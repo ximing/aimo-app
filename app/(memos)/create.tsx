@@ -8,22 +8,21 @@ import { createMemo, updateMemo } from "@/api/memo";
 import { MediaPreview } from "@/components/memos/media-preview";
 import { useMediaPicker } from "@/hooks/use-media-picker";
 import { useTheme } from "@/hooks/use-theme";
-import { showSuccess, showError } from "@/utils/toast";
 import MemoService from "@/services/memo-service";
+import { showError, showSuccess } from "@/utils/toast";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useService, view } from "@rabjs/react";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useState, useEffect } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
-    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -145,10 +144,18 @@ const CreateMemoContent = view(() => {
       // 返回
       router.back();
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : isEditMode ? "编辑失败" : "创建失败";
+      const errorMsg =
+        err instanceof Error
+          ? err.message
+          : isEditMode
+            ? "编辑失败"
+            : "创建失败";
       setError(errorMsg);
       showError(errorMsg);
-      console.error(isEditMode ? "Failed to update memo:" : "Failed to create memo:", err);
+      console.error(
+        isEditMode ? "Failed to update memo:" : "Failed to create memo:",
+        err,
+      );
     } finally {
       setSubmitting(false);
     }
@@ -181,37 +188,46 @@ const CreateMemoContent = view(() => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.background, paddingTop: insets.top },
+      ]}
     >
       {/* 头部 */}
       <View
         style={[
           styles.header,
           {
-            backgroundColor: theme.colors.card,
+            backgroundColor: theme.colors.background,
             borderBottomColor: theme.colors.border,
-            paddingTop: Math.max(insets.top, theme.spacing.md),
           },
         ]}
       >
         <TouchableOpacity
-          style={styles.headerButton}
+          style={[
+            styles.headerIconButton,
+            { backgroundColor: theme.colors.muted },
+          ]}
           onPress={handleGoBack}
           disabled={submitting}
         >
           <MaterialIcons
             name="close"
-            size={24}
+            size={20}
             color={theme.colors.foreground}
           />
         </TouchableOpacity>
 
-        <Text style={[styles.headerTitle, { color: theme.colors.foreground }]}>
-          {isEditMode ? "编辑备忘录" : "新建备忘录"}
-        </Text>
+        <View style={{ flex: 1 }} />
 
         <TouchableOpacity
-          style={[styles.headerButton, { opacity: submitting ? 0.5 : 1 }]}
+          style={[
+            styles.headerIconButton,
+            {
+              backgroundColor: theme.colors.muted,
+              opacity: submitting ? 0.5 : 1,
+            },
+          ]}
           onPress={handleSubmit}
           disabled={submitting}
         >
@@ -220,7 +236,7 @@ const CreateMemoContent = view(() => {
           ) : (
             <MaterialIcons
               name="check"
-              size={24}
+              size={20}
               color={theme.colors.primary}
             />
           )}
@@ -317,10 +333,7 @@ const CreateMemoContent = view(() => {
 
         {/* 分隔符 */}
         <View
-          style={[
-            styles.divider,
-            { backgroundColor: theme.colors.border },
-          ]}
+          style={[styles.divider, { backgroundColor: theme.colors.border }]}
         />
 
         {/* 拍照按钮 */}
@@ -330,7 +343,10 @@ const CreateMemoContent = view(() => {
           disabled={mediaLoading}
         >
           {mediaLoading ? (
-            <ActivityIndicator size="small" color={theme.colors.foregroundSecondary} />
+            <ActivityIndicator
+              size="small"
+              color={theme.colors.foregroundSecondary}
+            />
           ) : (
             <MaterialIcons
               name="camera-alt"
@@ -379,11 +395,18 @@ const styles = StyleSheet.create({
   // 头部
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 12,
-    borderBottomWidth: 1,
+    height: 56,
+    gap: 8,
+  },
+  headerIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerButton: {
     padding: 8,

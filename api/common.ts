@@ -41,16 +41,26 @@ const initAsyncStorage = async () => {
 
 /**
  * 获取存储的 token（同步版本 - 优先使用 getTokenAsync）
+ *
+ * ⚠️ 诊断提示：
+ * - 在 React Native 中，localStorage 可能不可用
+ * - 应该使用 getTokenAsync 以获得准确的 token 值
+ * - 如果返回 null，说明 token 未被保存或已过期
  */
 export const getToken = (): string | null => {
   // 同步版本的降级方案：在初始化时从 AsyncStorage 缓存
   // 实际应该使用 getTokenAsync 以获得准确的值
   try {
     if (typeof localStorage !== "undefined") {
-      return localStorage.getItem(TOKEN_KEY);
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (!token) {
+        console.debug("No token found in localStorage");
+      }
+      return token;
     }
   } catch (e) {
     // 环境不支持 localStorage
+    console.warn("localStorage not available:", e);
   }
   return null;
 };
@@ -180,6 +190,28 @@ const handleUnauthorized = async (): Promise<void> => {
 
 /**
  * 发送 API 请求
+ *
+ * 故障排查指南（如果遇到 "JSON Parse error: Unexpected character: <"）：
+ *
+ * 1️⃣  检查认证状态
+ *    - 查看日志是否显示 "✓ Token attached to request"
+ *    - 如果显示 "⚠️ WARNING: No token found"，说明 token 未正确保存或过期
+ *    - 需要先完成登录流程，确保 token 已保存
+ *
+ * 2️⃣  验证 FormData 上传
+ *    - 确保 isFormData=true 被正确传递
+ *    - FormData 的 Content-Type header 应该由浏览器/RN 自动设置
+ *    - 不能手动设置 Content-Type，否则会丢失边界符号
+ *
+ * 3️⃣  检查服务器响应
+ *    - 查看日志中的 "Non-JSON response received" 错误消息
+ *    - 如果返回 HTML，通常表示 401、404 或 500 错误
+ *
+ * 4️⃣  常见错误原因
+ *    - 401: Token 无效或过期
+ *    - 404: 路由不存在
+ *    - 500: 服务器错误
+ *    - FormData 格式错误
  */
 export const apiRequest = async <T = any>(
   url: string,
@@ -198,21 +230,35 @@ export const apiRequest = async <T = any>(
 
   // 构建完整的 URL
   const fullUrl = url.startsWith("http") ? url : `${BASE_URL}${url}`;
+  console.log("API Request:", {
+    method,
+    fullUrl,
+    isFormData,
+    hasToken: !!tokenToUse,
+  });
 
   // 构建请求头
   const requestHeaders: Record<string, string> = {
     ...headers,
   };
-
+  console.log("requestHeaders", requestHeaders);
   // 添加认证 token
   if (tokenToUse) {
     requestHeaders["Authorization"] = `Bearer ${tokenToUse}`;
+    console.log("✓ Token attached to request");
+  } else {
+    console.warn(
+      "⚠️ WARNING: No token found for request - this may cause 401 errors",
+    );
   }
 
-  // 如果不是 FormData，添加 Content-Type
+  // 设置 Content-Type
+  // 重要：FormData 不应该手动设置 Content-Type header，让浏览器/RN 自动处理
+  // 手动设置会导致边界符号丢失，导致服务器无法正确解析
   if (!isFormData && method !== "GET") {
     requestHeaders["Content-Type"] = "application/json";
   }
+  // 注：FormData 的 Content-Type 由浏览器/React Native 自动设置
 
   // 构建请求体
   let requestBody: any = undefined;
@@ -228,15 +274,55 @@ export const apiRequest = async <T = any>(
       credentials: "include", // 包含 Cookie
     });
 
-    const data = await response.json();
+    // 尝试解析响应为 JSON，如果失败则返回文本
+    let data: ApiResponse<T>;
+    const contentType = response.headers.get("content-type");
 
+    try {
+      // 检查响应是否是 JSON 格式
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        // 如果不是 JSON，尝试解析文本（可能是 HTML 错误页面）
+        const text = await response.text();
+        console.error("Non-JSON response received:", text.substring(0, 200));
+
+        // 对于 401，通常是返回 HTML 登录页面
+        if (response.status === 401) {
+          throw new Error("Authentication failed - please login again");
+        }
+
+        throw new Error(
+          `Server returned non-JSON response (${response.status}): ${text.substring(0, 100)}`,
+        );
+      }
+    } catch (parseError) {
+      // JSON 解析失败
+      const errorMsg =
+        parseError instanceof Error
+          ? parseError.message
+          : "Failed to parse response";
+      console.error("Response parse error:", errorMsg);
+
+      // 对于非 JSON 响应，构建错误响应对象
+      data = {
+        code: response.status,
+        message: errorMsg,
+        data: null,
+      } as ApiResponse<T>;
+    }
+
+    // 如果返回非 OK 状态码
     if (!response.ok) {
+      console.error(`HTTP Error ${response.status}:`, data.message);
+
       // 处理 401 未授权错误
       if (response.status === 401) {
         await handleUnauthorized();
-        // 401 错误由 handleUnauthorized 处理，不再继续抛出
-        return data as ApiResponse<T>;
+        // 直接抛出认证错误
+        throw new Error(data.message || "Authentication failed");
       }
+
       throw new Error(data.message || `HTTP Error: ${response.status}`);
     }
 
@@ -293,27 +379,37 @@ export const apiDelete = <T = any>(
 /**
  * 上传文件表单数据
  * 支持 Web File、Blob 和 React Native URI
+ * 基于表单提交方式（multipart/form-data）
+ *
+ * @param file - 文件对象：Web File/Blob 或 React Native { uri, type } 对象
+ * @param fileName - 文件名称
+ * @param additionalFields - 额外的表单字段（如 createdAt）
+ * @returns FormData 对象，浏览器/RN 会自动设置 Content-Type: multipart/form-data
  */
 export const createFormData = (
-  file: File | Blob | { uri: string; type?: string },
+  file: File | Blob | { uri: string; type?: string; name?: string },
   fileName: string,
   additionalFields?: Record<string, string | number>,
 ): FormData => {
   const formData = new FormData();
-  
-  // 检查是否是 React Native 的 URI 对象
-  if (typeof file === 'object' && 'uri' in file && !('slice' in file)) {
-    // React Native 的文件对象（来自 ImagePicker）
-    formData.append('file', {
+
+  // 检查是否是 React Native 的 URI 对象（没有 slice 方法）
+  if (typeof file === "object" && "uri" in file && !("slice" in file)) {
+    // React Native 的文件对象（来自 ImagePicker 或其他来源）
+    // 构建的对象结构会被 fetch 正确处理
+    formData.append("file", {
       uri: file.uri,
-      type: file.type || 'application/octet-stream',
+      type: file.type || "application/octet-stream",
       name: fileName,
     } as any);
   } else {
-    // Web 的 File 或 Blob
+    // Web 的 File 或 Blob（带有 slice 方法）
+    // 第三个参数是文件名，用于 Content-Disposition header
     formData.append("file", file as File | Blob, fileName);
   }
 
+  // 添加额外的表单字段
+  // 这些字段会作为 multipart/form-data 的其他部分发送
   if (additionalFields) {
     Object.entries(additionalFields).forEach(([key, value]) => {
       formData.append(key, String(value));

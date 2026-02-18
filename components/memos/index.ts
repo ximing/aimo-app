@@ -11,3 +11,4 @@ export { MediaPreview } from "./media-preview";
 export { AttachmentGrid } from "./attachment-grid";
 export { ImageViewer } from "./image-viewer";
 export { VideoPlayer } from "./video-player";
+export { ActivityHeatmap } from "./activity-heatmap";
