@@ -10,13 +10,14 @@
 - Infinite scroll: Use ScrollView onScroll event with scrollEventThrottle, check scroll position against content size
 - Components using services must be wrapped with `view()` and exported with `bindServices()`
 - Always export new components from components/memos/index.ts for clean imports
+- When using RelatedMemoList inside ScrollView, give it a fixed height (e.g., 300px) instead of flex:1
 
 ## Stories
 - [x] US-001: 创建相关笔记服务接口
 - [x] US-002: 创建相关笔记 Service 层
 - [x] US-003: 创建相关笔记列表组件
 - [x] US-004: 创建相关性分数组件
-- [ ] US-005: 集成相关笔记到详情页
+- [x] US-005: 集成相关笔记到详情页
 
 ## Completed
 
@@ -102,4 +103,22 @@
   - Tooltip positioning: use absolute positioning with negative margins for centering
   - Component props: make features optional (showLabel) for flexibility in different contexts
   - Score conversion: Math.round(score * 5) handles the 0-1 to 0-5 conversion cleanly
+---
+
+## 2025-02-20 00:15 - US-005
+- What was implemented:
+  - Integrated `RelatedMemoList` component into `app/(memos)/[id].tsx`
+  - Added `RelatedMemoService` to bindServices alongside `MemoService`
+  - Replaced the old inline related memos section with the new component
+  - Added section header with "相关笔记" title and link icon
+  - Fixed duplicate React imports (consolidated to single import)
+  - Updated RelatedMemoList to use fixed height (300px) for proper rendering inside ScrollView
+- Files changed:
+  - `app/(memos)/[id].tsx`: Integrated RelatedMemoList, added RelatedMemoService to bindServices
+  - `components/memos/related-memo-list.tsx`: Changed container style from flex:1 to fixed height 300px
+- **Learnings for future iterations:**
+  - When placing a ScrollView-based component inside another ScrollView, use fixed height instead of flex:1
+  - The RelatedMemoService auto-resets when memoId changes (handled in loadRelatedMemos method)
+  - Components that use services need both the component wrapped with `view()` AND exported with `bindServices()`
+  - Always check for duplicate imports when adding new imports to a file
 ---
