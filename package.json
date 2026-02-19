@@ -11,7 +11,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "commitlint": "commitlint --edit",
-    "prepare": "husky install"
+    "prepare": "husky"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
