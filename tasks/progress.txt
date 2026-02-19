@@ -1,0 +1,14 @@
+# Ralph Progress Log
+# Project: Aimo - 相关笔记无限滚动列表
+# Branch: ralph/related-memos-pagination
+
+## Stories
+- [ ] US-001: 创建相关笔记服务接口
+- [ ] US-002: 创建相关笔记 Service 层
+- [ ] US-003: 创建相关性分数组件
+- [ ] US-004: 创建相关笔记列表组件
+- [ ] US-005: 集成相关笔记到详情页
+
+## Completed
+
+## Notes

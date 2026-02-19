@@ -1,18 +1,18 @@
 /**
  * Sidebar Drawer Component - 侧边栏抽屉
  * 包含用户信息、菜单项、登出功能、主题切换
- * 
+ *
  * 功能：
  * - 用户信息展示
  * - 个人资料、设置、帮助等菜单项
  * - 深色/浅色主题切换（基于 ThemeService）
  * - 登出功能
- * 
+ *
  * 主题切换原理：
  * - 点击"深色模式"/"浅色模式"菜单项触发 themeService.toggleTheme()
  * - ThemeService 管理主题状态并持久化到 AsyncStorage
  * - useTheme() Hook 会响应主题变化，自动更新所有组件的颜色
- * 
+ *
  * 页面特定组件：仅在 (memos) 页面使用
  */
 
@@ -21,8 +21,8 @@ import AuthService from "@/services/auth-service";
 import MemoService from "@/services/memo-service";
 import ThemeService from "@/services/theme-service";
 import { MaterialIcons } from "@expo/vector-icons";
-import { Image } from "expo-image";
 import { useService, view } from "@rabjs/react";
+import { Image } from "expo-image";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
@@ -39,216 +39,248 @@ interface SidebarDrawerProps {
   onClose: () => void;
 }
 
-export const SidebarDrawer = view(({ visible, onClose }: SidebarDrawerProps) => {
-  const theme = useTheme();
-  const authService = useService(AuthService);
-  const memoService = useService(MemoService);
-  const themeService = useService(ThemeService);
-  const insets = useSafeAreaInsets();
-  const userName =
-    authService.user?.nickname || authService.user?.email || "用户";
-  const userEmail = authService.user?.email;
-  const userUid = authService.user?.uid;
-  const userAvatar = authService.user?.avatar;
-  const userInitial = userName.charAt(0).toUpperCase();
+export const SidebarDrawer = view(
+  ({ visible, onClose }: SidebarDrawerProps) => {
+    const theme = useTheme();
+    const authService = useService(AuthService);
+    const memoService = useService(MemoService);
+    const themeService = useService(ThemeService);
+    const insets = useSafeAreaInsets();
+    const userName =
+      authService.user?.nickname || authService.user?.email || "用户";
+    const userEmail = authService.user?.email;
+    const userAvatar = authService.user?.avatar;
+    const userInitial = userName.charAt(0).toUpperCase();
+    // 获取活动统计数据
+    useEffect(() => {
+      if (visible) {
+        memoService.fetchActivityStats(90);
+      }
+    }, [visible, memoService]);
 
-  // 获取活动统计数据
-  useEffect(() => {
-    if (visible) {
-      memoService.fetchActivityStats(90);
+    // 动画值
+    const slideAnim = useRef(new Animated.Value(-280)).current;
+    const opacityAnim = useRef(new Animated.Value(0)).current;
+
+    // 触发动画
+    useEffect(() => {
+      if (visible) {
+        Animated.parallel([
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      } else {
+        Animated.parallel([
+          Animated.timing(slideAnim, {
+            toValue: -280,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    }, [visible, slideAnim, opacityAnim]);
+
+    if (!visible) {
+      // 延迟渲染，等待动画完成
+      return null;
     }
-  }, [visible, memoService]);
 
-  // 动画值
-  const slideAnim = useRef(new Animated.Value(-280)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-
-  // 触发动画
-  useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: -280,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible, slideAnim, opacityAnim]);
-
-  if (!visible) {
-    // 延迟渲染，等待动画完成
-    return null;
-  }
-
-  return (
-    <>
-      {/* 背景覆盖层 */}
-      <Animated.View
-        style={[
-          styles.drawerOverlay,
-          {
-            opacity: opacityAnim,
-            backgroundColor: theme.colors.overlay,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          onPress={onClose}
-          activeOpacity={1}
-        />
-      </Animated.View>
-
-      {/* 抽屉内容 */}
-      <Animated.View
-        style={[
-          styles.drawerContainer,
-          {
-            backgroundColor: theme.colors.background,
-            transform: [{ translateX: slideAnim }],
-          },
-        ]}
-      >
-        {/* 账号信息区域 */}
-        <View
+    return (
+      <>
+        {/* 背景覆盖层 */}
+        <Animated.View
           style={[
-            styles.userInfoSection,
-            { paddingTop: insets.top + theme.spacing.lg },
+            styles.drawerOverlay,
+            {
+              opacity: opacityAnim,
+              backgroundColor: theme.colors.overlay,
+            },
           ]}
         >
-          <View style={[styles.avatarContainer, { backgroundColor: theme.colors.primary }]}>
-            {userAvatar ? (
-              <Image
-                source={{ uri: userAvatar }}
-                style={styles.avatarImage}
-                contentFit="cover"
-              />
-            ) : (
-              <Text style={styles.avatarText}>{userInitial}</Text>
-            )}
-          </View>
-
-          <View style={styles.userDetails}>
-            <Text
-              style={[styles.userName, { color: theme.colors.foreground }]}
-              numberOfLines={1}
-            >
-              {userName}
-            </Text>
-            {userEmail ? (
-              <Text
-                style={[styles.userMeta, { color: theme.colors.foregroundSecondary }]}
-                numberOfLines={1}
-              >
-                {userEmail}
-              </Text>
-            ) : null}
-            {userUid ? (
-              <Text
-                style={[styles.userMeta, { color: theme.colors.foregroundSecondary }]}
-                numberOfLines={1}
-              >
-                ID: {userUid}
-              </Text>
-            ) : null}
-          </View>
-        </View>
-
-        {/* 活动热力图 */}
-        <ActivityHeatmap
-          data={memoService.activityStats?.items || []}
-          isLoading={memoService.activityStatsLoading}
-        />
-
-        {/* 分隔线 */}
-        <View
-          style={[styles.drawerDivider, { backgroundColor: theme.colors.border }]}
-        />
-
-        {/* 菜单项 */}
-        <TouchableOpacity style={styles.drawerMenuItem}>
-          <MaterialIcons
-            name="person"
-            size={20}
-            color={theme.colors.foregroundSecondary}
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            onPress={onClose}
+            activeOpacity={1}
           />
-          <Text style={[styles.drawerMenuText, { color: theme.colors.foreground }]}>
-            个人资料
-          </Text>
-        </TouchableOpacity>
+        </Animated.View>
 
-        <TouchableOpacity style={styles.drawerMenuItem}>
-          <MaterialIcons
-            name="settings"
-            size={20}
-            color={theme.colors.foregroundSecondary}
-          />
-          <Text style={[styles.drawerMenuText, { color: theme.colors.foreground }]}>
-            设置
-          </Text>
-        </TouchableOpacity>
-
-        {/* 主题切换菜单项 */}
-        <TouchableOpacity 
-          style={styles.drawerMenuItem}
-          onPress={() => themeService.toggleTheme()}
+        {/* 抽屉内容 */}
+        <Animated.View
+          style={[
+            styles.drawerContainer,
+            {
+              backgroundColor: theme.colors.background,
+              transform: [{ translateX: slideAnim }],
+            },
+          ]}
         >
-          <MaterialIcons
-            name={theme.isDark ? "light-mode" : "dark-mode"}
-            size={20}
-            color={theme.colors.foregroundSecondary}
+          {/* 账号信息区域 */}
+          <View
+            style={[
+              styles.userInfoSection,
+              { paddingTop: insets.top + theme.spacing.lg },
+            ]}
+          >
+            <View
+              style={[
+                styles.avatarContainer,
+                { backgroundColor: theme.colors.primary },
+              ]}
+            >
+              {userAvatar ? (
+                <Image
+                  source={{ uri: userAvatar }}
+                  style={styles.avatarImage}
+                  contentFit="cover"
+                />
+              ) : (
+                <Text style={styles.avatarText}>{userInitial}</Text>
+              )}
+            </View>
+
+            <View style={styles.userDetails}>
+              <Text
+                style={[styles.userName, { color: theme.colors.foreground }]}
+                numberOfLines={1}
+              >
+                {userName}
+              </Text>
+              {userEmail ? (
+                <Text
+                  style={[
+                    styles.userMeta,
+                    { color: theme.colors.foregroundSecondary },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {userEmail}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+
+          {/* 活动热力图 */}
+          <ActivityHeatmap
+            data={memoService.activityStats?.items || []}
+            isLoading={memoService.activityStatsLoading}
           />
-          <Text style={[styles.drawerMenuText, { color: theme.colors.foreground }]}>
-            {theme.isDark ? "浅色模式" : "深色模式"}
-          </Text>
-        </TouchableOpacity>
 
-        <TouchableOpacity style={styles.drawerMenuItem}>
-          <MaterialIcons
-            name="help"
-            size={20}
-            color={theme.colors.foregroundSecondary}
+          {/* 分隔线 */}
+          <View
+            style={[
+              styles.drawerDivider,
+              { backgroundColor: theme.colors.border },
+            ]}
           />
-          <Text style={[styles.drawerMenuText, { color: theme.colors.foreground }]}>
-            帮助
-          </Text>
-        </TouchableOpacity>
 
-        {/* 分隔线 */}
-        <View
-          style={[styles.drawerDivider, { backgroundColor: 'transparent' }]}
-        />
+          {/* 菜单项 */}
+          <TouchableOpacity style={styles.drawerMenuItem}>
+            <MaterialIcons
+              name="person"
+              size={20}
+              color={theme.colors.foregroundSecondary}
+            />
+            <Text
+              style={[
+                styles.drawerMenuText,
+                { color: theme.colors.foreground },
+              ]}
+            >
+              个人资料
+            </Text>
+          </TouchableOpacity>
 
-        {/* 登出按钮 */}
-        <TouchableOpacity style={styles.drawerMenuItem}>
-          <MaterialIcons name="logout" size={20} color={theme.colors.destructive} />
-          <Text style={[styles.drawerMenuText, { color: theme.colors.destructive }]}>
-            登出
-          </Text>
-        </TouchableOpacity>
-      </Animated.View>
-    </>
-  );
-});
+          <TouchableOpacity style={styles.drawerMenuItem}>
+            <MaterialIcons
+              name="settings"
+              size={20}
+              color={theme.colors.foregroundSecondary}
+            />
+            <Text
+              style={[
+                styles.drawerMenuText,
+                { color: theme.colors.foreground },
+              ]}
+            >
+              设置
+            </Text>
+          </TouchableOpacity>
+
+          {/* 主题切换菜单项 */}
+          <TouchableOpacity
+            style={styles.drawerMenuItem}
+            onPress={() => themeService.toggleTheme()}
+          >
+            <MaterialIcons
+              name={theme.isDark ? "light-mode" : "dark-mode"}
+              size={20}
+              color={theme.colors.foregroundSecondary}
+            />
+            <Text
+              style={[
+                styles.drawerMenuText,
+                { color: theme.colors.foreground },
+              ]}
+            >
+              {theme.isDark ? "浅色模式" : "深色模式"}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.drawerMenuItem}>
+            <MaterialIcons
+              name="help"
+              size={20}
+              color={theme.colors.foregroundSecondary}
+            />
+            <Text
+              style={[
+                styles.drawerMenuText,
+                { color: theme.colors.foreground },
+              ]}
+            >
+              帮助
+            </Text>
+          </TouchableOpacity>
+
+          {/* 分隔线 */}
+          <View
+            style={[styles.drawerDivider, { backgroundColor: "transparent" }]}
+          />
+
+          {/* 登出按钮 */}
+          <TouchableOpacity style={styles.drawerMenuItem}>
+            <MaterialIcons
+              name="logout"
+              size={20}
+              color={theme.colors.destructive}
+            />
+            <Text
+              style={[
+                styles.drawerMenuText,
+                { color: theme.colors.destructive },
+              ]}
+            >
+              登出
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </>
+    );
+  },
+);
 
 const styles = StyleSheet.create({
   drawerOverlay: {

@@ -6,6 +6,7 @@
 import { Service } from '@rabjs/react';
 import { login as apiLogin, register as apiRegister } from '@/api/auth';
 import { clearToken, clearTokenAsync } from '@/api/common';
+import { getUserInfo } from '@/api/user';
 import type { User, LoginRequest, RegisterRequest } from '@/types/auth';
 
 class AuthService extends Service {
@@ -26,6 +27,12 @@ class AuthService extends Service {
       const response = await apiLogin(params);
       this.user = response.user;
       this.isAuthenticated = true;
+
+      try {
+        await this.fetchUserInfo();
+      } catch (fetchError) {
+        console.warn('Failed to fetch user info after login:', fetchError);
+      }
     } catch (err) {
       this.error = err instanceof Error ? err.message : '登录失败';
       this.isAuthenticated = false;
@@ -51,6 +58,17 @@ class AuthService extends Service {
     } finally {
       this.loading = false;
     }
+  }
+
+  /**
+   * 获取当前用户信息
+   */
+  async fetchUserInfo(): Promise<void> {
+    const userInfo = await getUserInfo();
+    this.user = {
+      ...(this.user ?? ({} as User)),
+      ...userInfo,
+    };
   }
 
   /**

@@ -43,6 +43,9 @@ const Layout = view(() => {
         if (token) {
           // 如果有存储的 token，标记为已认证
           authService.isAuthenticated = true;
+          authService.fetchUserInfo().catch((error) => {
+            console.warn("Failed to fetch user info on init:", error);
+          });
         }
       } catch (err) {
         console.error("Failed to initialize app:", err);

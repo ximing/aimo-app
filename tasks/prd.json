@@ -1,0 +1,89 @@
+{
+  "project": "Aimo",
+  "branchName": "ralph/related-memos-pagination",
+  "description": "相关笔记无限滚动列表 - 在备忘录详情页展示相关笔记，支持分页加载和相关性分数展示",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "创建相关笔记服务接口",
+      "description": "作为开发者，我需要调用后端 API 获取相关笔记数据，支持分页和分数展示。",
+      "acceptanceCriteria": [
+        "在 api/memo.ts 中添加 getRelatedMemos(memoId, page, pageSize) 函数",
+        "返回类型包含 id, content, createTime, relevanceScore 字段",
+        "错误处理：API 失败时抛出异常供调用方处理",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "创建相关笔记 Service 层",
+      "description": "作为开发者，我需要使用 @rabjs/react Service 管理相关笔记的状态和分页逻辑。",
+      "acceptanceCriteria": [
+        "创建 services/related-memo-service.ts，继承 Service 类",
+        "包含 relatedMemos 数组、loading、hasMore、currentPage 状态",
+        "实现 loadRelatedMemos(memoId) 方法，自动处理分页",
+        "实现 reset() 方法用于切换笔记时重置状态",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "创建相关性分数组件",
+      "description": "作为用户，我可以直观地看到每条笔记与当前笔记的相关程度。",
+      "acceptanceCriteria": [
+        "创建 components/memos/relevance-score.tsx",
+        "接收 score 参数（0-1 之间的原始分数）",
+        "使用 getRelevanceScore 函数转换为 0-5 分",
+        "展示为 5 个格子/圆点，填充数量代表分数（如 3/5 分填充 3 个）",
+        "悬停时显示具体分数（如 \"相关度: 3/5\"）",
+        "不同分数段使用不同颜色（低分灰色、中等黄色、高分绿色）",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "创建相关笔记列表组件",
+      "description": "作为用户，我可以在备忘录详情页看到相关笔记列表，支持无限滚动加载。",
+      "acceptanceCriteria": [
+        "创建 components/memos/related-memo-list.tsx",
+        "使用 bindServices 绑定 RelatedMemoService",
+        "实现无限滚动：当用户滚动到底部时自动加载下一页",
+        "加载时显示 loading 指示器",
+        "没有更多数据时显示\"已加载全部相关笔记\"",
+        "笔记卡片展示 content、createTime 和 RelevanceScore 组件",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "集成相关笔记到详情页",
+      "description": "作为用户，我可以在查看备忘录详情时直接看到下方的相关笔记。",
+      "acceptanceCriteria": [
+        "在 app/(memos)/[id].tsx 底部添加\"相关笔记\"区块",
+        "使用 RelatedMemoList 组件",
+        "当 memoId 变化时，重置相关笔记状态",
+        "区块标题为\"相关笔记\"，带图标",
+        "无相关笔记时显示\"暂无相关笔记\"提示",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "aimo-app",
-    "slug": "aimo-app",
+    "name": "aimo",
+    "slug": "aimo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/logo.png",
