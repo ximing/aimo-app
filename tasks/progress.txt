@@ -15,7 +15,7 @@
 - [x] US-001: 创建相关笔记服务接口
 - [x] US-002: 创建相关笔记 Service 层
 - [x] US-003: 创建相关笔记列表组件
-- [ ] US-004: 创建相关性分数组件
+- [x] US-004: 创建相关性分数组件
 - [ ] US-005: 集成相关笔记到详情页
 
 ## Completed
@@ -80,4 +80,26 @@
   - Component structure: Container ScrollView with content items + loading footer + empty/error states
   - Always reset service state in useEffect cleanup when component unmounts
   - Card styling follows pattern: background from theme.colors.background, borderRadius 8, padding 12
+---
+
+## 2025-02-19 23:50 - US-004
+- What was implemented:
+  - Created `components/memos/relevance-score.tsx` component
+  - Implemented `getRelevanceScore(score)` function to convert 0-1 to 0-5 integer scale
+  - Display as 5 vertical bars with color coding:
+    - 0-2: gray (foregroundTertiary) - low relevance
+    - 3: yellow (warning) - medium relevance
+    - 4-5: green (success) - high relevance
+  - Added tooltip showing "相关度: X/5" with descriptive label on press
+  - Exported component from `components/memos/index.ts`
+  - Added optional `showLabel` prop to display text description
+- Files changed:
+  - `components/memos/relevance-score.tsx`: New relevance score component
+  - `components/memos/index.ts`: Added export for RelevanceScore
+- **Learnings for future iterations:**
+  - For hover/tooltip on mobile: use TouchableOpacity with onPressIn/onPressOut
+  - Color transparency: use hex + alpha like `"${color}30"` for 30% opacity
+  - Tooltip positioning: use absolute positioning with negative margins for centering
+  - Component props: make features optional (showLabel) for flexibility in different contexts
+  - Score conversion: Math.round(score * 5) handles the 0-1 to 0-5 conversion cleanly
 ---

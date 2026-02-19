@@ -3,7 +3,7 @@
  * 显示单个备忘录的完整信息和相关笔记
  */
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Platform,
   Clipboard,
   Animated,
   Modal,
@@ -22,12 +21,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/use-theme";
 import MemoService from "@/services/memo-service";
+import RelatedMemoService from "@/services/related-memo-service";
 import { bindServices, useService, view } from "@rabjs/react";
-import { AttachmentGrid, ImageViewer, VideoPlayer } from "@/components/memos";
+import { AttachmentGrid, ImageViewer, VideoPlayer, RelatedMemoList } from "@/components/memos";
 import { getFileTypeFromMime } from "@/utils/attachment";
 import { showSuccess } from "@/utils/toast";
 import type { AttachmentDto } from "@/types/memo";
-import { useState } from "react";
 
 const MemoDetailContent = view(() => {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -572,79 +571,41 @@ const MemoDetailContent = view(() => {
         )}
 
         {/* 相关笔记部分 */}
-        {memoService.relatedMemos && memoService.relatedMemos.length > 0 && (
+        <View
+          style={[
+            styles.sectionContainer,
+            { marginHorizontal: theme.spacing.md, marginTop: theme.spacing.lg },
+          ]}
+        >
           <View
             style={[
-              styles.sectionContainer,
-              { marginHorizontal: theme.spacing.md, marginTop: theme.spacing.lg },
+              styles.sectionHeader,
+              { borderBottomColor: theme.colors.border },
             ]}
           >
-            <View
+            <MaterialIcons
+              name="link"
+              size={20}
+              color={theme.colors.relatedMemo}
+              style={styles.sectionIcon}
+            />
+            <Text
               style={[
-                styles.sectionHeader,
-                { borderBottomColor: theme.colors.border },
+                styles.sectionTitle,
+                { color: theme.colors.foreground },
               ]}
             >
-              <MaterialIcons
-                name="link"
-                size={20}
-                color={theme.colors.relatedMemo}
-                style={styles.sectionIcon}
-              />
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: theme.colors.foreground },
-                ]}
-              >
-                相关笔记 ({memoService.relatedMemos.length})
-              </Text>
-            </View>
-
-            <View style={styles.relatedMemosContent}>
-              {memoService.relatedMemos.map((relatedMemo) => (
-                <TouchableOpacity
-                  key={relatedMemo.memoId}
-                  style={[
-                    styles.relatedMemoCard,
-                    { backgroundColor: theme.colors.background },
-                  ]}
-                  onPress={() => handleRelatedMemoPress(relatedMemo.memoId)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.relatedMemoContent}>
-                  <Text
-                       style={[
-                         styles.relatedMemoText,
-                         { color: theme.colors.foregroundQuaternary },
-                       ]}
-                       numberOfLines={2}
-                     >
-                       {relatedMemo.content}
-                     </Text>
-                    {relatedMemo.similarity && (
-                      <View style={styles.similarityBadge}>
-                        <Text
-                          style={[
-                            styles.similarityText,
-                            { color: theme.colors.primary },
-                          ]}
-                        >
-                          相似度: {Math.round(relatedMemo.similarity * 100)}%
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  <MaterialIcons
-                    name="chevron-right"
-                    size={20}
-                    color={theme.colors.foregroundTertiary}
-                  />
-                </TouchableOpacity>
-              ))}
-            </View>
+              相关笔记
+            </Text>
           </View>
-        )}
+
+          <View style={styles.relatedMemosContent}>
+            <RelatedMemoList
+              memoId={id}
+              onMemoPress={handleRelatedMemoPress}
+            />
+          </View>
+        </View>
 
         {/* 底部空白 */}
         <View style={styles.bottomSpacer} />
@@ -677,7 +638,7 @@ const MemoDetailContent = view(() => {
 
 MemoDetailContent.displayName = "MemoDetailContent";
 
-export default bindServices(MemoDetailContent, [MemoService]);
+export default bindServices(MemoDetailContent, [MemoService, RelatedMemoService]);
 
 const styles = StyleSheet.create({
   container: {

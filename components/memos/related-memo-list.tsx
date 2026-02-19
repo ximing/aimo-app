@@ -250,7 +250,7 @@ export const RelatedMemoList = bindServices(RelatedMemoListContent, [
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    height: 300,
   },
   scrollView: {
     flex: 1,
