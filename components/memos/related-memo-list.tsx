@@ -7,12 +7,9 @@ import { useTheme } from "@/hooks/use-theme";
 import RelatedMemoService from "@/services/related-memo-service";
 import { MaterialIcons } from "@expo/vector-icons";
 import { bindServices, useService, view } from "@rabjs/react";
-import React, { useCallback, useEffect } from "react";
+import React, { useEffect } from "react";
 import {
   ActivityIndicator,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -43,29 +40,6 @@ const RelatedMemoListContent = view(
       };
     }, [memoId, relatedMemoService]);
 
-    // 处理滚动事件，实现无限滚动
-    const handleScroll = useCallback(
-      (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-        const { layoutMeasurement, contentOffset, contentSize } =
-          event.nativeEvent;
-        const paddingToBottom = 50;
-        const isCloseToBottom =
-          layoutMeasurement.height + contentOffset.y >=
-          contentSize.height - paddingToBottom;
-
-        if (
-          isCloseToBottom &&
-          relatedMemoService.hasMore &&
-          !relatedMemoService.loading
-        ) {
-          relatedMemoService.loadRelatedMemos(memoId).catch((err) => {
-            console.error("加载更多相关笔记失败:", err);
-          });
-        }
-      },
-      [memoId, relatedMemoService],
-    );
-
     // 格式化时间显示
     const formatDate = (timestamp: number): string => {
       const date = new Date(timestamp);
@@ -79,6 +53,12 @@ const RelatedMemoListContent = view(
     // 处理笔记点击
     const handleMemoPress = (memoId: string) => {
       onMemoPress?.(memoId);
+    };
+
+    const handleLoadMore = () => {
+      relatedMemoService.loadRelatedMemos(memoId).catch((err) => {
+        console.error("加载更多相关笔记失败:", err);
+      });
     };
 
     // 渲染加载指示器
@@ -103,6 +83,34 @@ const RelatedMemoListContent = view(
     // 渲染底部状态
     const renderFooter = () => {
       if (relatedMemoService.loading) return null;
+
+      if (
+        relatedMemoService.hasMore &&
+        relatedMemoService.relatedMemos.length > 0
+      ) {
+        return (
+          <TouchableOpacity
+            style={[
+              styles.loadMoreButton,
+              {
+                borderColor: theme.colors.border,
+                backgroundColor: theme.colors.backgroundSecondary,
+              },
+            ]}
+            onPress={handleLoadMore}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                styles.loadMoreText,
+                { color: theme.colors.foregroundSecondary },
+              ]}
+            >
+              加载更多
+            </Text>
+          </TouchableOpacity>
+        );
+      }
 
       if (
         !relatedMemoService.hasMore &&
@@ -173,13 +181,7 @@ const RelatedMemoListContent = view(
 
     return (
       <View style={styles.container}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          onScroll={handleScroll}
-          scrollEventThrottle={400}
-          showsVerticalScrollIndicator={false}
-        >
+        <View style={styles.listContent}>
           {relatedMemoService.relatedMemos.map((memo, index) => (
             <TouchableOpacity
               key={memo.id || `memo-${index}`}
@@ -237,7 +239,7 @@ const RelatedMemoListContent = view(
           {renderFooter()}
           {renderEmpty()}
           {renderError()}
-        </ScrollView>
+        </View>
       </View>
     );
   },
@@ -254,10 +256,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 200,
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
+  listContent: {
     paddingVertical: 8,
     gap: 8,
   },
@@ -315,6 +314,18 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 13,
+  },
+  loadMoreButton: {
+    paddingVertical: 12,
+    marginHorizontal: 8,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadMoreText: {
+    fontSize: 13,
+    fontWeight: "500",
   },
   emptyContainer: {
     paddingVertical: 32,

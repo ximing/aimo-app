@@ -16,14 +16,17 @@ import type { AttachmentDto } from "@/types/memo";
 import { getFileTypeFromMime } from "@/utils/attachment";
 import { showSuccess } from "@/utils/toast";
 import { MaterialIcons } from "@expo/vector-icons";
+import { Sparkles } from "lucide-react-native";
 import { bindServices, useService, view } from "@rabjs/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
   Clipboard,
   Modal,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -39,6 +42,7 @@ const MemoDetailContent = view(() => {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const memoService = useService(MemoService);
+  const relatedMemoService = useService(RelatedMemoService);
 
   // 菜单相关状态 - 必须在最前面
   const [menuVisible, setMenuVisible] = useState(false);
@@ -142,6 +146,29 @@ const MemoDetailContent = view(() => {
   const handleRelatedMemoPress = (memoId: string) => {
     router.push(`/(memos)/${memoId}`);
   };
+
+  const handlePageScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (!id) return;
+      const { layoutMeasurement, contentOffset, contentSize } =
+        event.nativeEvent;
+      const paddingToBottom = 120;
+      const isCloseToBottom =
+        layoutMeasurement.height + contentOffset.y >=
+        contentSize.height - paddingToBottom;
+
+      if (
+        isCloseToBottom &&
+        relatedMemoService.hasMore &&
+        !relatedMemoService.loading
+      ) {
+        relatedMemoService.loadRelatedMemos(id).catch((err) => {
+          console.error("加载更多相关笔记失败:", err);
+        });
+      }
+    },
+    [id, relatedMemoService],
+  );
 
   // 处理编辑
   const handleEdit = () => {
@@ -491,6 +518,8 @@ const MemoDetailContent = view(() => {
         style={styles.scrollContent}
         contentContainerStyle={styles.scrollContentContainer}
         showsVerticalScrollIndicator={false}
+        onScroll={handlePageScroll}
+        scrollEventThrottle={120}
       >
         {/* 主卡片 */}
         <View
@@ -593,8 +622,7 @@ const MemoDetailContent = view(() => {
               { borderBottomColor: theme.colors.border },
             ]}
           >
-            <MaterialIcons
-              name="link"
+            <Sparkles
               size={20}
               color={theme.colors.relatedMemo}
               style={styles.sectionIcon}

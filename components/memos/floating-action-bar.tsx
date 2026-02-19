@@ -6,67 +6,79 @@
  */
 
 import { useTheme } from "@/hooks/use-theme";
-import { MaterialIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { view } from "@rabjs/react";
+import { useRouter } from "expo-router";
+import { FileText, Mic, MoreHorizontal } from "lucide-react-native";
 import React from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 interface FloatingActionBarProps {
   onMicPress?: () => void;
   onAddPress?: () => void;
-  onEditPress?: () => void;
+  onMorePress?: () => void;
 }
 
-export const FloatingActionBar = view(({
-  onMicPress,
-  onAddPress,
-  onEditPress,
-}: FloatingActionBarProps) => {
-  const theme = useTheme();
-  const router = useRouter();
+export const FloatingActionBar = view(
+  ({ onMicPress, onAddPress, onMorePress }: FloatingActionBarProps) => {
+    const theme = useTheme();
+    const router = useRouter();
 
-  const handleAddPress = React.useCallback(() => {
-    if (onAddPress) {
-      onAddPress();
-    } else {
-      // 默认行为：导航到创建页面
-      router.push("/(memos)/create");
-    }
-  }, [onAddPress, router]);
+    const handleAddPress = React.useCallback(() => {
+      if (onAddPress) {
+        onAddPress();
+      } else {
+        // 默认行为：导航到创建页面
+        router.push("/(memos)/create");
+      }
+    }, [onAddPress, router]);
 
-  return (
-    <View style={styles.floatingActionBarWrapper}>
-      <View
-        style={[
-          styles.floatingActionBar,
-          {
-            // 使用 backgroundTertiary 以与卡片形成对比
-            // 浅色模式：#f3f4f6（与白色卡片 #ffffff 对比）
-            // 深色模式：使用 input (#3f3f46) 以区分于卡片 (#262626)
-            backgroundColor: theme.isDark ? theme.colors.input : theme.colors.backgroundTertiary,
-            // 深色模式下增加微弱边框以增强区分度
-            borderWidth: theme.isDark ? 1 : 0,
-            borderColor: theme.colors.border,
-            ...theme.shadows.lg,
-          },
-        ]}
-      >
-        <TouchableOpacity style={styles.actionButton} onPress={onMicPress}>
-          <MaterialIcons name="mic" size={24} color={theme.colors.info} />
-        </TouchableOpacity>
+    return (
+      <View style={styles.floatingActionBarWrapper}>
+        <View
+          style={[
+            styles.floatingActionBar,
+            {
+              backgroundColor: theme.colors.card,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              ...theme.shadows.lg,
+            },
+          ]}
+        >
+          <TouchableOpacity style={styles.actionButton} onPress={onMicPress}>
+            <Mic size={18} color={theme.colors.foreground} />
+            <Text
+              style={[styles.actionLabel, { color: theme.colors.foreground }]}
+            >
+              录音
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton} onPress={handleAddPress}>
-          <MaterialIcons name="add" size={28} color={theme.colors.primary} />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleAddPress}
+          >
+            <FileText size={18} color={theme.colors.foreground} />
+            <Text
+              style={[styles.actionLabel, { color: theme.colors.foreground }]}
+            >
+              文本
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton} onPress={onEditPress}>
-          <MaterialIcons name="edit" size={24} color={theme.colors.info} />
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={onMorePress}>
+            <MoreHorizontal size={18} color={theme.colors.foreground} />
+            <Text
+              style={[styles.actionLabel, { color: theme.colors.foreground }]}
+            >
+              更多
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  );
-});
+    );
+  },
+);
 
 const styles = StyleSheet.create({
   floatingActionBarWrapper: {
@@ -74,24 +86,28 @@ const styles = StyleSheet.create({
     bottom: 16,
     left: 0,
     right: 0,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     zIndex: 100,
     pointerEvents: "box-none",
+    marginHorizontal: 30,
   },
   floatingActionBar: {
     flexDirection: "row",
-    justifyContent: "center",
+    justifyContent: "space-around",
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 8,
-    borderRadius: 50, // 50% 圆角
+    borderRadius: 20,
     alignSelf: "center",
   },
   actionButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    gap: 2,
+  },
+  actionLabel: {
+    fontSize: 10,
+    marginTop: 2,
   },
 });
