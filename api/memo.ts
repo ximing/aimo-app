@@ -127,12 +127,22 @@ export const searchMemosByVector = async (
 /**
  * 查找相关笔记
  * GET /api/v1/memos/:memoId/related
+ * @param memoId - 笔记ID
+ * @param page - 页码，从1开始
+ * @param pageSize - 每页数量
+ * @returns Promise<RelatedMemosResponse>
+ * @throws Error 当API请求失败时抛出异常
  */
 export const getRelatedMemos = async (
   memoId: string,
-  limit?: number
+  page: number = 1,
+  pageSize: number = 10
 ): Promise<RelatedMemosResponse> => {
-  const url = `/memos/${memoId}/related${limit ? `?limit=${limit}` : ''}`;
+  const queryParams = new URLSearchParams();
+  queryParams.append('page', String(page));
+  queryParams.append('limit', String(pageSize));
+
+  const url = `/memos/${memoId}/related?${queryParams.toString()}`;
   const response = await apiGet<RelatedMemosResponse>(url);
 
   if (response.code !== 0) {

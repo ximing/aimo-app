@@ -11,7 +11,7 @@ import {
   getRelatedMemos as apiGetRelatedMemos,
   getActivityStats as apiGetActivityStats
 } from '@/api/memo';
-import type { Memo, ListMemosParams, MemoWithSimilarity, MemoActivityStatsDto } from '@/types/memo';
+import type { Memo, ListMemosParams, RelatedMemoItem, MemoActivityStatsDto } from '@/types/memo';
 
 class MemoService extends Service {
   // 响应式属性
@@ -24,7 +24,7 @@ class MemoService extends Service {
   
   // 详情页相关属性
   currentMemo: Memo | null = null;
-  relatedMemos: MemoWithSimilarity[] = [];
+  relatedMemos: RelatedMemoItem[] = [];
   detailLoading = false;
   detailError: string | null = null;
 
@@ -108,7 +108,7 @@ class MemoService extends Service {
     try {
       const [memo, relatedData] = await Promise.all([
         apiGetMemo(memoId),
-        apiGetRelatedMemos(memoId, 10)
+        apiGetRelatedMemos(memoId, 1, 10)
       ]);
 
       this.currentMemo = memo;

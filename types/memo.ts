@@ -91,9 +91,23 @@ export interface VectorSearchRequest {
 
 export interface VectorSearchResponse extends PaginatedResponse<MemoWithSimilarity> {}
 
+export interface RelatedMemoItem {
+  id: string;
+  memoId: string;
+  content: string;
+  createTime: number;
+  relevanceScore: number;
+  similarity?: number;
+}
+
 export interface RelatedMemosResponse {
-  items: MemoWithSimilarity[];
-  count: number;
+  items: RelatedMemoItem[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 /**
