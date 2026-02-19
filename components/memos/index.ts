@@ -13,3 +13,4 @@ export { ImageViewer } from "./image-viewer";
 export { VideoPlayer } from "./video-player";
 export { ActivityHeatmap } from "./activity-heatmap";
 export { RelatedMemoList } from "./related-memo-list";
+export { RelevanceScore } from "./relevance-score";
