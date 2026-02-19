@@ -61,7 +61,11 @@ export const AttachmentGrid = view(({
               { backgroundColor: theme.colors.backgroundSecondary },
             ]}
             contentFit="cover"
-            placeholder={require('@/assets/images/partial-react-logo.png')}
+            placeholder={
+              theme.isDark
+                ? require('@/assets/logo-dark.png')
+                : require('@/assets/logo.png')
+            }
             transition={200}
           />
         ) : isVideoType ? (

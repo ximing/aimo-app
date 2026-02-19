@@ -7,6 +7,7 @@ export interface UserInfo {
   uid: string;
   email?: string;
   nickname?: string;
+  avatar?: string;
 }
 
 export interface UpdateUserRequest {

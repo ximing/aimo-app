@@ -21,6 +21,7 @@ import AuthService from "@/services/auth-service";
 import MemoService from "@/services/memo-service";
 import ThemeService from "@/services/theme-service";
 import { MaterialIcons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useService, view } from "@rabjs/react";
 import React, { useEffect, useRef } from "react";
 import {
@@ -44,6 +45,12 @@ export const SidebarDrawer = view(({ visible, onClose }: SidebarDrawerProps) => 
   const memoService = useService(MemoService);
   const themeService = useService(ThemeService);
   const insets = useSafeAreaInsets();
+  const userName =
+    authService.user?.nickname || authService.user?.email || "用户";
+  const userEmail = authService.user?.email;
+  const userUid = authService.user?.uid;
+  const userAvatar = authService.user?.avatar;
+  const userInitial = userName.charAt(0).toUpperCase();
 
   // 获取活动统计数据
   useEffect(() => {
@@ -129,11 +136,15 @@ export const SidebarDrawer = view(({ visible, onClose }: SidebarDrawerProps) => 
           ]}
         >
           <View style={[styles.avatarContainer, { backgroundColor: theme.colors.primary }]}>
-            <Text style={styles.avatarText}>
-              {authService.user?.nickname?.charAt(0).toUpperCase() ||
-                authService.user?.email?.charAt(0).toUpperCase() ||
-                "U"}
-            </Text>
+            {userAvatar ? (
+              <Image
+                source={{ uri: userAvatar }}
+                style={styles.avatarImage}
+                contentFit="cover"
+              />
+            ) : (
+              <Text style={styles.avatarText}>{userInitial}</Text>
+            )}
           </View>
 
           <View style={styles.userDetails}>
@@ -141,14 +152,24 @@ export const SidebarDrawer = view(({ visible, onClose }: SidebarDrawerProps) => 
               style={[styles.userName, { color: theme.colors.foreground }]}
               numberOfLines={1}
             >
-              {authService.user?.nickname || authService.user?.email || "用户"}
+              {userName}
             </Text>
-            <Text
-              style={[styles.userEmail, { color: theme.colors.foregroundSecondary }]}
-              numberOfLines={1}
-            >
-              {authService.user?.email || ""}
-            </Text>
+            {userEmail ? (
+              <Text
+                style={[styles.userMeta, { color: theme.colors.foregroundSecondary }]}
+                numberOfLines={1}
+              >
+                {userEmail}
+              </Text>
+            ) : null}
+            {userUid ? (
+              <Text
+                style={[styles.userMeta, { color: theme.colors.foregroundSecondary }]}
+                numberOfLines={1}
+              >
+                ID: {userUid}
+              </Text>
+            ) : null}
           </View>
         </View>
 
@@ -259,6 +280,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
+    overflow: "hidden",
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
   },
   avatarText: {
     color: "#fff",
@@ -273,7 +299,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 4,
   },
-  userEmail: {
+  userMeta: {
     fontSize: 12,
   },
   drawerMenuItem: {
