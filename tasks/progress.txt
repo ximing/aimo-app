@@ -1,14 +1,40 @@
 # Ralph Progress Log
-# Project: Aimo - 相关笔记无限滚动列表
-# Branch: ralph/related-memos-pagination
+# Project: 相关笔记无限滚动列表
+# Branch: ralph/feature-20260219
+
+## Codebase Patterns
+- API functions use apiGet/apiPost/etc. from api/common.ts
+- API errors are thrown for callers to handle (try/catch in services)
+- RelatedMemoItem needs both `id` (for PRD) and `memoId` (for existing UI)
+- RelatedMemoItem uses `relevanceScore` (0-1) for new API, `similarity` for backward compatibility
 
 ## Stories
-- [ ] US-001: 创建相关笔记服务接口
+- [x] US-001: 创建相关笔记服务接口
 - [ ] US-002: 创建相关笔记 Service 层
-- [ ] US-003: 创建相关性分数组件
-- [ ] US-004: 创建相关笔记列表组件
+- [ ] US-003: 创建相关笔记列表组件
+- [ ] US-004: 创建相关性分数组件
 - [ ] US-005: 集成相关笔记到详情页
 
 ## Completed
 
 ## Notes
+
+---
+
+## 2025-02-19 22:46 - US-001
+- What was implemented:
+  - Added `RelatedMemoItem` interface in `types/memo.ts` with fields: id, memoId, content, createTime, relevanceScore, similarity
+  - Updated `RelatedMemosResponse` to include pagination metadata (total, page, limit, totalPages)
+  - Updated `getRelatedMemos()` API function to accept page and pageSize parameters
+  - Updated `memo-service.ts` to use the new `RelatedMemoItem` type
+- Files changed:
+  - `types/memo.ts`: Added RelatedMemoItem interface, updated RelatedMemosResponse
+  - `api/memo.ts`: Updated getRelatedMemos function signature with page/pageSize
+  - `services/memo-service.ts`: Updated relatedMemos type and API call
+- **Learnings for future iterations:**
+  - The existing UI in `app/(memos)/[id].tsx` uses `memoId` and `similarity` properties
+  - New PRD requires `id` and `relevanceScore` properties
+  - To maintain backward compatibility during transition, include both sets of properties
+  - Use lowercase commit messages (commitlint enforces this)
+  - Run `npx tsc --noEmit` to check types before committing
+---
