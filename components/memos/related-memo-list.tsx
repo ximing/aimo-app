@@ -3,22 +3,21 @@
  * 支持无限滚动加载，展示与当前笔记相关的其他笔记
  */
 
-import React, { useEffect, useCallback } from "react";
+import { useTheme } from "@/hooks/use-theme";
+import RelatedMemoService from "@/services/related-memo-service";
+import { MaterialIcons } from "@expo/vector-icons";
+import { bindServices, useService, view } from "@rabjs/react";
+import React, { useCallback, useEffect } from "react";
 import {
-  View,
+  ActivityIndicator,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  ActivityIndicator,
-  ScrollView,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
+  View,
 } from "react-native";
-import { MaterialIcons } from "@expo/vector-icons";
-import { useTheme } from "@/hooks/use-theme";
-import RelatedMemoService from "@/services/related-memo-service";
-import { bindServices, useService, view } from "@rabjs/react";
-import type { RelatedMemoItem } from "@/types/memo";
 
 interface RelatedMemoListProps {
   memoId: string;
@@ -54,13 +53,17 @@ const RelatedMemoListContent = view(
           layoutMeasurement.height + contentOffset.y >=
           contentSize.height - paddingToBottom;
 
-        if (isCloseToBottom && relatedMemoService.hasMore && !relatedMemoService.loading) {
+        if (
+          isCloseToBottom &&
+          relatedMemoService.hasMore &&
+          !relatedMemoService.loading
+        ) {
           relatedMemoService.loadRelatedMemos(memoId).catch((err) => {
             console.error("加载更多相关笔记失败:", err);
           });
         }
       },
-      [memoId, relatedMemoService]
+      [memoId, relatedMemoService],
     );
 
     // 格式化时间显示
@@ -77,58 +80,6 @@ const RelatedMemoListContent = view(
     const handleMemoPress = (memoId: string) => {
       onMemoPress?.(memoId);
     };
-
-    // 渲染单个相关笔记卡片
-    const renderRelatedMemoCard = (memo: RelatedMemoItem) => (
-      <TouchableOpacity
-        key={memo.id}
-        style={[
-          styles.memoCard,
-          { backgroundColor: theme.colors.background },
-        ]}
-        onPress={() => handleMemoPress(memo.memoId)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.memoContent}>
-          <Text
-            style={[
-              styles.memoText,
-              { color: theme.colors.foreground },
-            ]}
-            numberOfLines={2}
-          >
-            {memo.content}
-          </Text>
-          <View style={styles.memoMeta}>
-            <Text
-              style={[
-                styles.memoDate,
-                { color: theme.colors.foregroundTertiary },
-              ]}
-            >
-              {formatDate(memo.createTime)}
-            </Text>
-            {memo.relevanceScore !== undefined && (
-              <View style={styles.relevanceBadge}>
-                <Text
-                  style={[
-                    styles.relevanceText,
-                    { color: theme.colors.primary },
-                  ]}
-                >
-                  相关度: {Math.round(memo.relevanceScore * 100)}%
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
-        <MaterialIcons
-          name="chevron-right"
-          size={20}
-          color={theme.colors.foregroundTertiary}
-        />
-      </TouchableOpacity>
-    );
 
     // 渲染加载指示器
     const renderLoadingIndicator = () => {
@@ -153,7 +104,10 @@ const RelatedMemoListContent = view(
     const renderFooter = () => {
       if (relatedMemoService.loading) return null;
 
-      if (!relatedMemoService.hasMore && relatedMemoService.relatedMemos.length > 0) {
+      if (
+        !relatedMemoService.hasMore &&
+        relatedMemoService.relatedMemos.length > 0
+      ) {
         return (
           <View style={styles.footerContainer}>
             <Text
@@ -210,12 +164,7 @@ const RelatedMemoListContent = view(
             size={24}
             color={theme.colors.destructive}
           />
-          <Text
-            style={[
-              styles.errorText,
-              { color: theme.colors.destructive },
-            ]}
-          >
+          <Text style={[styles.errorText, { color: theme.colors.destructive }]}>
             {relatedMemoService.error}
           </Text>
         </View>
@@ -231,7 +180,59 @@ const RelatedMemoListContent = view(
           scrollEventThrottle={400}
           showsVerticalScrollIndicator={false}
         >
-          {relatedMemoService.relatedMemos.map(renderRelatedMemoCard)}
+          {relatedMemoService.relatedMemos.map((memo, index) => (
+            <TouchableOpacity
+              key={memo.id || `memo-${index}`}
+              style={[
+                styles.memoCard,
+                { backgroundColor: theme.colors.backgroundTertiary },
+              ]}
+              onPress={() => handleMemoPress(memo.memoId)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.memoContent}>
+                <Text
+                  style={[styles.memoText, { color: theme.colors.foreground }]}
+                  numberOfLines={2}
+                >
+                  {memo.content}
+                </Text>
+                <View style={styles.memoMeta}>
+                  <Text
+                    style={[
+                      styles.memoDate,
+                      { color: theme.colors.foregroundTertiary },
+                    ]}
+                  >
+                    {formatDate(memo.createdAt)}
+                  </Text>
+                  {memo.relevanceScore !== undefined && (
+                    <View style={styles.relevanceBadge}>
+                      {[1, 2, 3, 4, 5].map((level) => (
+                        <View
+                          key={level}
+                          style={[
+                            styles.relevanceDot,
+                            {
+                              backgroundColor:
+                                level <= Math.ceil(memo.relevanceScore * 5)
+                                  ? theme.colors.primary
+                                  : theme.colors.foregroundTertiary,
+                            },
+                          ]}
+                        />
+                      ))}
+                    </View>
+                  )}
+                </View>
+              </View>
+              <MaterialIcons
+                name="chevron-right"
+                size={20}
+                color={theme.colors.foregroundTertiary}
+              />
+            </TouchableOpacity>
+          ))}
           {renderLoadingIndicator()}
           {renderFooter()}
           {renderEmpty()}
@@ -239,7 +240,7 @@ const RelatedMemoListContent = view(
         </ScrollView>
       </View>
     );
-  }
+  },
 );
 
 RelatedMemoListContent.displayName = "RelatedMemoListContent";
@@ -250,7 +251,8 @@ export const RelatedMemoList = bindServices(RelatedMemoListContent, [
 
 const styles = StyleSheet.create({
   container: {
-    height: 300,
+    flex: 1,
+    minHeight: 200,
   },
   scrollView: {
     flex: 1,
@@ -264,7 +266,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 8,
     padding: 12,
-    marginHorizontal: 0,
+    marginHorizontal: 8,
   },
   memoContent: {
     flex: 1,
@@ -284,10 +286,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   relevanceBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    backgroundColor: "transparent",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  relevanceDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   relevanceText: {
     fontSize: 11,

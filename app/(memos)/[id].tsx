@@ -3,30 +3,35 @@
  * 显示单个备忘录的完整信息和相关笔记
  */
 
-import React, { useEffect, useRef, useState } from "react";
 import {
-  View,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-  Clipboard,
-  Animated,
-  Modal,
-  Pressable,
-} from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { MaterialIcons } from "@expo/vector-icons";
+  AttachmentGrid,
+  ImageViewer,
+  RelatedMemoList,
+  VideoPlayer,
+} from "@/components/memos";
 import { useTheme } from "@/hooks/use-theme";
 import MemoService from "@/services/memo-service";
 import RelatedMemoService from "@/services/related-memo-service";
-import { bindServices, useService, view } from "@rabjs/react";
-import { AttachmentGrid, ImageViewer, VideoPlayer, RelatedMemoList } from "@/components/memos";
+import type { AttachmentDto } from "@/types/memo";
 import { getFileTypeFromMime } from "@/utils/attachment";
 import { showSuccess } from "@/utils/toast";
-import type { AttachmentDto } from "@/types/memo";
+import { MaterialIcons } from "@expo/vector-icons";
+import { bindServices, useService, view } from "@rabjs/react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Animated,
+  Clipboard,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const MemoDetailContent = view(() => {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -43,7 +48,9 @@ const MemoDetailContent = view(() => {
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [videoPlayerVisible, setVideoPlayerVisible] = useState(false);
-  const [selectedVideo, setSelectedVideo] = useState<AttachmentDto | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<AttachmentDto | null>(
+    null,
+  );
 
   // 动画值
   const slideAnim = useRef(new Animated.Value(300)).current;
@@ -113,10 +120,10 @@ const MemoDetailContent = view(() => {
     if (fileType === "image") {
       const imageAttachments =
         memoService.currentMemo?.attachments?.filter(
-          (att) => getFileTypeFromMime(att.type) === "image"
+          (att) => getFileTypeFromMime(att.type) === "image",
         ) || [];
       const imageIndex = imageAttachments.findIndex(
-        (att) => att.attachmentId === attachment.attachmentId
+        (att) => att.attachmentId === attachment.attachmentId,
       );
       setSelectedImageIndex(imageIndex >= 0 ? imageIndex : 0);
       setImageViewerVisible(true);
@@ -205,7 +212,10 @@ const MemoDetailContent = view(() => {
           style={styles.errorIcon}
         />
         <Text
-          style={[styles.errorText, { color: theme.colors.foregroundSecondary }]}
+          style={[
+            styles.errorText,
+            { color: theme.colors.foregroundSecondary },
+          ]}
         >
           加载失败
         </Text>
@@ -218,7 +228,10 @@ const MemoDetailContent = view(() => {
           {memoService.detailError}
         </Text>
         <TouchableOpacity
-          style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
+          style={[
+            styles.retryButton,
+            { backgroundColor: theme.colors.primary },
+          ]}
           onPress={() => {
             if (id) {
               memoService.fetchMemoDetail(id);
@@ -241,7 +254,10 @@ const MemoDetailContent = view(() => {
         ]}
       >
         <Text
-          style={[styles.emptyText, { color: theme.colors.foregroundSecondary }]}
+          style={[
+            styles.emptyText,
+            { color: theme.colors.foregroundSecondary },
+          ]}
         >
           未找到该备忘录
         </Text>
@@ -259,33 +275,61 @@ const MemoDetailContent = view(() => {
       {/* 头部 */}
       <View style={styles.header}>
         <TouchableOpacity
-          style={[styles.headerIconButton, { backgroundColor: theme.colors.muted }]}
+          style={[
+            styles.headerIconButton,
+            { backgroundColor: theme.colors.muted },
+          ]}
           onPress={handleBack}
         >
-          <MaterialIcons name="arrow-back" size={20} color={theme.colors.foreground} />
+          <MaterialIcons
+            name="arrow-back"
+            size={20}
+            color={theme.colors.foreground}
+          />
         </TouchableOpacity>
 
         <View style={{ flex: 1 }} />
 
         <TouchableOpacity
-          style={[styles.headerIconButton, { backgroundColor: theme.colors.muted }]}
+          style={[
+            styles.headerIconButton,
+            { backgroundColor: theme.colors.muted },
+          ]}
           onPress={handleEdit}
         >
-          <MaterialIcons name="edit" size={20} color={theme.colors.foreground} />
+          <MaterialIcons
+            name="edit"
+            size={20}
+            color={theme.colors.foreground}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.headerIconButton, { backgroundColor: theme.colors.muted, marginHorizontal: 8 }]}
+          style={[
+            styles.headerIconButton,
+            { backgroundColor: theme.colors.muted, marginHorizontal: 8 },
+          ]}
           onPress={handleCopy}
         >
-          <MaterialIcons name="content-copy" size={20} color={theme.colors.foreground} />
+          <MaterialIcons
+            name="content-copy"
+            size={20}
+            color={theme.colors.foreground}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.headerIconButton, { backgroundColor: theme.colors.muted }]}
+          style={[
+            styles.headerIconButton,
+            { backgroundColor: theme.colors.muted },
+          ]}
           onPress={() => setMenuVisible(true)}
         >
-          <MaterialIcons name="more-vert" size={20} color={theme.colors.foreground} />
+          <MaterialIcons
+            name="more-vert"
+            size={20}
+            color={theme.colors.foreground}
+          />
         </TouchableOpacity>
       </View>
 
@@ -452,16 +496,16 @@ const MemoDetailContent = view(() => {
         <View
           style={[
             styles.mainCard,
-            { backgroundColor: theme.colors.card, marginHorizontal: theme.spacing.md },
+            {
+              backgroundColor: theme.colors.card,
+              marginHorizontal: theme.spacing.md,
+            },
           ]}
         >
           {/* 内容 */}
           <View style={styles.contentSection}>
             <Text
-              style={[
-                styles.contentText,
-                { color: theme.colors.foreground },
-              ]}
+              style={[styles.contentText, { color: theme.colors.foreground }]}
             >
               {memo.content}
             </Text>
@@ -474,60 +518,23 @@ const MemoDetailContent = view(() => {
               { borderTopColor: theme.colors.border },
             ]}
           >
-            <View style={styles.timeItem}>
-              <MaterialIcons
-                name="create"
-                size={16}
-                color={theme.colors.foregroundTertiary}
-                style={styles.timeIcon}
-              />
-              <View style={styles.timeInfo}>
-                <Text
-                  style={[
-                    styles.timeLabel,
-                    { color: theme.colors.foregroundTertiary },
-                  ]}
-                >
-                  创建时间
-                </Text>
-                <Text
-                  style={[
-                    styles.timeValue,
-                    { color: theme.colors.foregroundSecondary },
-                  ]}
-                >
-                  {formatDate(memo.createdAt)}
-                </Text>
-              </View>
-            </View>
-
+            <Text
+              style={[
+                styles.timeText,
+                { color: theme.colors.foregroundTertiary },
+              ]}
+            >
+              创建时间: {formatDate(memo.createdAt)}
+            </Text>
             {memo.updatedAt !== memo.createdAt && (
-              <View style={styles.timeItem}>
-                <MaterialIcons
-                  name="update"
-                  size={16}
-                  color={theme.colors.foregroundTertiary}
-                  style={styles.timeIcon}
-                />
-                <View style={styles.timeInfo}>
-                  <Text
-                    style={[
-                      styles.timeLabel,
-                      { color: theme.colors.foregroundTertiary },
-                    ]}
-                  >
-                    最后编辑
-                  </Text>
-                  <Text
-                    style={[
-                      styles.timeValue,
-                      { color: theme.colors.foregroundSecondary },
-                    ]}
-                  >
-                    {formatDate(memo.updatedAt)}
-                  </Text>
-                </View>
-              </View>
+              <Text
+                style={[
+                  styles.timeText,
+                  { color: theme.colors.foregroundTertiary },
+                ]}
+              >
+                编辑时间: {formatDate(memo.updatedAt)}
+              </Text>
             )}
           </View>
         </View>
@@ -537,7 +544,10 @@ const MemoDetailContent = view(() => {
           <View
             style={[
               styles.sectionContainer,
-              { marginHorizontal: theme.spacing.md, marginTop: theme.spacing.lg },
+              {
+                marginHorizontal: theme.spacing.md,
+                marginTop: theme.spacing.lg,
+              },
             ]}
           >
             <View
@@ -590,20 +600,14 @@ const MemoDetailContent = view(() => {
               style={styles.sectionIcon}
             />
             <Text
-              style={[
-                styles.sectionTitle,
-                { color: theme.colors.foreground },
-              ]}
+              style={[styles.sectionTitle, { color: theme.colors.foreground }]}
             >
-              相关笔记
+              语义相关
             </Text>
           </View>
 
           <View style={styles.relatedMemosContent}>
-            <RelatedMemoList
-              memoId={id}
-              onMemoPress={handleRelatedMemoPress}
-            />
+            <RelatedMemoList memoId={id} onMemoPress={handleRelatedMemoPress} />
           </View>
         </View>
 
@@ -616,7 +620,7 @@ const MemoDetailContent = view(() => {
         visible={imageViewerVisible}
         images={
           memo.attachments?.filter(
-            (att) => getFileTypeFromMime(att.type) === "image"
+            (att) => getFileTypeFromMime(att.type) === "image",
           ) || []
         }
         initialIndex={selectedImageIndex}
@@ -638,7 +642,10 @@ const MemoDetailContent = view(() => {
 
 MemoDetailContent.displayName = "MemoDetailContent";
 
-export default bindServices(MemoDetailContent, [MemoService, RelatedMemoService]);
+export default bindServices(MemoDetailContent, [
+  MemoService,
+  RelatedMemoService,
+]);
 
 const styles = StyleSheet.create({
   container: {
@@ -797,10 +804,15 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   timeSection: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
-    gap: 12,
+    gap: 16,
+  },
+  timeText: {
+    fontSize: 12,
   },
   timeItem: {
     flexDirection: "row",

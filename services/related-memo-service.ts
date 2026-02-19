@@ -56,8 +56,10 @@ class RelatedMemoService extends Service {
         this.pageSize
       );
 
-      // 追加新数据到列表
-      this.relatedMemos.push(...response.items);
+      // 追加新数据到列表（去重）
+      const existingIds = new Set(this.relatedMemos.map((m) => m.id));
+      const newItems = response.items.filter((item) => !existingIds.has(item.id));
+      this.relatedMemos.push(...newItems);
 
       // 更新分页状态
       const { pagination } = response;

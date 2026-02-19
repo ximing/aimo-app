@@ -93,11 +93,16 @@ export interface VectorSearchResponse extends PaginatedResponse<MemoWithSimilari
 
 export interface RelatedMemoItem {
   id: string;
+  uid: string;
   memoId: string;
   content: string;
-  createTime: number;
+  type: string;
+  createdAt: number;
+  updatedAt: number;
   relevanceScore: number;
   similarity?: number;
+  attachments?: unknown[];
+  categoryId?: string | null;
 }
 
 export interface RelatedMemosResponse {
