@@ -1,0 +1,150 @@
+{
+  "project": "Aimo",
+  "branchName": "ralph/voice-to-text",
+  "description": "录音转文字功能 - 用户点击录音按钮录制语音，自动转写为文本填入新建备忘录",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "安装 expo-av 并创建 useAudioRecorder hook",
+      "description": "作为开发者，我需要安装录音库并创建可复用的录音 hook 来管理录音状态。",
+      "acceptanceCriteria": [
+        "安装 expo-av 依赖",
+        "创建 hooks/use-audio-recorder.ts",
+        "Hook 返回：recording、uri、duration、startRecording、stopRecording、error 状态",
+        "录音格式配置为 m4a，编码为 AAC",
+        "处理麦克风权限请求和错误",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "expo-av already installed; hook created with all required functionality"
+    },
+    {
+      "id": "US-002",
+      "title": "实现 ASR API 接口",
+      "description": "作为开发者，我需要实现 ASR 相关的 API 接口用于语音转文字。",
+      "acceptanceCriteria": [
+        "创建 api/asr.ts",
+        "实现 submitTranscriptionTask(fileUrls: string[]) 调用 POST /api/v1/asr/transcribe",
+        "实现 getTaskStatus(taskId: string) 调用 GET /api/v1/asr/task/:taskId",
+        "实现 getTranscriptionResult(taskId: string) 调用 GET /api/v1/asr/result/:taskId",
+        "语言提示固定为 ['zh', 'en']",
+        "定义 ASR 相关的 TypeScript 类型（ASRTaskResponse、ASRTaskStatus、ASRResult）",
+        "正确处理 API 错误响应",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "ASR API implemented with submitTranscriptionTask, getTaskStatus, getTranscriptionResult; types defined in types/asr.ts"
+    },
+    {
+      "id": "US-003",
+      "title": "实现录音浮层组件 VoiceRecorderModal",
+      "description": "作为用户，我需要一个直观的录音界面来控制录音过程。",
+      "acceptanceCriteria": [
+        "创建 components/memos/voice-recorder-modal.tsx",
+        "组件 props：visible、onClose、onRecordingComplete(audioUri: string)",
+        "显示录音时长，格式 MM:SS",
+        "录音中显示红色脉冲动画或录音标识",
+        "提供停止录音按钮（方形图标）和取消按钮（X 图标）",
+        "使用 @rabjs/react 的 view 装饰器响应主题",
+        "弹窗样式使用 Modal 组件，背景半透明遮罩",
+        "Typecheck passes",
+        "Verify in browser/simulator using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "VoiceRecorderModal implemented with recording animation, waveform, duration display, stop/cancel buttons"
+    },
+    {
+      "id": "US-004",
+      "title": "修改 floating-action-bar 绑定录音按钮",
+      "description": "作为用户，我点击录音按钮后应该唤起录音浮层。",
+      "acceptanceCriteria": [
+        "修改 components/memos/floating-action-bar.tsx",
+        "添加 VoiceRecorderModal 状态管理（visible、audioUri）",
+        "点击录音按钮显示 VoiceRecorderModal",
+        "录音完成后获取 audioUri，跳转到 /(memos)/create?audioUri={encodedUri}",
+        "对 audioUri 进行 encodeURIComponent 编码",
+        "Typecheck passes",
+        "Verify in browser/simulator using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "FloatingActionBar integrated with VoiceRecorderModal, navigates to create page with encoded audioUri on complete"
+    },
+    {
+      "id": "US-005",
+      "title": "MediaPreview 组件支持音频类型",
+      "description": "作为用户，我希望在 create 页面能看到已添加的录音附件。",
+      "acceptanceCriteria": [
+        "修改 components/memos/media-preview.tsx",
+        "MediaItem 类型添加 'audio' 类型支持",
+        "音频附件显示音频图标（Headphones 或 Mic）",
+        "显示文件名和时长（如果有）",
+        "保留删除按钮功能",
+        "样式与现有图片/视频预览保持一致",
+        "Typecheck passes",
+        "Verify in browser/simulator using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "MediaPreview updated to support audio type with mic icon and filename display"
+    },
+    {
+      "id": "US-006",
+      "title": "修改 create 页面接收 audioUri 并显示音频附件",
+      "description": "作为用户，我结束录音后跳转到 create 页面应该看到录音附件已添加。",
+      "acceptanceCriteria": [
+        "修改 app/(memos)/create.tsx",
+        "从 useLocalSearchParams 获取 audioUri 参数",
+        "useEffect 监听 audioUri，解码后添加到 selectedMedia 作为音频类型",
+        "音频文件显示在 MediaPreview 中",
+        "用户保存 memo 时，音频文件正常上传为附件",
+        "Typecheck passes",
+        "Verify in browser/simulator using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Create page updated to receive audioUri from query params and display in MediaPreview"
+    },
+    {
+      "id": "US-007",
+      "title": "创建 VoiceMemoService 管理转写流程",
+      "description": "作为开发者，我需要 Service 来管理语音转写的状态和流程。",
+      "acceptanceCriteria": [
+        "创建 services/voice-memo-service.ts",
+        "Service 包含状态：transcriptionTaskId、transcriptionText、transcriptionStatus、isTranscribing",
+        "实现 uploadAndTranscribe(audioUri: string) 方法：上传文件→获取 URL→提交 ASR 任务",
+        "实现 pollTranscriptionResult(taskId: string) 方法：轮询 task 状态直到完成或失败",
+        "轮询间隔 2 秒，最多 30 次（60秒超时）",
+        "转写成功返回提取的 text，失败抛出错误",
+        "Service 继承 @rabjs/react 的 Service 类",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "VoiceMemoService created with uploadAndTranscribe, pollTranscriptionResult, 2s interval, 30 max polls, reactive state management"
+    },
+    {
+      "id": "US-008",
+      "title": "create 页面集成 ASR 转写流程",
+      "description": "作为用户，我进入 create 页面后应该自动进行语音转写并将结果填入内容区。",
+      "acceptanceCriteria": [
+        "修改 app/(memos)/create.tsx",
+        "使用 VoiceMemoService 进行转写",
+        "页面加载后，如果有 audioUri，自动调用 uploadAndTranscribe",
+        "显示转写状态：转写中、转写成功、转写失败",
+        "转写成功后将文本追加到 content 输入框",
+        "转写失败时 toast 提示 '语音转文字失败，请手动输入'",
+        "转写失败时保留音频附件",
+        "用户可以在转写过程中编辑其他内容",
+        "Typecheck passes",
+        "Verify in browser/simulator using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Create page integrated with VoiceMemoService for ASR flow, shows transcription status, appends text to content on success, toast on failure"
+    }
+  ]
+}

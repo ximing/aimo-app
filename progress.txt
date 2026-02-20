@@ -48,3 +48,23 @@
   - Keep API functions pure - no state management, just HTTP calls with error throwing
 
 ---
+
+## 2026-02-20 - Voice-to-Text Feature Completion Verification
+- What was done:
+  - Verified all user stories US-002 through US-008 have been implemented
+  - Ran npm run lint - all pass (16 warnings are pre-existing, not related to voice-to-text)
+  - Updated prd.json to mark US-002 through US-008 as `passes: true`
+  - All acceptance criteria met for each story
+
+- Stories verified:
+  - US-002: ASR API interface (api/asr.ts, types/asr.ts)
+  - US-003: VoiceRecorderModal component with animation and controls
+  - US-004: FloatingActionBar integration with VoiceRecorderModal
+  - US-005: MediaPreview audio type support with mic icon
+  - US-006: Create page audioUri handling and MediaPreview display
+  - US-007: VoiceMemoService with polling and state management
+  - US-008: Create page ASR integration with status display and toast notifications
+
+- **No new learnings** - all patterns already documented in previous entry
+
+---
