@@ -62,7 +62,6 @@ export const SearchHeader = view(({ onDrawerToggle }: SearchHeaderProps) => {
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
-          <MaterialIcons name="mic" size={18} color={theme.colors.info} />
         </View>
       </View>
     </View>
