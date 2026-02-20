@@ -361,24 +361,6 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
               >
                 {formatDate(memo.updatedAt)}
               </Text>
-
-              {memo.attachments && memo.attachments.length > 0 && (
-                <View style={styles.attachmentBadge}>
-                  <MaterialIcons
-                    name="attach-file"
-                    size={12}
-                    color={theme.colors.info}
-                  />
-                  <Text
-                    style={[
-                      styles.attachmentCount,
-                      { color: theme.colors.info },
-                    ]}
-                  >
-                    {memo.attachments.length}
-                  </Text>
-                </View>
-              )}
             </View>
 
             {/* 右侧菜单按钮 */}

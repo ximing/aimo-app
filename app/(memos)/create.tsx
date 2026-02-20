@@ -11,6 +11,7 @@ import { useTheme } from "@/hooks/use-theme";
 import MemoService from "@/services/memo-service";
 import { showError, showSuccess } from "@/utils/toast";
 import { MaterialIcons } from "@expo/vector-icons";
+import { Camera, Delete, Image, Video, X, Check } from "lucide-react-native";
 import { useService, view } from "@rabjs/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -108,7 +109,7 @@ const CreateMemoContent = view(() => {
           fileName: media.name,
           createdAt: Date.now(),
         });
-        attachmentIds.push(attachment.id);
+        attachmentIds.push(attachment.attachmentId);
       }
 
       // 构建 memo 内容
@@ -199,20 +200,18 @@ const CreateMemoContent = view(() => {
           styles.header,
           {
             backgroundColor: theme.colors.background,
-            borderBottomColor: theme.colors.border,
           },
         ]}
       >
         <TouchableOpacity
           style={[
             styles.headerIconButton,
-            { backgroundColor: theme.colors.muted },
+            { backgroundColor: theme.colors.backgroundTertiary },
           ]}
           onPress={handleGoBack}
           disabled={submitting}
         >
-          <MaterialIcons
-            name="close"
+          <X
             size={20}
             color={theme.colors.foreground}
           />
@@ -224,7 +223,7 @@ const CreateMemoContent = view(() => {
           style={[
             styles.headerIconButton,
             {
-              backgroundColor: theme.colors.muted,
+              backgroundColor: theme.colors.primary,
               opacity: submitting ? 0.5 : 1,
             },
           ]}
@@ -232,12 +231,11 @@ const CreateMemoContent = view(() => {
           disabled={submitting}
         >
           {submitting ? (
-            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <MaterialIcons
-              name="check"
+            <Check
               size={20}
-              color={theme.colors.primary}
+              color="#fff"
             />
           )}
         </TouchableOpacity>
@@ -249,8 +247,7 @@ const CreateMemoContent = view(() => {
           styles.inputSection,
           {
             flex: 1,
-            backgroundColor: theme.colors.card,
-            borderBottomColor: theme.colors.border,
+            backgroundColor: theme.colors.backgroundSecondary,
           },
         ]}
       >
@@ -278,8 +275,6 @@ const CreateMemoContent = view(() => {
         <View
           style={{
             backgroundColor: theme.colors.background,
-            borderTopColor: theme.colors.border,
-            borderTopWidth: 1,
           }}
         >
           <MediaPreview media={selectedMedia} onRemove={removeMedia} />
@@ -312,8 +307,7 @@ const CreateMemoContent = view(() => {
         style={[
           styles.footer,
           {
-            backgroundColor: theme.colors.card,
-            borderTopColor: theme.colors.border,
+            backgroundColor: theme.colors.background,
             paddingBottom: Math.max(insets.bottom, theme.spacing.sm),
           },
         ]}
@@ -324,17 +318,11 @@ const CreateMemoContent = view(() => {
           onPress={handleClear}
           disabled={submitting}
         >
-          <MaterialIcons
-            name="delete"
+          <Delete
             size={20}
             color={theme.colors.foregroundSecondary}
           />
         </TouchableOpacity>
-
-        {/* 分隔符 */}
-        <View
-          style={[styles.divider, { backgroundColor: theme.colors.border }]}
-        />
 
         {/* 拍照按钮 */}
         <TouchableOpacity
@@ -348,8 +336,7 @@ const CreateMemoContent = view(() => {
               color={theme.colors.foregroundSecondary}
             />
           ) : (
-            <MaterialIcons
-              name="camera-alt"
+            <Camera
               size={20}
               color={theme.colors.foregroundSecondary}
             />
@@ -362,8 +349,7 @@ const CreateMemoContent = view(() => {
           onPress={pickImage}
           disabled={mediaLoading}
         >
-          <MaterialIcons
-            name="image"
+          <Image
             size={20}
             color={theme.colors.foregroundSecondary}
           />
@@ -375,8 +361,7 @@ const CreateMemoContent = view(() => {
           onPress={pickVideo}
           disabled={mediaLoading}
         >
-          <MaterialIcons
-            name="videocam"
+          <Video
             size={20}
             color={theme.colors.foregroundSecondary}
           />
@@ -457,10 +442,5 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     justifyContent: "center",
     alignItems: "center",
-  },
-  divider: {
-    width: 1,
-    height: 24,
-    marginHorizontal: 4,
   },
 });
