@@ -6,6 +6,7 @@
 export { SearchHeader } from "./search-header";
 export { SidebarDrawer } from "./sidebar-drawer";
 export { FloatingActionBar } from "./floating-action-bar";
+export { MediaActionDrawer } from "./media-action-drawer";
 export { MediaPicker } from "./media-picker";
 export { MediaPreview } from "./media-preview";
 export { AttachmentGrid } from "./attachment-grid";

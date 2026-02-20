@@ -159,6 +159,11 @@ export function useMediaPicker() {
     setError(null);
   }, []);
 
+  // 添加媒体（用于从外部传入图片）
+  const addMedia = useCallback((media: SelectedMedia) => {
+    setSelectedMedia((prev) => [...prev, media]);
+  }, []);
+
   return {
     selectedMedia,
     loading,
@@ -169,5 +174,6 @@ export function useMediaPicker() {
     removeMedia,
     clearMedia,
     clearError,
+    addMedia,
   };
 }

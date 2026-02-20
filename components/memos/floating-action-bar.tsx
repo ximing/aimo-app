@@ -5,23 +5,25 @@
  * 页面特定组件：仅在 (memos) 页面使用
  */
 
+import * as ImagePicker from "expo-image-picker";
 import { useTheme } from "@/hooks/use-theme";
 import { view } from "@rabjs/react";
 import { useRouter } from "expo-router";
 import { FileText, Mic, MoreHorizontal } from "lucide-react-native";
-import React from "react";
+import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { MediaActionDrawer } from "./media-action-drawer";
 
 interface FloatingActionBarProps {
   onMicPress?: () => void;
   onAddPress?: () => void;
-  onMorePress?: () => void;
 }
 
 export const FloatingActionBar = view(
-  ({ onMicPress, onAddPress, onMorePress }: FloatingActionBarProps) => {
+  ({ onMicPress, onAddPress }: FloatingActionBarProps) => {
     const theme = useTheme();
     const router = useRouter();
+    const [drawerVisible, setDrawerVisible] = useState(false);
 
     const handleAddPress = React.useCallback(() => {
       if (onAddPress) {
@@ -31,6 +33,64 @@ export const FloatingActionBar = view(
         router.push("/(memos)/create");
       }
     }, [onAddPress, router]);
+
+    // 处理更多按钮点击 - 显示底部抽屉
+    const handleMorePress = React.useCallback(() => {
+      setDrawerVisible(true);
+    }, []);
+
+    // 拍照
+    const handleCameraPress = React.useCallback(async () => {
+      try {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== "granted") {
+          return;
+        }
+
+        const result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: false,
+          quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          const asset = result.assets[0];
+          const imageUri = encodeURIComponent(asset.uri);
+          router.push(`/(memos)/create?imageUri=${imageUri}&imageType=image`);
+        }
+      } catch (error) {
+        console.error("Camera error:", error);
+      }
+    }, [router]);
+
+    // 从相册选择图片
+    const handleGalleryPress = React.useCallback(async () => {
+      try {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+          return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: false,
+          quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          const asset = result.assets[0];
+          const imageUri = encodeURIComponent(asset.uri);
+          router.push(`/(memos)/create?imageUri=${imageUri}&imageType=image`);
+        }
+      } catch (error) {
+        console.error("Gallery error:", error);
+      }
+    }, [router]);
+
+    // 关闭抽屉
+    const handleDrawerClose = React.useCallback(() => {
+      setDrawerVisible(false);
+    }, []);
 
     return (
       <View style={styles.floatingActionBarWrapper}>
@@ -66,7 +126,7 @@ export const FloatingActionBar = view(
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionButton} onPress={onMorePress}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleMorePress}>
             <MoreHorizontal size={18} color={theme.colors.foreground} />
             <Text
               style={[styles.actionLabel, { color: theme.colors.foreground }]}
@@ -75,6 +135,14 @@ export const FloatingActionBar = view(
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* 媒体操作抽屉 */}
+        <MediaActionDrawer
+          visible={drawerVisible}
+          onClose={handleDrawerClose}
+          onCameraPress={handleCameraPress}
+          onGalleryPress={handleGalleryPress}
+        />
       </View>
     );
   },

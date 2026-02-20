@@ -32,7 +32,11 @@ const CreateMemoContent = view(() => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const memoService = useService(MemoService);
-  const { memoId: queryMemoId } = useLocalSearchParams<{ memoId: string }>();
+  const { memoId: queryMemoId, imageUri: queryImageUri, imageType: queryImageType } = useLocalSearchParams<{
+    memoId?: string;
+    imageUri?: string;
+    imageType?: string;
+  }>();
   const {
     selectedMedia,
     loading: mediaLoading,
@@ -43,6 +47,7 @@ const CreateMemoContent = view(() => {
     removeMedia,
     clearMedia,
     clearError: clearMediaError,
+    addMedia,
   } = useMediaPicker();
 
   const [content, setContent] = useState("");
@@ -84,6 +89,30 @@ const CreateMemoContent = view(() => {
 
     initEditData();
   }, [queryMemoId, memoService]);
+
+  // 处理从外部传入的图片（拍照或相册选择后）
+  useEffect(() => {
+    const initMediaFromQuery = async () => {
+      if (queryImageUri && queryImageType === "image") {
+        try {
+          // 解码图片 URI
+          const decodedUri = decodeURIComponent(queryImageUri);
+          const media = {
+            type: "image" as const,
+            uri: decodedUri,
+            name: `photo-${Date.now()}.jpg`,
+            mimeType: "image/jpeg",
+          };
+          // 添加到 selectedMedia
+          addMedia(media);
+        } catch (err) {
+          console.error("Failed to load image from query:", err);
+        }
+      }
+    };
+
+    initMediaFromQuery();
+  }, [queryImageUri, queryImageType]);
 
   // 处理返回
   const handleGoBack = useCallback(() => {
