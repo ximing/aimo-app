@@ -13,6 +13,7 @@ import { FileText, Mic, MoreHorizontal } from "lucide-react-native";
 import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { MediaActionDrawer } from "./media-action-drawer";
+import { VoiceRecorderModal } from "./voice-recorder-modal";
 
 interface FloatingActionBarProps {
   onMicPress?: () => void;
@@ -24,6 +25,7 @@ export const FloatingActionBar = view(
     const theme = useTheme();
     const router = useRouter();
     const [drawerVisible, setDrawerVisible] = useState(false);
+    const [voiceRecorderVisible, setVoiceRecorderVisible] = useState(false);
 
     const handleAddPress = React.useCallback(() => {
       if (onAddPress) {
@@ -92,6 +94,30 @@ export const FloatingActionBar = view(
       setDrawerVisible(false);
     }, []);
 
+    // 处理录音按钮点击
+    const handleMicPress = React.useCallback(() => {
+      if (onMicPress) {
+        onMicPress();
+      } else {
+        setVoiceRecorderVisible(true);
+      }
+    }, [onMicPress]);
+
+    // 关闭录音浮层
+    const handleVoiceRecorderClose = React.useCallback(() => {
+      setVoiceRecorderVisible(false);
+    }, []);
+
+    // 录音完成
+    const handleRecordingComplete = React.useCallback(
+      (audioUri: string) => {
+        // 跳转到创建页面，传递音频 URI
+        const encodedUri = encodeURIComponent(audioUri);
+        router.push(`/(memos)/create?audioUri=${encodedUri}`);
+      },
+      [router]
+    );
+
     return (
       <View style={styles.floatingActionBarWrapper}>
         <View
@@ -105,7 +131,7 @@ export const FloatingActionBar = view(
             },
           ]}
         >
-          <TouchableOpacity style={styles.actionButton} onPress={onMicPress}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleMicPress}>
             <Mic size={18} color={theme.colors.foreground} />
             <Text
               style={[styles.actionLabel, { color: theme.colors.foreground }]}
@@ -142,6 +168,13 @@ export const FloatingActionBar = view(
           onClose={handleDrawerClose}
           onCameraPress={handleCameraPress}
           onGalleryPress={handleGalleryPress}
+        />
+
+        {/* 录音浮层 */}
+        <VoiceRecorderModal
+          visible={voiceRecorderVisible}
+          onClose={handleVoiceRecorderClose}
+          onRecordingComplete={handleRecordingComplete}
         />
       </View>
     );

@@ -9,10 +9,11 @@ import { MediaPreview } from "@/components/memos/media-preview";
 import { useMediaPicker } from "@/hooks/use-media-picker";
 import { useTheme } from "@/hooks/use-theme";
 import MemoService from "@/services/memo-service";
+import VoiceMemoService from "@/services/voice-memo-service";
 import { showError, showSuccess } from "@/utils/toast";
 import { MaterialIcons } from "@expo/vector-icons";
-import { Camera, Delete, Image, Video, X, Check } from "lucide-react-native";
-import { useService, view } from "@rabjs/react";
+import { Camera, Delete, Image, Video, X, Check, Mic } from "lucide-react-native";
+import { useService, view, bindServices } from "@rabjs/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -32,10 +33,12 @@ const CreateMemoContent = view(() => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const memoService = useService(MemoService);
-  const { memoId: queryMemoId, imageUri: queryImageUri, imageType: queryImageType } = useLocalSearchParams<{
+  const voiceMemoService = useService(VoiceMemoService);
+  const { memoId: queryMemoId, imageUri: queryImageUri, imageType: queryImageType, audioUri: queryAudioUri } = useLocalSearchParams<{
     memoId?: string;
     imageUri?: string;
     imageType?: string;
+    audioUri?: string;
   }>();
   const {
     selectedMedia,
@@ -113,6 +116,54 @@ const CreateMemoContent = view(() => {
 
     initMediaFromQuery();
   }, [queryImageUri, queryImageType]);
+
+  // 处理从外部传入的录音（录音完成后）
+  useEffect(() => {
+    const initAudioFromQuery = async () => {
+      if (queryAudioUri) {
+        try {
+          // 解码音频 URI
+          const decodedUri = decodeURIComponent(queryAudioUri);
+
+          // 添加音频到 selectedMedia
+          const audioMedia = {
+            type: "audio" as const,
+            uri: decodedUri,
+            name: `voice-memo-${Date.now()}.m4a`,
+            mimeType: "audio/m4a",
+          };
+          addMedia(audioMedia);
+
+          // 启动上传和转写流程
+          await voiceMemoService.uploadAndTranscribe(decodedUri);
+        } catch (err) {
+          console.error("Failed to process audio from query:", err);
+          showError("语音处理失败，请稍后重试");
+        }
+      }
+    };
+
+    initAudioFromQuery();
+
+    // 组件卸载时清理轮询
+    return () => {
+      voiceMemoService.stopPolling();
+    };
+  }, [queryAudioUri, addMedia, voiceMemoService]);
+
+  // 监听转写结果，自动填入内容
+  useEffect(() => {
+    if (voiceMemoService.transcriptionText && !content) {
+      setContent(voiceMemoService.transcriptionText);
+    }
+  }, [voiceMemoService.transcriptionText, content]);
+
+  // 监听转写错误
+  useEffect(() => {
+    if (voiceMemoService.transcriptionError) {
+      showError("语音转文字失败，请手动输入");
+    }
+  }, [voiceMemoService.transcriptionError]);
 
   // 处理返回
   const handleGoBack = useCallback(() => {
@@ -310,6 +361,38 @@ const CreateMemoContent = view(() => {
         </View>
       )}
 
+      {/* 转写状态提示 */}
+      {voiceMemoService.transcriptionFlowStatus !== 'idle' && voiceMemoService.transcriptionFlowStatus !== 'success' && voiceMemoService.transcriptionFlowStatus !== 'failed' && (
+        <View
+          style={[
+            styles.transcriptionStatusContainer,
+            { backgroundColor: theme.colors.backgroundSecondary },
+          ]}
+        >
+          <ActivityIndicator size="small" color={theme.colors.primary} />
+          <Text style={[styles.transcriptionStatusText, { color: theme.colors.foregroundSecondary }]}>
+            {voiceMemoService.transcriptionFlowStatus === 'uploading' && '正在上传音频...'}
+            {voiceMemoService.transcriptionFlowStatus === 'submitting' && '正在提交转写任务...'}
+            {voiceMemoService.transcriptionFlowStatus === 'polling' && '正在转写语音...'}
+          </Text>
+        </View>
+      )}
+
+      {/* 转写失败提示 */}
+      {voiceMemoService.transcriptionFlowStatus === 'failed' && (
+        <View
+          style={[
+            styles.transcriptionStatusContainer,
+            { backgroundColor: theme.colors.destructive + '15' },
+          ]}
+        >
+          <Mic size={16} color={theme.colors.destructive} />
+          <Text style={[styles.transcriptionStatusText, { color: theme.colors.destructive }]}>
+            语音转文字失败，请手动输入
+          </Text>
+        </View>
+      )}
+
       {/* 错误信息 */}
       {(error || mediaError) && (
         <View
@@ -400,7 +483,7 @@ const CreateMemoContent = view(() => {
   );
 });
 
-export default CreateMemoContent;
+export default bindServices(CreateMemoContent, [VoiceMemoService]);
 
 const styles = StyleSheet.create({
   container: {
@@ -471,5 +554,20 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     justifyContent: "center",
     alignItems: "center",
+  },
+  // 转写状态
+  transcriptionStatusContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 16,
+    marginVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+  transcriptionStatusText: {
+    fontSize: 13,
   },
 });

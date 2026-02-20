@@ -1,0 +1,50 @@
+## Codebase Patterns
+- **Service Pattern**: All state management uses @rabjs/react Service class with observable properties
+- **bindServices**: Page components using services must be wrapped with bindServices([Service1, Service2])
+- **API Layer**: Pure async functions in api/ directory, returning data or throwing errors
+- **Component Structure**: Page-specific components go in components/[feature]/ with index.ts for exports
+- **Hooks Pattern**: Custom hooks for reusable logic (e.g., useAudioRecorder), following React patterns
+- **Type Safety**: All API functions have proper TypeScript types, interfaces in types/ directory
+- **Error Handling**: API functions throw errors for callers to handle; Services manage error state
+- **Theme Access**: Use useTheme() hook and view decorator from @rabjs/react for theme reactivity
+
+---
+
+## 2026-02-20 - Voice-to-Text Feature Implementation
+- What was implemented:
+  - Created ASR API (api/asr.ts) with submitTranscriptionTask, getTaskStatus, getTranscriptionResult
+  - Created VoiceMemoService (services/voice-memo-service.ts) managing recording + transcription flow
+  - Updated useAudioRecorder hook to add formatDuration helper
+  - Created VoiceRecorderModal component with recording animation, waveform, duration display
+  - Updated floating-action-bar.tsx to integrate VoiceRecorderModal and navigate to create page with audioUri
+  - Updated create.tsx to support audioUri query param, auto-upload and transcribe, show status
+  - Updated media-preview.tsx to support audio type with mic icon
+  - Updated use-media-picker.ts SelectedMedia type to include 'audio'
+  - Updated components/memos/index.ts to export VoiceRecorderModal
+
+- Files changed:
+  - types/asr.ts (new)
+  - api/asr.ts (new)
+  - services/voice-memo-service.ts (new)
+  - components/memos/voice-recorder-modal.tsx (new)
+  - hooks/use-audio-recorder.ts (added formatDuration)
+  - hooks/use-media-picker.ts (added 'audio' type)
+  - components/memos/floating-action-bar.tsx (integrated VoiceRecorderModal)
+  - components/memos/media-preview.tsx (added audio support)
+  - components/memos/index.ts (added VoiceRecorderModal export)
+  - app/(memos)/create.tsx (integrated VoiceMemoService, audio handling)
+
+- **Learnings for future iterations:**
+  - `expo-av` is already installed in the project, use Audio from expo-av for recording
+  - Service polling intervals should use `ReturnType<typeof setInterval>` type, not `NodeJS.Timeout` (for React Native compatibility)
+  - When navigating with URIs as query params, always use `encodeURIComponent()` to handle special characters
+  - The project uses bindServices pattern for page-level components that consume services
+  - Media types are defined in SelectedMedia interface in use-media-picker.ts
+  - For audio file MIME type, use 'audio/m4a' format
+  - The ASR API expects language hints as ['zh', 'en'] and fileUrls as array
+  - Toast notifications use showError/showSuccess from @/utils/toast
+  - When adding new media types, update both SelectedMedia interface and MediaPreview component
+  - Use view decorator from @rabjs/react for components that need theme reactivity
+  - Keep API functions pure - no state management, just HTTP calls with error throwing
+
+---
