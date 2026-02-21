@@ -113,3 +113,80 @@
   - MemoService now automatically reacts to FilterService changes when watchFilterChanges() is called
 
 ---
+
+## 2026-02-21 - US-006 - 搜索入口改造 - 点击跳转搜索页面
+- What was implemented:
+  - Modified components/memos/search-header.tsx
+  - Wrapped search container with TouchableOpacity for navigation
+  - Made TextInput read-only with `editable={false}` and `pointerEvents="none"`
+  - Added router.push('/search') navigation using expo-router's useRouter
+  - Changed placeholder text from "搜索笔记" to "搜索笔记..."
+  - Removed local search state (searchQuery, setSearchQuery) and search handlers
+  - Cleaned up unused imports (useState, Text from react-native)
+
+- Files changed:
+  - components/memos/search-header.tsx (modified)
+
+- **Learnings for future iterations:**
+  - To make a search box read-only and clickable, wrap it with TouchableOpacity and set TextInput's `editable={false}` and `pointerEvents="none"`
+  - Use `useRouter` from expo-router for navigation in React Native components
+  - The project pattern for navigation is `router.push('/route-path')`
+  - When removing state management from a component, remember to clean up unused imports
+
+---
+
+## 2026-02-21 - US-007 - 创建 SearchService 管理搜索状态和最近搜索历史
+- What was implemented:
+  - Created services/search-service.ts extending @rabjs/react Service class
+  - State management: searchKeyword, searchResults, isSearching, recentSearches, searchFilters
+  - SearchFilters interface with categoryId and dateRange (start/end Date)
+  - AsyncStorage persistence for recentSearches (key: 'recentSearches'), max 10 items
+  - Methods implemented:
+    - loadRecentSearches() - load from AsyncStorage on init
+    - addRecentSearch(keyword) - insert at top, deduplicate, limit to 10
+    - removeRecentSearch(keyword) - remove single entry
+    - clearRecentSearches() - clear all history
+    - search(keyword, filters) - execute search (API integration placeholder for US-012)
+    - setSearchKeyword(), setSearchFilters(), clearSearchFilters()
+    - loadNextPage() - pagination support
+    - clearSearchResults(), reset() - cleanup methods
+
+- Files changed:
+  - services/search-service.ts (new)
+
+- **Learnings for future iterations:**
+  - SearchService follows same pattern as FilterService for AsyncStorage persistence
+  - Use splice() to modify observable arrays in @rabjs/react (direct assignment works but splice is cleaner for array modifications)
+  - Date range filters use Date objects internally, will convert to ISO strings for API calls
+  - The search() method has TODO placeholder for API integration (US-012)
+  - Recent searches are stored as simple string array, not complex objects (simpler UX)
+  - SearchService manages its own pagination state (currentPage, pageSize, hasMore)
+
+---
+
+## 2026-02-21 - US-008 - 创建搜索页面 SearchPage 基础结构
+- What was implemented:
+  - Created app/search.tsx with full search page structure
+  - Top header with back button (router.back()) and search input
+  - Search input with autoFocus using ref and setTimeout
+  - Clear button appears when input has text, clears input and refocuses
+  - Recent searches section with history icon and keyword
+  - Delete (X) button on each recent search to remove single entry
+  - Clear All button to clear all recent searches
+  - Filter bar with Date and Category buttons (UI only, functionality in US-010)
+  - Empty state with search icon and "输入关键词开始搜索" message
+  - Integrated SearchService and CategoryService via bindServices
+
+- Files changed:
+  - app/search.tsx (new)
+
+- **Learnings for future iterations:**
+  - Use `useRef<TextInput>(null)` + `inputRef.current?.focus()` for auto-focus
+  - Delay auto-focus with setTimeout to ensure page is fully loaded
+  - For search input with clear button, use conditional rendering based on text length
+  - Recent search items: Use history icon + text with delete button on right
+  - Use `hitSlop` prop on TouchableOpacity to increase touch target without affecting visual size
+  - Filter bar buttons use row layout with icon + text + dropdown arrow
+  - Empty state pattern: Large icon (64px) + descriptive text, centered with paddingTop
+
+---

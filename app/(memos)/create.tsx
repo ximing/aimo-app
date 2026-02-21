@@ -14,14 +14,7 @@ import { showError, showSuccess } from "@/utils/toast";
 import { MaterialIcons } from "@expo/vector-icons";
 import { bindServices, useService, view } from "@rabjs/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import {
-  Camera,
-  Check,
-  Image,
-  Mic,
-  Video,
-  X,
-} from "lucide-react-native";
+import { Camera, Check, Image, Mic, Video, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
