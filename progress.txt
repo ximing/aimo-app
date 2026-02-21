@@ -253,3 +253,54 @@
   - Use `selectedOption !== 'all'` to determine if filter button shows active state
 
 ---
+
+## 2026-02-21 - US-012 - API 层支持搜索接口
+- What was implemented:
+  - Added SearchMemosParams interface in types/memo.ts
+  - Added SearchResultItem type alias (reuses Memo type)
+  - Added SearchMemosResponse interface extending PaginatedResponse
+  - Created searchMemos function in api/memo.ts
+  - Function supports: keyword (required), categoryId, dateRange, page, pageSize
+  - Uses POST /memos/search endpoint with query params for pagination
+  - Request body contains keyword, optional categoryId, and optional dateRange (ISO strings)
+  - Error handling with friendly Chinese error message "搜索笔记失败"
+
+- Files changed:
+  - types/memo.ts (added SearchMemosParams, SearchResultItem, SearchMemosResponse)
+  - api/memo.ts (added searchMemos function)
+
+- **Learnings for future iterations:**
+  - Search API uses POST method with query string for pagination params
+  - Date objects are converted to ISO strings for API transmission
+  - Reuse existing Memo type for search results via type alias
+  - Pattern: separate URLSearchParams for query params vs request body for filter criteria
+  - Pagination params (page, pageSize) use query string; filter params use request body
+
+---
+
+## 2026-02-21 - US-011 - 实现搜索结果展示功能
+- What was implemented:
+  - Connected SearchService to actual searchMemos API (removed TODO placeholders)
+  - Implemented search() method to call searchMemos with keyword, categoryId, dateRange, page, pageSize
+  - Implemented loadNextPage() method to fetch next page of results
+  - Added pagination support to search page with onEndReached and onEndReachedThreshold (0.5)
+  - Added initial search loading indicator (centered spinner with "搜索中..." text)
+  - Added footer loading indicator for pagination ("加载中..." text)
+  - Reused MemoItem component for search results display
+  - Search results show title, content summary, creation time (via MemoItem)
+  - Clicking search result navigates to memo detail page /(memos)/[id]
+  - Empty state displays "未找到相关笔记" when search returns no results
+
+- Files changed:
+  - services/search-service.ts (connected search() and loadNextPage() to API)
+  - app/search.tsx (added onEndReached, loading indicators, ListFooterComponent)
+
+- **Learnings for future iterations:**
+  - SearchService pagination pattern: currentPage, pageSize (20), hasMore flags
+  - Use `onEndReached` with `onEndReachedThreshold={0.5}` for pagination in FlatList
+  - Separate loading states: initial search (centered spinner) vs pagination (footer loading)
+  - MemoItem component can be directly reused for search results - no need for separate SearchResultItem
+  - API returns `items` array and `total` count; hasMore = items.length === pageSize
+  - SearchService.push() to add new items to existing results array
+
+---

@@ -249,6 +249,13 @@ const SearchPageContent = () => {
     </>
   );
 
+  // 处理加载更多
+  const handleLoadMore = useCallback(async () => {
+    if (searchService.hasMore && !searchService.isSearching) {
+      await searchService.loadNextPage();
+    }
+  }, [searchService]);
+
   // 渲染搜索结果项
   const renderSearchResult = useCallback(
     ({ item }: { item: import("@/types/memo").Memo }) => (
@@ -261,6 +268,27 @@ const SearchPageContent = () => {
     ),
     [router],
   );
+
+  // 渲染列表底部加载指示器
+  const renderFooter = useCallback(() => {
+    if (!searchService.isSearching || searchService.searchResults.length === 0) {
+      return null;
+    }
+
+    return (
+      <View style={styles.footerLoading}>
+        <MaterialIcons
+          name="refresh"
+          size={20}
+          color={theme.colors.foregroundTertiary}
+          style={{ transform: [{ rotate: '45deg' }] }}
+        />
+        <Text style={[styles.footerText, { color: theme.colors.foregroundTertiary }]}>
+          加载中...
+        </Text>
+      </View>
+    );
+  }, [searchService.isSearching, searchService.searchResults.length, theme]);
 
   // 渲染空状态
   const renderEmpty = useCallback(() => {
@@ -370,6 +398,21 @@ const SearchPageContent = () => {
         </View>
       </View>
 
+      {/* 搜索加载指示器 */}
+      {searchService.isSearching && searchService.searchResults.length === 0 && (
+        <View style={styles.loadingContainer}>
+          <MaterialIcons
+            name="refresh"
+            size={32}
+            color={theme.colors.foregroundTertiary}
+            style={{ transform: [{ rotate: '45deg' }] }}
+          />
+          <Text style={[styles.loadingText, { color: theme.colors.foregroundTertiary }]}>
+            搜索中...
+          </Text>
+        </View>
+      )}
+
       {/* 内容区域 */}
       <FlatList
         data={searchService.searchResults}
@@ -377,16 +420,19 @@ const SearchPageContent = () => {
         keyExtractor={(item) => item.memoId}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
+        ListFooterComponent={renderFooter}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + 20 },
         ]}
-        refreshing={searchService.isSearching}
+        refreshing={searchService.isSearching && searchService.searchResults.length > 0}
         onRefresh={() => {
           if (searchService.searchKeyword.trim()) {
             handleSearch(searchService.searchKeyword);
           }
         }}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
       />
     </View>
   );
@@ -477,5 +523,28 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     marginTop: 16,
+  },
+  loadingContainer: {
+    position: 'absolute',
+    top: 200,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  loadingText: {
+    fontSize: 14,
+    marginTop: 12,
+  },
+  footerLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 8,
+  },
+  footerText: {
+    fontSize: 14,
   },
 });

@@ -13,6 +13,7 @@
 
 import { Service } from '@rabjs/react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { searchMemos } from '@/api/memo';
 import type { Memo } from '@/types/memo';
 
 const RECENT_SEARCHES_STORAGE_KEY = 'recentSearches';
@@ -196,20 +197,18 @@ class SearchService extends Service {
 
       this.currentPage = 1;
 
-      // TODO: 调用 API 搜索（US-012 中实现 searchMemos API）
-      // 目前先使用本地模拟，等待 API 实现
-      // const response = await searchMemos({
-      //   keyword: searchKeyword,
-      //   categoryId: searchFilters.categoryId,
-      //   startDate: searchFilters.dateRange?.start?.toISOString(),
-      //   endDate: searchFilters.dateRange?.end?.toISOString(),
-      //   page: 1,
-      //   limit: this.pageSize,
-      // });
+      // 调用 API 搜索
+      const response = await searchMemos({
+        keyword: searchKeyword,
+        categoryId: searchFilters.categoryId,
+        dateRange: searchFilters.dateRange,
+        page: 1,
+        pageSize: this.pageSize,
+      });
 
-      // this.searchResults = response.items;
-      // this.searchTotal = response.total;
-      // this.hasMore = response.items.length === this.pageSize;
+      this.searchResults = response.items;
+      this.searchTotal = response.total;
+      this.hasMore = response.items.length === this.pageSize;
 
       // 添加到最近搜索历史
       await this.addRecentSearch(searchKeyword);
@@ -233,19 +232,18 @@ class SearchService extends Service {
     try {
       const nextPage = this.currentPage + 1;
 
-      // TODO: 调用 API 搜索下一页（US-012 中实现）
-      // const response = await searchMemos({
-      //   keyword: this.searchKeyword,
-      //   categoryId: this.searchFilters.categoryId,
-      //   startDate: this.searchFilters.dateRange?.start?.toISOString(),
-      //   endDate: this.searchFilters.dateRange?.end?.toISOString(),
-      //   page: nextPage,
-      //   limit: this.pageSize,
-      // });
+      // 调用 API 搜索下一页
+      const response = await searchMemos({
+        keyword: this.searchKeyword,
+        categoryId: this.searchFilters.categoryId,
+        dateRange: this.searchFilters.dateRange,
+        page: nextPage,
+        pageSize: this.pageSize,
+      });
 
-      // this.searchResults.push(...response.items);
-      // this.hasMore = response.items.length === this.pageSize;
-      // this.currentPage = nextPage;
+      this.searchResults.push(...response.items);
+      this.hasMore = response.items.length === this.pageSize;
+      this.currentPage = nextPage;
     } catch (error) {
       this.searchError = error instanceof Error ? error.message : '加载更多失败';
       throw error;
