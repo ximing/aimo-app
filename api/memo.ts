@@ -17,6 +17,8 @@ import type {
   BacklinksResponse,
   MemoActivityStatsDto,
   OnThisDayResponseDto,
+  SearchMemosParams,
+  SearchMemosResponse,
 } from '@/types/memo';
 
 /**
@@ -203,6 +205,47 @@ export const getOnThisDayMemos = async (): Promise<OnThisDayResponseDto> => {
 
   if (response.code !== 0) {
     throw new Error(response.message || '获取历史上的今天失败');
+  }
+
+  return response.data;
+};
+
+/**
+ * 搜索笔记
+ * POST /api/v1/memos/search
+ * @param params - 搜索参数
+ * @returns Promise<SearchMemosResponse> - 搜索结果列表和总数量
+ * @throws Error 当API请求失败时抛出异常
+ */
+export const searchMemos = async (
+  params: SearchMemosParams
+): Promise<SearchMemosResponse> => {
+  const queryParams = new URLSearchParams();
+
+  // 分页参数
+  queryParams.append('page', String(params.page || 1));
+  queryParams.append('limit', String(params.pageSize || 20));
+
+  // 构建请求体
+  const body: Record<string, unknown> = {
+    keyword: params.keyword,
+  };
+
+  // 可选参数
+  if (params.categoryId) {
+    body.categoryId = params.categoryId;
+  }
+
+  if (params.dateRange) {
+    body.startDate = params.dateRange.start.toISOString();
+    body.endDate = params.dateRange.end.toISOString();
+  }
+
+  const url = `/memos/search?${queryParams.toString()}`;
+  const response = await apiPost<SearchMemosResponse>(url, body);
+
+  if (response.code !== 0) {
+    throw new Error(response.message || '搜索笔记失败');
   }
 
   return response.data;

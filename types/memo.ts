@@ -171,3 +171,28 @@ export interface OnThisDayResponseDto {
   total: number; // 总数量
   todayMonthDay: string; // 当天月日（MM-DD 格式）
 }
+
+/**
+ * 搜索备忘录参数
+ */
+export interface SearchMemosParams {
+  keyword: string; // 搜索关键词（必填）
+  categoryId?: string; // 分类ID（undefined表示全部分类）
+  dateRange?: {
+    // 日期范围
+    start: Date;
+    end: Date;
+  };
+  page?: number; // 页码，从1开始
+  pageSize?: number; // 每页数量
+}
+
+/**
+ * 搜索结果项（复用 Memo 类型）
+ */
+export type SearchResultItem = Memo;
+
+/**
+ * 搜索响应类型
+ */
+export interface SearchMemosResponse extends PaginatedResponse<SearchResultItem> {}
