@@ -190,3 +190,30 @@
   - Empty state pattern: Large icon (64px) + descriptive text, centered with paddingTop
 
 ---
+
+## 2026-02-21 - US-009 - 实现最近搜索词功能和展示
+- What was implemented:
+  - Verified SearchService already has all recent search functionality (AsyncStorage persistence, add/remove/clear methods)
+  - Enhanced app/search.tsx to display search results using MemoItem component
+  - Search results integration: FlatList now uses searchService.searchResults data
+  - Added renderSearchResult callback using MemoItem with onPress navigation to memo detail
+  - Updated renderEmpty to show "未找到相关笔记" when search has no results
+  - Added pull-to-refresh functionality for search results
+  - Click recent search item: fills search box AND executes search via handleRecentSearchPress
+  - Delete single recent search: removeRecentSearch method with AsyncStorage update
+  - Clear all recent searches: clearRecentSearches method
+  - Max 10 recent searches enforced in addRecentSearch method
+
+- Files changed:
+  - app/search.tsx (modified)
+
+- **Learnings for future iterations:**
+  - MemoItem component can be reused for search results - it accepts memo and onPress props
+  - Empty state should have two modes: initial ("输入关键词开始搜索") and no-results ("未找到相关笔记")
+  - Use MaterialIcons "search-off" for no results state
+  - SearchService.searchResults is reactive - changes will trigger FlatList re-render via @rabjs/react
+  - Add refreshing/onRefresh props to FlatList for pull-to-refresh functionality
+  - When using MemoItem in search results, pass router.push for navigation to detail page
+  - Recent search persistence is automatic via SearchService - component just calls service methods
+
+---

@@ -24,6 +24,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme } from "@/hooks/use-theme";
+import { MemoItem } from "@/components/memos/memo-item";
 import CategoryService from "@/services/category-service";
 import SearchService from "@/services/search-service";
 
@@ -230,21 +231,55 @@ const SearchPageContent = () => {
     </>
   );
 
-  // 渲染空状态
-  const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
-      <MaterialIcons
-        name="search"
-        size={64}
-        color={theme.colors.foregroundQuaternary}
+  // 渲染搜索结果项
+  const renderSearchResult = useCallback(
+    ({ item }: { item: import("@/types/memo").Memo }) => (
+      <MemoItem
+        memo={item}
+        onPress={(memoId: string) => {
+          router.push(`/(memos)/${memoId}`);
+        }}
       />
-      <Text
-        style={[styles.emptyText, { color: theme.colors.foregroundTertiary }]}
-      >
-        输入关键词开始搜索
-      </Text>
-    </View>
+    ),
+    [router],
   );
+
+  // 渲染空状态
+  const renderEmpty = useCallback(() => {
+    // 如果有搜索关键词但没有结果，显示"未找到相关笔记"
+    if (searchService.searchKeyword.trim() && !searchService.isSearching) {
+      return (
+        <View style={styles.emptyContainer}>
+          <MaterialIcons
+            name="search-off"
+            size={64}
+            color={theme.colors.foregroundQuaternary}
+          />
+          <Text
+            style={[styles.emptyText, { color: theme.colors.foregroundTertiary }]}
+          >
+            未找到相关笔记
+          </Text>
+        </View>
+      );
+    }
+
+    // 初始状态显示"输入关键词开始搜索"
+    return (
+      <View style={styles.emptyContainer}>
+        <MaterialIcons
+          name="search"
+          size={64}
+          color={theme.colors.foregroundQuaternary}
+        />
+        <Text
+          style={[styles.emptyText, { color: theme.colors.foregroundTertiary }]}
+        >
+          输入关键词开始搜索
+        </Text>
+      </View>
+    );
+  }, [searchService.searchKeyword, searchService.isSearching, theme]);
 
   return (
     <View
@@ -319,14 +354,21 @@ const SearchPageContent = () => {
 
       {/* 内容区域 */}
       <FlatList
-        data={[]} // 搜索结果将在 US-011 中实现
-        renderItem={() => null}
+        data={searchService.searchResults}
+        renderItem={renderSearchResult}
+        keyExtractor={(item) => item.memoId}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + 20 },
         ]}
+        refreshing={searchService.isSearching}
+        onRefresh={() => {
+          if (searchService.searchKeyword.trim()) {
+            handleSearch(searchService.searchKeyword);
+          }
+        }}
       />
     </View>
   );
