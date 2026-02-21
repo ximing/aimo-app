@@ -6,6 +6,7 @@
 import { deleteLocalFile, uploadAttachment } from "@/api/attachment";
 import { createMemo, updateMemo } from "@/api/memo";
 import { MediaPreview } from "@/components/memos/media-preview";
+import { VoiceRecorderModal } from "@/components/memos/voice-recorder-modal";
 import { useMediaPicker } from "@/hooks/use-media-picker";
 import { useTheme } from "@/hooks/use-theme";
 import MemoService from "@/services/memo-service";
@@ -64,6 +65,7 @@ const CreateMemoContent = view(() => {
   const [isLoading, setIsLoading] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [audioUri, setAudioUri] = useState<string | null>(null);
+  const [voiceRecorderVisible, setVoiceRecorderVisible] = useState(false);
 
   // 初始化加载编辑数据
   useEffect(() => {
@@ -173,6 +175,32 @@ const CreateMemoContent = view(() => {
       showError("语音转文字失败，请手动输入");
     }
   }, [voiceMemoService.transcriptionError]);
+
+  // 录音完成处理
+  const handleRecordingComplete = useCallback(
+    async (audioUri: string) => {
+      try {
+        // 保存音频 URI
+        setAudioUri(audioUri);
+
+        // 添加音频到 selectedMedia
+        const audioMedia = {
+          type: "audio" as const,
+          uri: audioUri,
+          name: `voice-memo-${Date.now()}.m4a`,
+          mimeType: "audio/m4a",
+        };
+        addMedia(audioMedia);
+
+        // 启动上传和转写流程
+        await voiceMemoService.uploadAndTranscribe(audioUri);
+      } catch (err) {
+        console.error("Failed to process audio:", err);
+        showError("语音处理失败，请稍后重试");
+      }
+    },
+    [addMedia, voiceMemoService]
+  );
 
   // 处理返回
   const handleGoBack = useCallback(() => {
@@ -480,7 +508,37 @@ const CreateMemoContent = view(() => {
         >
           <Video size={20} color={theme.colors.foregroundSecondary} />
         </TouchableOpacity>
+
+        {/* 录音按钮 */}
+        <TouchableOpacity
+          style={[
+            styles.actionButton,
+            {
+              opacity:
+                voiceMemoService.transcriptionFlowStatus !== "idle" &&
+                voiceMemoService.transcriptionFlowStatus !== "success" &&
+                voiceMemoService.transcriptionFlowStatus !== "failed"
+                  ? 0.5
+                  : 1,
+            },
+          ]}
+          onPress={() => setVoiceRecorderVisible(true)}
+          disabled={
+            voiceMemoService.transcriptionFlowStatus !== "idle" &&
+            voiceMemoService.transcriptionFlowStatus !== "success" &&
+            voiceMemoService.transcriptionFlowStatus !== "failed"
+          }
+        >
+          <Mic size={20} color={theme.colors.foregroundSecondary} />
+        </TouchableOpacity>
       </View>
+
+      {/* 录音弹窗 */}
+      <VoiceRecorderModal
+        visible={voiceRecorderVisible}
+        onClose={() => setVoiceRecorderVisible(false)}
+        onRecordingComplete={handleRecordingComplete}
+      />
     </KeyboardAvoidingView>
   );
 });
