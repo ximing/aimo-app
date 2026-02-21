@@ -6,7 +6,12 @@
 /**
  * 转写任务状态
  */
-export type TranscriptionStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type TranscriptionStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "SUCCEEDED"
+  | "FAILED"
+  | "RUNNING";
 
 /**
  * 提交转写任务请求
@@ -38,32 +43,62 @@ export interface TranscriptionTaskStatusResponse {
 }
 
 /**
- * 转写结果片段
+ * 转写结果中的转写内容（单个声道）
  */
-export interface TranscriptionSegment {
-  startTime: number;
-  endTime: number;
+export interface Transcript {
+  channel_id: number;
+  content_duration_in_milliseconds: number;
   text: string;
-  confidence: number;
+  sentences: TranscriptionSentence[];
+}
+
+/**
+ * 转写结果的音频属性
+ */
+export interface TranscriptionProperties {
+  audio_format: string;
+  channels: number[];
+  original_sampling_rate: number;
+  original_duration_in_milliseconds: number;
 }
 
 /**
  * 单个文件的转写结果
  */
 export interface TranscriptionResultItem {
-  fileUrl: string;
+  file_url: string;
+  properties: TranscriptionProperties;
+  transcripts: Transcript[];
+}
+
+/**
+ * 转写句子
+ */
+export interface TranscriptionSentence {
+  begin_time: number;
+  end_time: number;
   text: string;
-  confidence: number;
-  segments: TranscriptionSegment[];
+  sentence_id: number;
+  words: TranscriptionWord[];
+}
+
+/**
+ * 转写词
+ */
+export interface TranscriptionWord {
+  begin_time: number;
+  end_time: number;
+  text: string;
+  punctuation: string;
 }
 
 /**
  * 转写结果响应
  */
 export interface TranscriptionResultResponse {
-  taskId: string;
   status: TranscriptionStatus;
-  transcripts: TranscriptionResultItem[];
+  results: TranscriptionResultItem[];
+  requestId?: string;
   completedAt?: number;
   errorMessage?: string;
 }

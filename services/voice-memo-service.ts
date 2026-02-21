@@ -4,41 +4,40 @@
  * 使用 @rabjs/react 进行响应式状态管理
  */
 
-import { Service } from '@rabjs/react';
-import { uploadAttachment } from '@/api/attachment';
-import { getAttachment } from '@/api/attachment';
 import {
-  submitTranscriptionTask,
   getTaskStatus,
   getTranscriptionResult,
-} from '@/api/asr';
-import type { TranscriptionStatus } from '@/types/asr';
+  submitTranscriptionTask,
+} from "@/api/asr";
+import { getAttachment, uploadAttachment } from "@/api/attachment";
+import type { TranscriptionStatus } from "@/types/asr";
+import { Service } from "@rabjs/react";
 
 /**
  * 音频录制状态
  */
-export type RecordingStatus = 'idle' | 'recording' | 'stopped' | 'error';
+export type RecordingStatus = "idle" | "recording" | "stopped" | "error";
 
 /**
  * 转写流程状态
  */
 export type TranscriptionFlowStatus =
-  | 'idle'
-  | 'uploading'
-  | 'submitting'
-  | 'polling'
-  | 'success'
-  | 'failed';
+  | "idle"
+  | "uploading"
+  | "submitting"
+  | "polling"
+  | "success"
+  | "failed";
 
 class VoiceMemoService extends Service {
   // 录音状态
-  recordingStatus: RecordingStatus = 'idle';
+  recordingStatus: RecordingStatus = "idle";
   audioUri: string | null = null;
   recordingDuration = 0;
   recordingError: string | null = null;
 
   // 转写状态
-  transcriptionFlowStatus: TranscriptionFlowStatus = 'idle';
+  transcriptionFlowStatus: TranscriptionFlowStatus = "idle";
   transcriptionTaskId: string | null = null;
   transcriptionText: string | null = null;
   transcriptionStatus: TranscriptionStatus | null = null;
@@ -56,7 +55,7 @@ class VoiceMemoService extends Service {
    * 开始录音
    */
   startRecording(): void {
-    this.recordingStatus = 'recording';
+    this.recordingStatus = "recording";
     this.recordingDuration = 0;
     this.recordingError = null;
     this.audioUri = null;
@@ -73,7 +72,7 @@ class VoiceMemoService extends Service {
    * 停止录音
    */
   stopRecording(audioUri: string): void {
-    this.recordingStatus = 'stopped';
+    this.recordingStatus = "stopped";
     this.audioUri = audioUri;
   }
 
@@ -81,7 +80,7 @@ class VoiceMemoService extends Service {
    * 录音错误
    */
   setRecordingError(error: string): void {
-    this.recordingStatus = 'error';
+    this.recordingStatus = "error";
     this.recordingError = error;
   }
 
@@ -89,7 +88,7 @@ class VoiceMemoService extends Service {
    * 重置录音状态
    */
   resetRecording(): void {
-    this.recordingStatus = 'idle';
+    this.recordingStatus = "idle";
     this.audioUri = null;
     this.recordingDuration = 0;
     this.recordingError = null;
@@ -100,7 +99,7 @@ class VoiceMemoService extends Service {
    * 整合流程：上传 -> 获取URL -> 提交ASR任务
    */
   async uploadAndTranscribe(audioUri: string): Promise<void> {
-    this.transcriptionFlowStatus = 'uploading';
+    this.transcriptionFlowStatus = "uploading";
     this.transcriptionError = null;
     this.transcriptionText = null;
     this.transcriptionTaskId = null;
@@ -109,7 +108,7 @@ class VoiceMemoService extends Service {
       // 1. 上传音频文件
       const fileName = `voice-memo-${Date.now()}.m4a`;
       const attachment = await uploadAttachment({
-        file: { uri: audioUri, type: 'audio/m4a' },
+        file: { uri: audioUri, type: "audio/m4a" },
         fileName,
         createdAt: Date.now(),
       });
@@ -121,8 +120,11 @@ class VoiceMemoService extends Service {
       this.attachmentUrl = attachmentDetail.url;
 
       // 3. 提交转写任务
-      this.transcriptionFlowStatus = 'submitting';
-      const taskResponse = await submitTranscriptionTask([attachmentDetail.url], ['zh', 'en']);
+      this.transcriptionFlowStatus = "submitting";
+      const taskResponse = await submitTranscriptionTask(
+        [attachmentDetail.url],
+        ["zh", "en"],
+      );
 
       this.transcriptionTaskId = taskResponse.taskId;
       this.transcriptionStatus = taskResponse.status;
@@ -130,9 +132,10 @@ class VoiceMemoService extends Service {
       // 4. 开始轮询任务状态
       this.startPolling(taskResponse.taskId);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : '上传或提交转写任务失败';
+      const errorMsg =
+        err instanceof Error ? err.message : "上传或提交转写任务失败";
       this.transcriptionError = errorMsg;
-      this.transcriptionFlowStatus = 'failed';
+      this.transcriptionFlowStatus = "failed";
       throw err;
     }
   }
@@ -141,20 +144,20 @@ class VoiceMemoService extends Service {
    * 提交转写任务（音频已上传时）
    */
   async submitTranscription(fileUrl: string): Promise<void> {
-    this.transcriptionFlowStatus = 'submitting';
+    this.transcriptionFlowStatus = "submitting";
     this.transcriptionError = null;
 
     try {
-      const response = await submitTranscriptionTask([fileUrl], ['zh', 'en']);
+      const response = await submitTranscriptionTask([fileUrl], ["zh", "en"]);
       this.transcriptionTaskId = response.taskId;
       this.transcriptionStatus = response.status;
 
       // 开始轮询
       this.startPolling(response.taskId);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : '提交转写任务失败';
+      const errorMsg = err instanceof Error ? err.message : "提交转写任务失败";
       this.transcriptionError = errorMsg;
-      this.transcriptionFlowStatus = 'failed';
+      this.transcriptionFlowStatus = "failed";
       throw err;
     }
   }
@@ -163,7 +166,7 @@ class VoiceMemoService extends Service {
    * 开始轮询任务状态
    */
   private startPolling(taskId: string): void {
-    this.transcriptionFlowStatus = 'polling';
+    this.transcriptionFlowStatus = "polling";
     this.pollingCount = 0;
 
     // 清除已有的轮询
@@ -188,8 +191,8 @@ class VoiceMemoService extends Service {
       // 检查是否超过最大轮询次数
       if (this.pollingCount > this.MAX_POLLING_COUNT) {
         this.stopPolling();
-        this.transcriptionFlowStatus = 'failed';
-        this.transcriptionError = '转写任务超时，请稍后重试';
+        this.transcriptionFlowStatus = "failed";
+        this.transcriptionError = "转写任务超时，请稍后重试";
         return;
       }
 
@@ -198,19 +201,19 @@ class VoiceMemoService extends Service {
       this.transcriptionStatus = statusResponse.status;
 
       // 根据状态处理
-      if (statusResponse.status === 'completed') {
+      if (statusResponse.status === "SUCCEEDED") {
         // 任务完成，获取结果
         await this.fetchTranscriptionResult(taskId);
-      } else if (statusResponse.status === 'failed') {
+      } else if (statusResponse.status === "FAILED") {
         // 任务失败
         this.stopPolling();
-        this.transcriptionFlowStatus = 'failed';
-        this.transcriptionError = statusResponse.message || '转写任务失败';
+        this.transcriptionFlowStatus = "failed";
+        this.transcriptionError = statusResponse.message || "转写任务失败";
       }
-      // pending 或 processing 状态继续轮询
+      // PENDING 或 PROCESSING 状态继续轮询
     } catch (err) {
       // 轮询错误，继续尝试
-      console.error('Polling error:', err);
+      console.error("Polling error:", err);
     }
   }
 
@@ -221,17 +224,21 @@ class VoiceMemoService extends Service {
     try {
       const result = await getTranscriptionResult(taskId);
 
-      if (result.status === 'completed' && result.transcripts.length > 0) {
-        // 提取第一个转写文本
-        this.transcriptionText = result.transcripts[0].text;
-        this.transcriptionFlowStatus = 'success';
-      } else if (result.status === 'failed') {
-        this.transcriptionFlowStatus = 'failed';
-        this.transcriptionError = result.errorMessage || '转写失败';
+      if (result.status === "SUCCEEDED" && result.results.length > 0) {
+        this.transcriptionText = result.results.reduce((acc, item) => {
+          return `${acc}${item.transcripts.reduce((acc, item) => {
+            return `${acc}${item.text}`;
+          }, "")}`;
+        }, "");
+        this.transcriptionFlowStatus = "success";
+      } else if (result.status === "FAILED") {
+        this.transcriptionFlowStatus = "failed";
+        this.transcriptionError = result.errorMessage || "转写失败";
       }
     } catch (err) {
-      this.transcriptionFlowStatus = 'failed';
-      this.transcriptionError = err instanceof Error ? err.message : '获取转写结果失败';
+      this.transcriptionFlowStatus = "failed";
+      this.transcriptionError =
+        err instanceof Error ? err.message : "获取转写结果失败";
     } finally {
       this.stopPolling();
     }
@@ -259,7 +266,7 @@ class VoiceMemoService extends Service {
    */
   resetTranscription(): void {
     this.stopPolling();
-    this.transcriptionFlowStatus = 'idle';
+    this.transcriptionFlowStatus = "idle";
     this.transcriptionTaskId = null;
     this.transcriptionText = null;
     this.transcriptionStatus = null;
@@ -282,8 +289,8 @@ class VoiceMemoService extends Service {
    */
   clearTranscriptionError(): void {
     this.transcriptionError = null;
-    if (this.transcriptionFlowStatus === 'failed') {
-      this.transcriptionFlowStatus = 'idle';
+    if (this.transcriptionFlowStatus === "failed") {
+      this.transcriptionFlowStatus = "idle";
     }
   }
 }

@@ -3,7 +3,7 @@
  * 提供编辑标题、内容、上传媒体等功能
  */
 
-import { uploadAttachment, deleteLocalFile } from "@/api/attachment";
+import { deleteLocalFile, uploadAttachment } from "@/api/attachment";
 import { createMemo, updateMemo } from "@/api/memo";
 import { MediaPreview } from "@/components/memos/media-preview";
 import { useMediaPicker } from "@/hooks/use-media-picker";
@@ -12,19 +12,27 @@ import MemoService from "@/services/memo-service";
 import VoiceMemoService from "@/services/voice-memo-service";
 import { showError, showSuccess } from "@/utils/toast";
 import { MaterialIcons } from "@expo/vector-icons";
-import { Camera, Delete, Image, Video, X, Check, Mic } from "lucide-react-native";
-import { useService, view, bindServices } from "@rabjs/react";
+import { bindServices, useService, view } from "@rabjs/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+  Camera,
+  Check,
+  Delete,
+  Image,
+  Mic,
+  Video,
+  X,
+} from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -34,7 +42,12 @@ const CreateMemoContent = view(() => {
   const insets = useSafeAreaInsets();
   const memoService = useService(MemoService);
   const voiceMemoService = useService(VoiceMemoService);
-  const { memoId: queryMemoId, imageUri: queryImageUri, imageType: queryImageType, audioUri: queryAudioUri } = useLocalSearchParams<{
+  const {
+    memoId: queryMemoId,
+    imageUri: queryImageUri,
+    imageType: queryImageType,
+    audioUri: queryAudioUri,
+  } = useLocalSearchParams<{
     memoId?: string;
     imageUri?: string;
     imageType?: string;
@@ -125,7 +138,7 @@ const CreateMemoContent = view(() => {
         try {
           // 解码音频 URI
           const decodedUri = decodeURIComponent(queryAudioUri);
-          
+
           // 保存音频 URI，供后续删除使用
           setAudioUri(decodedUri);
 
@@ -199,6 +212,11 @@ const CreateMemoContent = view(() => {
       // 构建 memo 内容
       const memoContent = content.trim();
 
+      // 判断是否有音频类型的附件
+      const hasAudio =
+        selectedMedia.some((media) => media.type === "audio") || !!audioUri;
+      // [{"mimeType": "audio/m4a", "name": "voice-memo-1771646384864.m4a", "type": "audio", "uri": "file:///data/user/0/host.exp.exponent/cache/voice-memo-1771646384764.m4a"}, {"mimeType": "image/jpeg", "name": "image-1771646396244-0.jpg", "size": 4195546, "type": "image", "uri": "file:///data/user/0/host.exp.exponent/cache/ImagePicker/ed72ce81-e878-4191-b1d3-34ca2e8084d0.jpeg"}]
+      // console.log("selectedMedia", selectedMedia);
       if (isEditMode && queryMemoId) {
         // 编辑模式
         const memo = await updateMemo(queryMemoId, {
@@ -216,6 +234,7 @@ const CreateMemoContent = view(() => {
         // 创建模式
         const memo = await createMemo({
           content: memoContent,
+          type: hasAudio ? "audio" : "text",
           attachments: attachmentIds.length > 0 ? attachmentIds : undefined,
         });
 
@@ -301,10 +320,7 @@ const CreateMemoContent = view(() => {
           onPress={handleGoBack}
           disabled={submitting}
         >
-          <X
-            size={20}
-            color={theme.colors.foreground}
-          />
+          <X size={20} color={theme.colors.foreground} />
         </TouchableOpacity>
 
         <View style={{ flex: 1 }} />
@@ -323,10 +339,7 @@ const CreateMemoContent = view(() => {
           {submitting ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Check
-              size={20}
-              color="#fff"
-            />
+            <Check size={20} color="#fff" />
           )}
         </TouchableOpacity>
       </View>
@@ -372,32 +385,47 @@ const CreateMemoContent = view(() => {
       )}
 
       {/* 转写状态提示 */}
-      {voiceMemoService.transcriptionFlowStatus !== 'idle' && voiceMemoService.transcriptionFlowStatus !== 'success' && voiceMemoService.transcriptionFlowStatus !== 'failed' && (
-        <View
-          style={[
-            styles.transcriptionStatusContainer,
-            { backgroundColor: theme.colors.backgroundSecondary },
-          ]}
-        >
-          <ActivityIndicator size="small" color={theme.colors.primary} />
-          <Text style={[styles.transcriptionStatusText, { color: theme.colors.foregroundSecondary }]}>
-            {voiceMemoService.transcriptionFlowStatus === 'uploading' && '正在上传音频...'}
-            {voiceMemoService.transcriptionFlowStatus === 'submitting' && '正在提交转写任务...'}
-            {voiceMemoService.transcriptionFlowStatus === 'polling' && '正在转写语音...'}
-          </Text>
-        </View>
-      )}
+      {voiceMemoService.transcriptionFlowStatus !== "idle" &&
+        voiceMemoService.transcriptionFlowStatus !== "success" &&
+        voiceMemoService.transcriptionFlowStatus !== "failed" && (
+          <View
+            style={[
+              styles.transcriptionStatusContainer,
+              { backgroundColor: theme.colors.backgroundSecondary },
+            ]}
+          >
+            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <Text
+              style={[
+                styles.transcriptionStatusText,
+                { color: theme.colors.foregroundSecondary },
+              ]}
+            >
+              {voiceMemoService.transcriptionFlowStatus === "uploading" &&
+                "正在上传音频..."}
+              {voiceMemoService.transcriptionFlowStatus === "submitting" &&
+                "正在提交转写任务..."}
+              {voiceMemoService.transcriptionFlowStatus === "polling" &&
+                "正在转写语音..."}
+            </Text>
+          </View>
+        )}
 
       {/* 转写失败提示 */}
-      {voiceMemoService.transcriptionFlowStatus === 'failed' && (
+      {voiceMemoService.transcriptionFlowStatus === "failed" && (
         <View
           style={[
             styles.transcriptionStatusContainer,
-            { backgroundColor: theme.colors.destructive + '15' },
+            { backgroundColor: theme.colors.destructive + "15" },
           ]}
         >
           <Mic size={16} color={theme.colors.destructive} />
-          <Text style={[styles.transcriptionStatusText, { color: theme.colors.destructive }]}>
+          <Text
+            style={[
+              styles.transcriptionStatusText,
+              { color: theme.colors.destructive },
+            ]}
+          >
             语音转文字失败，请手动输入
           </Text>
         </View>
@@ -440,10 +468,7 @@ const CreateMemoContent = view(() => {
           onPress={handleClear}
           disabled={submitting}
         >
-          <Delete
-            size={20}
-            color={theme.colors.foregroundSecondary}
-          />
+          <Delete size={20} color={theme.colors.foregroundSecondary} />
         </TouchableOpacity>
 
         {/* 拍照按钮 */}
@@ -458,10 +483,7 @@ const CreateMemoContent = view(() => {
               color={theme.colors.foregroundSecondary}
             />
           ) : (
-            <Camera
-              size={20}
-              color={theme.colors.foregroundSecondary}
-            />
+            <Camera size={20} color={theme.colors.foregroundSecondary} />
           )}
         </TouchableOpacity>
 
@@ -471,10 +493,7 @@ const CreateMemoContent = view(() => {
           onPress={pickImage}
           disabled={mediaLoading}
         >
-          <Image
-            size={20}
-            color={theme.colors.foregroundSecondary}
-          />
+          <Image size={20} color={theme.colors.foregroundSecondary} />
         </TouchableOpacity>
 
         {/* 视频按钮 */}
@@ -483,10 +502,7 @@ const CreateMemoContent = view(() => {
           onPress={pickVideo}
           disabled={mediaLoading}
         >
-          <Video
-            size={20}
-            color={theme.colors.foregroundSecondary}
-          />
+          <Video size={20} color={theme.colors.foregroundSecondary} />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
