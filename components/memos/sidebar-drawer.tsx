@@ -22,6 +22,7 @@ import MemoService from "@/services/memo-service";
 import ThemeService from "@/services/theme-service";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useService, view } from "@rabjs/react";
+import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 import React, { useEffect, useRef } from "react";
 import {
@@ -30,6 +31,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ActivityHeatmap } from "./activity-heatmap";
@@ -41,6 +43,15 @@ interface SidebarDrawerProps {
 
 export const SidebarDrawer = view(
   ({ visible, onClose }: SidebarDrawerProps) => {
+    const { width: screenWidth } = useWindowDimensions();
+    const router = useRouter();
+    // 窄屏设备使用更大的宽度比例，确保热力图有足够空间
+    // 热力图需要约 270px 宽度
+    // 窄屏(<400px)使用 85%，宽屏使用 70%，最大不超过 300px
+    const drawerWidth =
+      screenWidth < 400 ? screenWidth * 0.85 : screenWidth * 0.7;
+    const maxDrawerWidth = Math.min(drawerWidth, 300);
+
     const theme = useTheme();
     const authService = useService(AuthService);
     const memoService = useService(MemoService);
@@ -58,8 +69,8 @@ export const SidebarDrawer = view(
       }
     }, [visible, memoService]);
 
-    // 动画值
-    const slideAnim = useRef(new Animated.Value(-280)).current;
+    // 动画值 - 使用动态宽度
+    const slideAnim = useRef(new Animated.Value(-maxDrawerWidth)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
 
     // 触发动画
@@ -80,7 +91,7 @@ export const SidebarDrawer = view(
       } else {
         Animated.parallel([
           Animated.timing(slideAnim, {
-            toValue: -280,
+            toValue: -maxDrawerWidth,
             duration: 300,
             useNativeDriver: true,
           }),
@@ -91,7 +102,7 @@ export const SidebarDrawer = view(
           }),
         ]).start();
       }
-    }, [visible, slideAnim, opacityAnim]);
+    }, [visible, slideAnim, opacityAnim, maxDrawerWidth]);
 
     if (!visible) {
       // 延迟渲染，等待动画完成
@@ -124,6 +135,8 @@ export const SidebarDrawer = view(
             {
               backgroundColor: theme.colors.background,
               transform: [{ translateX: slideAnim }],
+              width: maxDrawerWidth,
+              maxWidth: 300,
             },
           ]}
         >
@@ -176,6 +189,7 @@ export const SidebarDrawer = view(
           <ActivityHeatmap
             data={memoService.activityStats?.items || []}
             isLoading={memoService.activityStatsLoading}
+            cellSize={Math.floor((maxDrawerWidth - 32 - 22) / 12)}
           />
 
           {/* 分隔线 */}
@@ -187,23 +201,13 @@ export const SidebarDrawer = view(
           />
 
           {/* 菜单项 */}
-          <TouchableOpacity style={styles.drawerMenuItem}>
-            <MaterialIcons
-              name="person"
-              size={20}
-              color={theme.colors.foregroundSecondary}
-            />
-            <Text
-              style={[
-                styles.drawerMenuText,
-                { color: theme.colors.foreground },
-              ]}
-            >
-              个人资料
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.drawerMenuItem}>
+          <TouchableOpacity
+            style={styles.drawerMenuItem}
+            onPress={() => {
+              onClose();
+              router.push("/settings");
+            }}
+          >
             <MaterialIcons
               name="settings"
               size={20}
@@ -239,9 +243,16 @@ export const SidebarDrawer = view(
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.drawerMenuItem}>
+          {/* 关于菜单项 */}
+          <TouchableOpacity
+            style={styles.drawerMenuItem}
+            onPress={() => {
+              onClose();
+              router.push("/about");
+            }}
+          >
             <MaterialIcons
-              name="help"
+              name="info"
               size={20}
               color={theme.colors.foregroundSecondary}
             />
@@ -251,7 +262,7 @@ export const SidebarDrawer = view(
                 { color: theme.colors.foreground },
               ]}
             >
-              帮助
+              关于
             </Text>
           </TouchableOpacity>
 

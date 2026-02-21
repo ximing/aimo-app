@@ -11,11 +11,12 @@
  */
 
 import { useTheme } from "@/hooks/use-theme";
+import { CreateCategoryModal } from "@/components/memos";
 import type { SortField, SortOrder } from "@/services/filter-service";
 import type { Category } from "@/types/category";
 import { MaterialIcons } from "@expo/vector-icons";
 import { view } from "@rabjs/react";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -53,6 +54,8 @@ export const FilterDrawer = view(
     onChangeSort,
   }: FilterDrawerProps) => {
     const theme = useTheme();
+    // 新建分类 Modal 状态
+    const [createModalVisible, setCreateModalVisible] = useState(false);
     // 动画值
     const translateX = useRef(new Animated.Value(DRAWER_WIDTH)).current;
     const opacity = useRef(new Animated.Value(0)).current;
@@ -317,6 +320,29 @@ export const FilterDrawer = view(
                   )}
                 </TouchableOpacity>
               ))}
+
+              {/* 新建分类按钮 */}
+              <TouchableOpacity
+                style={[
+                  styles.optionItem,
+                  styles.addCategoryButton,
+                ]}
+                onPress={() => setCreateModalVisible(true)}
+              >
+                <MaterialIcons
+                  name="add"
+                  size={20}
+                  color={theme.colors.primary}
+                />
+                <Text
+                  style={[
+                    styles.optionText,
+                    { color: theme.colors.primary },
+                  ]}
+                >
+                  新建分类
+                </Text>
+              </TouchableOpacity>
             </View>
 
             {/* 排序区域 */}
@@ -517,6 +543,16 @@ export const FilterDrawer = view(
               </Text>
             </View>
           </Animated.View>
+
+          {/* 新建分类弹窗 */}
+          <CreateCategoryModal
+            visible={createModalVisible}
+            onClose={() => setCreateModalVisible(false)}
+            onSuccess={(categoryId) => {
+              onSelectCategory(categoryId);
+              onClose();
+            }}
+          />
         </View>
       </Modal>
     );
@@ -595,6 +631,9 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     marginLeft: 5,
+  },
+  addCategoryButton: {
+    marginTop: 8,
   },
   divider: {
     height: 1,

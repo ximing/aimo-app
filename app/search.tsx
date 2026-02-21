@@ -51,7 +51,7 @@ const SearchPageContent = () => {
   // 初始化加载最近搜索历史和分类
   useEffect(() => {
     searchService.loadRecentSearches();
-    categoryService.initialize();
+    categoryService.fetchCategories();
   }, [searchService, categoryService]);
 
   // 自动聚焦搜索框
@@ -106,7 +106,10 @@ const SearchPageContent = () => {
           {item}
         </Text>
         <TouchableOpacity
-          onPress={() => searchService.removeRecentSearch(item)}
+          onPress={(e) => {
+            e.stopPropagation();
+            searchService.removeRecentSearch(item);
+          }}
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
           <MaterialIcons

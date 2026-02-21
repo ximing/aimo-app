@@ -295,3 +295,29 @@ export const deleteLocalFile = async (uri: string): Promise<void> => {
     // 不抛出错误，只是警告
   }
 };
+
+/**
+ * 更新附件属性
+ * PATCH /api/v1/attachments/:attachmentId/properties
+ *
+ * 更新附件的属性信息。属性会与现有属性合并（新值覆盖旧值）。
+ *
+ * @param attachmentId 附件 ID
+ * @param properties 要更新的属性对象
+ * @returns 更新后的附件对象
+ */
+export const updateAttachmentProperties = async (
+  attachmentId: string,
+  properties: Record<string, unknown>,
+): Promise<Attachment> => {
+  const response = await apiPatch<Attachment>(
+    `/attachments/${attachmentId}/properties`,
+    { properties },
+  );
+
+  if (response.code !== 0) {
+    throw new Error(response.message || "更新附件属性失败");
+  }
+
+  return response.data;
+};

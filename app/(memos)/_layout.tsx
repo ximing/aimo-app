@@ -32,6 +32,13 @@ export default function MemosLayout() {
           presentation: "card",
         }}
       />
+      <Stack.Screen
+        name="settings"
+        options={{
+          headerShown: false,
+          presentation: "card",
+        }}
+      />
     </Stack>
   );
 }

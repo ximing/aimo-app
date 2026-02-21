@@ -7,14 +7,15 @@
  */
 
 import { useTheme } from "@/hooks/use-theme";
+import type { MemoActivityStatsItemDto } from "@/types/insights";
 import { view } from "@rabjs/react";
 import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import type { MemoActivityStatsItemDto } from "@/types/insights";
 
 interface ActivityHeatmapProps {
   data: MemoActivityStatsItemDto[];
   isLoading?: boolean;
+  cellSize?: number;
 }
 
 // 热力图单元格类型
@@ -51,7 +52,7 @@ const CELL_GAP = 2;
 const WEEKS = 12;
 
 export const ActivityHeatmap = view(
-  ({ data, isLoading }: ActivityHeatmapProps) => {
+  ({ data, isLoading, cellSize = CELL_SIZE }: ActivityHeatmapProps) => {
     const theme = useTheme();
     const isDark = theme.isDark;
     const colors = isDark ? DARK_COLORS : LIGHT_COLORS;
@@ -155,7 +156,12 @@ export const ActivityHeatmap = view(
     if (isLoading) {
       return (
         <View style={styles.container}>
-          <Text style={[styles.loadingText, { color: theme.colors.foregroundTertiary }]}>
+          <Text
+            style={[
+              styles.loadingText,
+              { color: theme.colors.foregroundTertiary },
+            ]}
+          >
             加载中...
           </Text>
         </View>
@@ -173,7 +179,11 @@ export const ActivityHeatmap = view(
                   key={`cell-${weekIndex}-${dayIndex}`}
                   style={[
                     styles.cell,
-                    { backgroundColor: getLevelColor(dayData.level) },
+                    {
+                      backgroundColor: getLevelColor(dayData.level),
+                      width: cellSize,
+                      height: cellSize,
+                    },
                   ]}
                 />
               ))}
@@ -183,22 +193,39 @@ export const ActivityHeatmap = view(
 
         {/* 图例 */}
         <View style={styles.legendContainer}>
-          <Text style={[styles.legendLabel, { color: theme.colors.foregroundTertiary }]}>
+          <Text
+            style={[
+              styles.legendLabel,
+              { color: theme.colors.foregroundTertiary },
+            ]}
+          >
             少
           </Text>
           {[0, 1, 2, 3, 4].map((level) => (
             <View
               key={`legend-${level}`}
-              style={[styles.legendCell, { backgroundColor: getLevelColor(level) }]}
+              style={[
+                styles.legendCell,
+                {
+                  backgroundColor: getLevelColor(level),
+                  width: cellSize,
+                  height: cellSize,
+                },
+              ]}
             />
           ))}
-          <Text style={[styles.legendLabel, { color: theme.colors.foregroundTertiary }]}>
+          <Text
+            style={[
+              styles.legendLabel,
+              { color: theme.colors.foregroundTertiary },
+            ]}
+          >
             多
           </Text>
         </View>
       </View>
     );
-  }
+  },
 );
 
 const styles = StyleSheet.create({

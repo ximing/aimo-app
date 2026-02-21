@@ -1,30 +1,32 @@
 /**
- * Category Service - 分类状态管理服务
+ * Category Service - 分类管理服务
+ * 使用 @rabjs/react 进行响应式状态管理
  *
- * 管理分类列表，支持从 API 获取分类数据
+ * 功能：
+ * - 获取分类列表
+ * - 创建分类
+ * - 删除分类
+ * - 管理分类状态
  */
 
-import { Service } from '@rabjs/react';
-import { getCategories } from '@/api/category';
-import type { Category } from '@/types/category';
+import {
+  createCategory as apiCreateCategory,
+  deleteCategory as apiDeleteCategory,
+  getCategories as apiGetCategories,
+} from "@/api/category";
+import type { Category, CreateCategoryRequest } from "@/types/category";
+import { Service } from "@rabjs/react";
 
 class CategoryService extends Service {
-  // 分类列表
+  // 响应式属性
   categories: Category[] = [];
-  // 加载状态
   loading = false;
-  // 错误信息
   error: string | null = null;
-  // 是否已初始化
-  initialized = false;
 
   /**
-   * 初始化：获取分类列表
+   * 初始化：加载分类列表
    */
   async initialize(): Promise<void> {
-    if (this.initialized && this.categories.length > 0) {
-      return;
-    }
     await this.fetchCategories();
   }
 
@@ -36,22 +38,57 @@ class CategoryService extends Service {
     this.error = null;
 
     try {
-      const categories = await getCategories();
+      const categories = await apiGetCategories();
       this.categories = categories;
-      this.initialized = true;
     } catch (err) {
-      this.error = err instanceof Error ? err.message : '获取分类列表失败';
-      console.error('Failed to fetch categories:', err);
+      this.error = err instanceof Error ? err.message : "获取分类列表失败";
+      throw err;
     } finally {
       this.loading = false;
     }
   }
 
   /**
-   * 根据 ID 获取分类
+   * 创建分类
+   * @param params - 分类信息 (name, color, description)
    */
-  getCategoryById(categoryId: string): Category | undefined {
-    return this.categories.find(c => c.categoryId === categoryId);
+  async createCategory(params: CreateCategoryRequest): Promise<Category> {
+    this.loading = true;
+    this.error = null;
+
+    try {
+      const newCategory = await apiCreateCategory(params);
+      // 添加到列表
+      this.categories = [...this.categories, newCategory];
+      return newCategory;
+    } catch (err) {
+      this.error = err instanceof Error ? err.message : "创建分类失败";
+      throw err;
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  /**
+   * 删除分类
+   * @param categoryId - 分类 ID
+   */
+  async deleteCategory(categoryId: string): Promise<void> {
+    this.loading = true;
+    this.error = null;
+
+    try {
+      await apiDeleteCategory(categoryId);
+      // 从列表中移除
+      this.categories = this.categories.filter(
+        (c) => c.categoryId !== categoryId,
+      );
+    } catch (err) {
+      this.error = err instanceof Error ? err.message : "删除分类失败";
+      throw err;
+    } finally {
+      this.loading = false;
+    }
   }
 
   /**
@@ -68,7 +105,6 @@ class CategoryService extends Service {
     this.categories = [];
     this.loading = false;
     this.error = null;
-    this.initialized = false;
   }
 }
 

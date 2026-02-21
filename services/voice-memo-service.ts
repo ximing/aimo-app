@@ -9,7 +9,11 @@ import {
   getTranscriptionResult,
   submitTranscriptionTask,
 } from "@/api/asr";
-import { getAttachment, uploadAttachment } from "@/api/attachment";
+import {
+  getAttachment,
+  updateAttachmentProperties,
+  uploadAttachment,
+} from "@/api/attachment";
 import type { TranscriptionStatus } from "@/types/asr";
 import { Service } from "@rabjs/react";
 
@@ -225,11 +229,39 @@ class VoiceMemoService extends Service {
       const result = await getTranscriptionResult(taskId);
 
       if (result.status === "SUCCEEDED" && result.results.length > 0) {
+        // 合并所有转写文本
         this.transcriptionText = result.results.reduce((acc, item) => {
           return `${acc}${item.transcripts.reduce((acc, item) => {
             return `${acc}${item.text}`;
           }, "")}`;
         }, "");
+
+        // 更新附件的 duration 属性
+        // 累加所有 transcripts 中的 content_duration_in_milliseconds
+        if (this.attachmentId) {
+          const totalDurationMs = result.results.reduce((total, item) => {
+            const itemDuration = item.transcripts.reduce((sum, transcript) => {
+              return sum + (transcript.content_duration_in_milliseconds || 0);
+            }, 0);
+            return total + itemDuration;
+          }, 0);
+
+          // 将毫秒转换为秒（API 要求 duration 单位为秒）
+          const durationInSeconds = Math.round(totalDurationMs / 1000);
+
+          try {
+            await updateAttachmentProperties(this.attachmentId, {
+              duration: durationInSeconds,
+            });
+            console.log(
+              `Updated attachment ${this.attachmentId} duration: ${durationInSeconds}s`,
+            );
+          } catch (updateError) {
+            console.warn("Failed to update attachment duration:", updateError);
+            // 不阻塞转写成功流程，只是记录警告
+          }
+        }
+
         this.transcriptionFlowStatus = "success";
       } else if (result.status === "FAILED") {
         this.transcriptionFlowStatus = "failed";

@@ -134,8 +134,10 @@ class SearchService extends Service {
    */
   async removeRecentSearch(keyword: string): Promise<void> {
     const index = this.recentSearches.indexOf(keyword);
+    console.log("index", index, keyword);
     if (index > -1) {
       this.recentSearches.splice(index, 1);
+      this.recentSearches = [...this.recentSearches];
       await this.saveRecentSearches();
     }
   }
@@ -194,9 +196,10 @@ class SearchService extends Service {
    * 更新日期筛选并触发搜索
    * @param dateRange - 日期范围
    */
-  async updateDateFilter(
-    dateRange?: { start: Date; end: Date },
-  ): Promise<void> {
+  async updateDateFilter(dateRange?: {
+    start: Date;
+    end: Date;
+  }): Promise<void> {
     this.searchFilters = { ...this.searchFilters, dateRange };
     if (this.searchKeyword.trim()) {
       await this.search(this.searchKeyword, this.searchFilters);

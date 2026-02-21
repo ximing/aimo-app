@@ -19,3 +19,8 @@ export interface UpdateUserResponse {
   message: string;
   user: UserInfo;
 }
+
+export interface UploadAvatarResponse {
+  message: string;
+  avatar: string;
+}

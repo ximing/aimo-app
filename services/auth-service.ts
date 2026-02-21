@@ -5,7 +5,7 @@
 
 import { login as apiLogin, register as apiRegister } from "@/api/auth";
 import { clearToken, clearTokenAsync } from "@/api/common";
-import { getUserInfo } from "@/api/user";
+import { getUserInfo, updateUserInfo, uploadAvatar } from "@/api/user";
 import type { LoginRequest, RegisterRequest, User } from "@/types/auth";
 import { Service } from "@rabjs/react";
 
@@ -107,6 +107,48 @@ class AuthService extends Service {
       await clearTokenAsync();
     } catch (err) {
       console.error("Failed to clear token asynchronously:", err);
+    }
+  }
+
+  /**
+   * 更新用户信息（昵称）
+   */
+  async updateUserProfile(params: { nickname?: string }): Promise<void> {
+    this.loading = true;
+    this.error = null;
+
+    try {
+      const updatedUser = await updateUserInfo(params);
+      if (this.user) {
+        this.user = { ...this.user, ...updatedUser };
+      }
+    } catch (err) {
+      this.error = err instanceof Error ? err.message : "更新用户信息失败";
+      throw err;
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  /**
+   * 上传用户头像
+   */
+  async uploadUserAvatar(
+    avatar: File | { uri: string; type?: string; name?: string }
+  ): Promise<void> {
+    this.loading = true;
+    this.error = null;
+
+    try {
+      const avatarUrl = await uploadAvatar(avatar);
+      if (this.user) {
+        this.user = { ...this.user, avatar: avatarUrl };
+      }
+    } catch (err) {
+      this.error = err instanceof Error ? err.message : "上传头像失败";
+      throw err;
+    } finally {
+      this.loading = false;
     }
   }
 
