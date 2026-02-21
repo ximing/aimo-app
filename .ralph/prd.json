@@ -72,8 +72,8 @@
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Already implemented - getMemos supports categoryId, sortBy, sortOrder via ListMemosParams"
     },
     {
       "id": "US-005",

@@ -68,3 +68,24 @@
 - **No new learnings** - all patterns already documented in previous entry
 
 ---
+
+## 2026-02-21 - US-004 - API 层支持筛选和排序参数
+- What was implemented:
+  - Verified that api/memo.ts getMemos function already supports all required filtering and sorting parameters
+  - ListMemosParams type includes: categoryId, sortBy ('createdAt' | 'updatedAt'), sortOrder ('asc' | 'desc')
+  - API correctly passes these parameters as query strings
+  - Error handling with friendly Chinese error messages is already in place
+  - No code changes required - functionality was already implemented
+
+- Files reviewed:
+  - api/memo.ts - getMemos function and ListMemosParams handling
+  - types/memo.ts - ListMemosParams interface definition
+  - services/filter-service.ts - FilterService for filter state management
+  - components/memos/filter-drawer.tsx - UI for filter selection
+
+- **Learnings for future iterations:**
+  - The API layer already uses `categoryId` parameter for filtering (including `__uncategorized__` for no category)
+  - Sort parameters use `sortBy` (not `sortField`) in the API, but FilterService uses `sortField` - this mapping happens in the service layer
+  - The API query parameter construction uses URLSearchParams with proper null/undefined checks
+
+---
