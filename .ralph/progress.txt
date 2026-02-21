@@ -1,4 +1,31 @@
-# Ralph Progress: voice-to-text
+## Codebase Patterns
+
+- Service pattern: Use `@rabjs/react` Service class with observable properties
+- AsyncStorage: Use `@react-native-async-storage/async-storage` for persistence
+- Service initialization: Use `initialize()` method called from app startup
+- State persistence: Save on every state change, load during initialization
+- Default values: Always provide sensible defaults for all state properties
+
+---
+
+## 2026-02-21T14:00:00Z - US-001
+- Implemented FilterService at services/filter-service.ts
+- Service manages: selectedCategoryId, sortField, sortOrder
+- Persistence: Uses AsyncStorage with key 'memoFilterPrefs'
+- Methods: loadFilterPrefs(), saveFilterPrefs(), setSelectedCategory(), setSortField(), setSortOrder(), resetToDefaults()
+- Defaults: all categories, createdAt, desc (newest first)
+- Exports: FilterService class, SortField type, SortOrder type, FilterPrefs interface
+- Files changed: services/filter-service.ts (created)
+- Commit: 5ad7acd feat: [US-001] - 创建 FilterService 管理筛选状态和持久化
+- **Learnings for future iterations:**
+  - FilterService follows the same pattern as ThemeService for AsyncStorage persistence
+  - Service properties are automatically reactive in @rabjs/react, no decorators needed
+  - Use undefined for "all categories", '__uncategorized__' string for uncategorized filter
+  - Always validate loaded values from storage before applying them
+  - Pre-existing type/lint errors in codebase should not block new feature commits
+---
+
+# Ralph Progress: voice-to-text (completed)
 
 ## Current Status
 
