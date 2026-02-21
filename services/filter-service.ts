@@ -48,6 +48,11 @@ class FilterService extends Service {
   sortOrder: SortOrder = 'desc';
 
   /**
+   * 是否已初始化
+   */
+  initialized = false;
+
+  /**
    * 初始化：从 AsyncStorage 加载筛选偏好
    */
   async loadFilterPrefs(): Promise<void> {
@@ -59,10 +64,12 @@ class FilterService extends Service {
         this.sortField = this.isValidSortField(prefs.sortField) ? prefs.sortField : 'createdAt';
         this.sortOrder = this.isValidSortOrder(prefs.sortOrder) ? prefs.sortOrder : 'desc';
       }
+      this.initialized = true;
     } catch (error) {
       console.error('Failed to load filter preferences:', error);
       // 使用默认值
       this.resetToDefaults();
+      this.initialized = true;
     }
   }
 

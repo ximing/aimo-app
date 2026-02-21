@@ -20,9 +20,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 interface SearchHeaderProps {
   onDrawerToggle: () => void;
   onSearch?: (query: string) => void;
+  onFilterPress?: () => void;
 }
 
-export const SearchHeader = view(({ onDrawerToggle, onSearch }: SearchHeaderProps) => {
+export const SearchHeader = view(({ onDrawerToggle, onSearch, onFilterPress }: SearchHeaderProps) => {
   const theme = useTheme();
   const [searchQuery, setSearchQuery] = useState("");
   const insets = useSafeAreaInsets();
@@ -50,9 +51,15 @@ export const SearchHeader = view(({ onDrawerToggle, onSearch }: SearchHeaderProp
       ]}
     >
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.menuButton} onPress={onDrawerToggle}>
-          <MaterialIcons name="menu" size={24} color={theme.colors.foreground} />
-        </TouchableOpacity>
+        <View style={styles.leftButtons}>
+          <TouchableOpacity style={styles.menuButton} onPress={onDrawerToggle}>
+            <MaterialIcons name="menu" size={24} color={theme.colors.foreground} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.filterButton} onPress={onFilterPress}>
+            <MaterialIcons name="tune" size={22} color={theme.colors.foreground} />
+          </TouchableOpacity>
+        </View>
 
         {/* 搜索输入框 */}
         <View
@@ -111,9 +118,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  leftButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   menuButton: {
     padding: 8,
-    marginRight: 8,
+    marginRight: 4,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  filterButton: {
+    padding: 8,
+    marginRight: 4,
     justifyContent: "center",
     alignItems: "center",
   },

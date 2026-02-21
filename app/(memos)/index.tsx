@@ -6,11 +6,15 @@ import {
   FloatingActionBar,
   SearchHeader,
   SidebarDrawer,
+  FilterDrawer,
 } from "@/components/memos";
 import { MemoItem } from "@/components/memos/memo-item";
 import { useTheme } from "@/hooks/use-theme";
 import MemoService from "@/services/memo-service";
+import CategoryService from "@/services/category-service";
+import FilterService from "@/services/filter-service";
 import type { Memo } from "@/types/memo";
+import type { SortField, SortOrder } from "@/services/filter-service";
 import { MaterialIcons } from "@expo/vector-icons";
 import { bindServices, useService } from "@rabjs/react";
 import { useRouter } from "expo-router";
@@ -29,14 +33,37 @@ const MemosListContent = () => {
   const theme = useTheme();
   const router = useRouter();
   const memoService = useService(MemoService);
+  const categoryService = useService(CategoryService);
+  const filterService = useService(FilterService);
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const [filterDrawerVisible, setFilterDrawerVisible] = useState(false);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const flatListRef = React.useRef<FlatList>(null);
 
-  // 初始化加载列表
+  // 初始化加载列表和分类
   useEffect(() => {
     memoService.refreshMemos();
-  }, [memoService]);
+    categoryService.initialize();
+    filterService.loadFilterPrefs();
+  }, [memoService, categoryService, filterService]);
+
+  // 监听筛选变化，刷新列表
+  useEffect(() => {
+    // 当筛选条件变化时，刷新 memo 列表
+    if (filterService.initialized) {
+      memoService.refreshMemos();
+    }
+  }, [filterService.selectedCategoryId, filterService.sortField, filterService.sortOrder, filterService.initialized, memoService]);
+
+  // 处理分类选择
+  const handleSelectCategory = useCallback((categoryId: string | undefined) => {
+    filterService.setSelectedCategory(categoryId);
+  }, [filterService]);
+
+  // 处理排序变更
+  const handleChangeSort = useCallback((field: SortField, order: SortOrder) => {
+    filterService.setSortOption(field, order);
+  }, [filterService]);
 
   // 处理搜索
   const handleSearch = useCallback((query: string) => {
@@ -152,12 +179,28 @@ const MemosListContent = () => {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       {/* 搜索头部 */}
-      <SearchHeader onDrawerToggle={() => setDrawerVisible(!drawerVisible)} onSearch={handleSearch} />
+      <SearchHeader
+        onDrawerToggle={() => setDrawerVisible(!drawerVisible)}
+        onSearch={handleSearch}
+        onFilterPress={() => setFilterDrawerVisible(true)}
+      />
 
       {/* 侧边栏抽屉 */}
       <SidebarDrawer
         visible={drawerVisible}
         onClose={() => setDrawerVisible(false)}
+      />
+
+      {/* 筛选抽屉 */}
+      <FilterDrawer
+        visible={filterDrawerVisible}
+        onClose={() => setFilterDrawerVisible(false)}
+        categories={categoryService.categories}
+        selectedCategoryId={filterService.selectedCategoryId}
+        onSelectCategory={handleSelectCategory}
+        sortField={filterService.sortField}
+        sortOrder={filterService.sortOrder}
+        onChangeSort={handleChangeSort}
       />
 
       {/* 列表 */}
@@ -215,7 +258,7 @@ const MemosListContent = () => {
   );
 };
 
-export default bindServices(MemosListContent, []);
+export default bindServices(MemosListContent, [CategoryService, FilterService]);
 
 const styles = StyleSheet.create({
   container: {
