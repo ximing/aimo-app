@@ -3,18 +3,17 @@
  */
 
 import {
+  FilterDrawer,
   FloatingActionBar,
   SearchHeader,
   SidebarDrawer,
-  FilterDrawer,
 } from "@/components/memos";
 import { MemoItem } from "@/components/memos/memo-item";
 import { useTheme } from "@/hooks/use-theme";
-import MemoService from "@/services/memo-service";
 import CategoryService from "@/services/category-service";
 import FilterService from "@/services/filter-service";
+import MemoService from "@/services/memo-service";
 import type { Memo } from "@/types/memo";
-import type { SortField, SortOrder } from "@/services/filter-service";
 import { MaterialIcons } from "@expo/vector-icons";
 import { bindServices, useService } from "@rabjs/react";
 import { useRouter } from "expo-router";
@@ -53,59 +52,27 @@ const MemosListContent = () => {
     if (filterService.initialized) {
       memoService.refreshMemos();
     }
-  }, [filterService.selectedCategoryId, filterService.sortField, filterService.sortOrder, filterService.initialized, memoService]);
+  }, [
+    filterService.selectedCategoryId,
+    filterService.sortField,
+    filterService.sortOrder,
+    filterService.initialized,
+    memoService,
+  ]);
 
-  // 处理分类选择
-  const handleSelectCategory = useCallback((categoryId: string | undefined) => {
-    filterService.setSelectedCategory(categoryId);
-  }, [filterService]);
-
-  // 处理排序变更
-  const handleChangeSort = useCallback((field: SortField, order: SortOrder) => {
-    filterService.setSortOption(field, order);
-  }, [filterService]);
-
-  // 处理搜索
-  const handleSearch = useCallback((query: string) => {
-    if (query) {
-      memoService.searchMemos(query);
-    } else {
-      // 清除搜索，恢复正常列表
-      memoService.clearSearch();
+  // 监听筛选变化，刷新列表
+  useEffect(() => {
+    // 当筛选条件变化时，刷新 memo 列表
+    if (filterService.initialized) {
+      memoService.refreshMemos();
     }
-  }, [memoService]);
-
-  // 处理刷新
-  const handleRefresh = useCallback(() => {
-    memoService.refreshMemos();
-  }, [memoService]);
-
-  // 处理加载更多
-  const handleLoadMore = useCallback(() => {
-    if (memoService.hasMore && !memoService.loading) {
-      memoService.loadNextPage();
-    }
-  }, [memoService]);
-
-  // 处理滚动事件
-  const handleScroll = useCallback((event: any) => {
-    const offsetY = event.nativeEvent.contentOffset.y;
-    // 滚动距离超过 300 像素时显示回到顶部按钮
-    setShowScrollToTop(offsetY > 300);
-  }, []);
-
-  // 回到顶部
-  const handleScrollToTop = useCallback(() => {
-    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-  }, []);
-
-  // 处理列表项点击
-  const handleMemoPress = useCallback(
-    (memoId: string) => {
-      router.push(`/(memos)/${memoId}`);
-    },
-    [router],
-  );
+  }, [
+    filterService.selectedCategoryId,
+    filterService.sortField,
+    filterService.sortOrder,
+    filterService.initialized,
+    memoService,
+  ]);
 
   // 渲染空状态
   const renderEmpty = () => {
@@ -114,7 +81,10 @@ const MemosListContent = () => {
       return (
         <View style={styles.emptyContainer}>
           <Text
-            style={[styles.emptyText, { color: theme.colors.foregroundTertiary }]}
+            style={[
+              styles.emptyText,
+              { color: theme.colors.foregroundTertiary },
+            ]}
           >
             未找到相关笔记
           </Text>
@@ -150,6 +120,25 @@ const MemosListContent = () => {
     );
   };
 
+  // 处理滚动事件（需要访问 setShowScrollToTop）
+  const handleScroll = useCallback((event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    setShowScrollToTop(offsetY > 300);
+  }, []);
+
+  // 回到顶部（需要访问 flatListRef）
+  const handleScrollToTop = useCallback(() => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, []);
+
+  // 处理列表项点击（需要访问 router）
+  const handleMemoPress = useCallback(
+    (memoId: string) => {
+      router.push(`/(memos)/${memoId}`);
+    },
+    [router],
+  );
+
   // 渲染列表项
   const renderItem = ({ item }: { item: Memo }) => (
     <MemoItem memo={item} onPress={handleMemoPress} />
@@ -181,7 +170,7 @@ const MemosListContent = () => {
       {/* 搜索头部 */}
       <SearchHeader
         onDrawerToggle={() => setDrawerVisible(!drawerVisible)}
-        onSearch={handleSearch}
+        onSearch={memoService.handleSearch}
         onFilterPress={() => setFilterDrawerVisible(true)}
       />
 
@@ -197,10 +186,10 @@ const MemosListContent = () => {
         onClose={() => setFilterDrawerVisible(false)}
         categories={categoryService.categories}
         selectedCategoryId={filterService.selectedCategoryId}
-        onSelectCategory={handleSelectCategory}
+        onSelectCategory={filterService.setSelectedCategory}
         sortField={filterService.sortField}
         sortOrder={filterService.sortOrder}
-        onChangeSort={handleChangeSort}
+        onChangeSort={filterService.setSortOption}
       />
 
       {/* 列表 */}
@@ -214,11 +203,11 @@ const MemosListContent = () => {
         refreshControl={
           <RefreshControl
             refreshing={memoService.loading && memoService.currentPage === 1}
-            onRefresh={handleRefresh}
+            onRefresh={memoService.refreshMemos}
             tintColor={theme.colors.info}
           />
         }
-        onEndReached={handleLoadMore}
+        onEndReached={memoService.loadNextPage}
         onEndReachedThreshold={0.5}
         onScroll={handleScroll}
         scrollEventThrottle={16}
@@ -258,7 +247,7 @@ const MemosListContent = () => {
   );
 };
 
-export default bindServices(MemosListContent, [CategoryService, FilterService]);
+export default bindServices(MemosListContent, []);
 
 const styles = StyleSheet.create({
   container: {

@@ -11,12 +11,12 @@
  * - 搜索筛选条件（分类、日期范围）
  */
 
-import { Service } from '@rabjs/react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { searchMemos } from '@/api/memo';
-import type { Memo } from '@/types/memo';
+import { searchMemosByVector } from "@/api/memo";
+import type { MemoWithSimilarity } from "@/types/memo";
+import { Service } from "@rabjs/react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const RECENT_SEARCHES_STORAGE_KEY = 'recentSearches';
+const RECENT_SEARCHES_STORAGE_KEY = "recentSearches";
 const MAX_RECENT_SEARCHES = 10;
 
 export interface SearchFilters {
@@ -30,7 +30,7 @@ export interface SearchFilters {
 }
 
 export interface SearchResult {
-  items: Memo[];
+  items: MemoWithSimilarity[];
   total: number;
   page: number;
   hasMore: boolean;
@@ -38,10 +38,10 @@ export interface SearchResult {
 
 class SearchService extends Service {
   /** 搜索关键词 */
-  searchKeyword = '';
+  searchKeyword = "";
 
   /** 搜索结果列表 */
-  searchResults: Memo[] = [];
+  searchResults: MemoWithSimilarity[] = [];
 
   /** 搜索总数量 */
   searchTotal = 0;
@@ -72,13 +72,15 @@ class SearchService extends Service {
    */
   async loadRecentSearches(): Promise<void> {
     try {
-      const savedSearches = await AsyncStorage.getItem(RECENT_SEARCHES_STORAGE_KEY);
+      const savedSearches = await AsyncStorage.getItem(
+        RECENT_SEARCHES_STORAGE_KEY,
+      );
       if (savedSearches) {
         const searches: string[] = JSON.parse(savedSearches);
         this.recentSearches = searches.slice(0, MAX_RECENT_SEARCHES);
       }
     } catch (error) {
-      console.error('Failed to load recent searches:', error);
+      console.error("Failed to load recent searches:", error);
       this.recentSearches = [];
     }
   }
@@ -90,10 +92,10 @@ class SearchService extends Service {
     try {
       await AsyncStorage.setItem(
         RECENT_SEARCHES_STORAGE_KEY,
-        JSON.stringify(this.recentSearches)
+        JSON.stringify(this.recentSearches),
       );
     } catch (error) {
-      console.error('Failed to save recent searches:', error);
+      console.error("Failed to save recent searches:", error);
     }
   }
 
@@ -170,6 +172,58 @@ class SearchService extends Service {
   }
 
   /**
+   * 提交当前关键词搜索
+   * 用于 TextInput onSubmitEditing
+   */
+  async submitSearch(): Promise<void> {
+    if (this.searchKeyword.trim()) {
+      await this.search(this.searchKeyword);
+    }
+  }
+
+  /**
+   * 从最近搜索点击进行搜索
+   * @param keyword - 搜索关键词
+   */
+  async searchFromRecent(keyword: string): Promise<void> {
+    this.searchKeyword = keyword;
+    await this.search(keyword);
+  }
+
+  /**
+   * 更新日期筛选并触发搜索
+   * @param dateRange - 日期范围
+   */
+  async updateDateFilter(
+    dateRange?: { start: Date; end: Date },
+  ): Promise<void> {
+    this.searchFilters = { ...this.searchFilters, dateRange };
+    if (this.searchKeyword.trim()) {
+      await this.search(this.searchKeyword, this.searchFilters);
+    }
+  }
+
+  /**
+   * 更新分类筛选并触发搜索
+   * @param categoryId - 分类ID
+   */
+  async updateCategoryFilter(categoryId?: string): Promise<void> {
+    this.searchFilters = { ...this.searchFilters, categoryId };
+    if (this.searchKeyword.trim()) {
+      await this.search(this.searchKeyword, this.searchFilters);
+    }
+  }
+
+  /**
+   * 加载更多搜索结果
+   */
+  async loadMore(): Promise<void> {
+    if (this.hasMore && !this.isSearching && this.searchKeyword) {
+      await this.loadNextPage();
+    }
+  }
+
+  /**
    * 执行搜索
    * @param keyword - 搜索关键词（可选，默认使用当前的 searchKeyword）
    * @param filters - 搜索筛选条件（可选，默认使用当前的 searchFilters）
@@ -197,23 +251,24 @@ class SearchService extends Service {
 
       this.currentPage = 1;
 
-      // 调用 API 搜索
-      const response = await searchMemos({
-        keyword: searchKeyword,
+      // 调用向量搜索 API
+      const response = await searchMemosByVector({
+        query: searchKeyword,
         categoryId: searchFilters.categoryId,
-        dateRange: searchFilters.dateRange,
+        startDate: searchFilters.dateRange?.start.getTime(),
+        endDate: searchFilters.dateRange?.end.getTime(),
         page: 1,
-        pageSize: this.pageSize,
+        limit: this.pageSize,
       });
 
       this.searchResults = response.items;
       this.searchTotal = response.total;
-      this.hasMore = response.items.length === this.pageSize;
+      this.hasMore = response.items.length == this.pageSize;
 
       // 添加到最近搜索历史
       await this.addRecentSearch(searchKeyword);
     } catch (error) {
-      this.searchError = error instanceof Error ? error.message : '搜索失败';
+      this.searchError = error instanceof Error ? error.message : "搜索失败";
       throw error;
     } finally {
       this.isSearching = false;
@@ -232,20 +287,22 @@ class SearchService extends Service {
     try {
       const nextPage = this.currentPage + 1;
 
-      // 调用 API 搜索下一页
-      const response = await searchMemos({
-        keyword: this.searchKeyword,
+      // 调用向量搜索 API 加载下一页
+      const response = await searchMemosByVector({
+        query: this.searchKeyword,
         categoryId: this.searchFilters.categoryId,
-        dateRange: this.searchFilters.dateRange,
+        startDate: this.searchFilters.dateRange?.start.getTime(),
+        endDate: this.searchFilters.dateRange?.end.getTime(),
         page: nextPage,
-        pageSize: this.pageSize,
+        limit: this.pageSize,
       });
 
       this.searchResults.push(...response.items);
       this.hasMore = response.items.length === this.pageSize;
       this.currentPage = nextPage;
     } catch (error) {
-      this.searchError = error instanceof Error ? error.message : '加载更多失败';
+      this.searchError =
+        error instanceof Error ? error.message : "加载更多失败";
       throw error;
     } finally {
       this.isSearching = false;
@@ -267,7 +324,7 @@ class SearchService extends Service {
    * 重置所有搜索状态
    */
   reset(): void {
-    this.searchKeyword = '';
+    this.searchKeyword = "";
     this.searchResults = [];
     this.searchTotal = 0;
     this.isSearching = false;

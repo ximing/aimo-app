@@ -95,6 +95,9 @@ export interface VectorSearchRequest {
   query: string;
   page?: number;
   limit?: number;
+  categoryId?: string;
+  startDate?: number;
+  endDate?: number;
 }
 
 export interface VectorSearchResponse extends PaginatedResponse<MemoWithSimilarity> {}

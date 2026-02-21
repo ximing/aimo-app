@@ -11,6 +11,7 @@
  */
 
 import { useTheme } from "@/hooks/use-theme";
+import type { SortField, SortOrder } from "@/services/filter-service";
 import type { Category } from "@/types/category";
 import { MaterialIcons } from "@expo/vector-icons";
 import { view } from "@rabjs/react";
@@ -25,8 +26,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { SortField, SortOrder } from "@/services/filter-service";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.8, 320);
@@ -54,8 +53,6 @@ export const FilterDrawer = view(
     onChangeSort,
   }: FilterDrawerProps) => {
     const theme = useTheme();
-    const insets = useSafeAreaInsets();
-
     // 动画值
     const translateX = useRef(new Animated.Value(DRAWER_WIDTH)).current;
     const opacity = useRef(new Animated.Value(0)).current;
@@ -147,15 +144,15 @@ export const FilterDrawer = view(
               {
                 backgroundColor: theme.colors.background,
                 width: DRAWER_WIDTH,
-                paddingTop: insets.top,
-                paddingBottom: insets.bottom,
                 transform: [{ translateX }],
               },
             ]}
           >
             {/* 标题栏 */}
             <View style={styles.header}>
-              <Text style={[styles.headerTitle, { color: theme.colors.foreground }]}>
+              <Text
+                style={[styles.headerTitle, { color: theme.colors.foreground }]}
+              >
                 筛选与排序
               </Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -169,7 +166,12 @@ export const FilterDrawer = view(
 
             {/* 分类区域 */}
             <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.foregroundSecondary }]}>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  { color: theme.colors.foregroundSecondary },
+                ]}
+              >
                 分类
               </Text>
 
@@ -319,7 +321,12 @@ export const FilterDrawer = view(
 
             {/* 排序区域 */}
             <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.foregroundSecondary }]}>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  { color: theme.colors.foregroundSecondary },
+                ]}
+              >
                 排序方式
               </Text>
 

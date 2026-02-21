@@ -15,6 +15,8 @@ class AuthService extends Service {
   isAuthenticated = false;
   loading = false;
   error: string | null = null;
+  private userInfoLoaded = false;
+  private userInfoRequest: Promise<void> | null = null;
 
   /**
    * 用户登录
@@ -27,9 +29,11 @@ class AuthService extends Service {
       const response = await apiLogin(params);
       this.user = response.user;
       this.isAuthenticated = true;
+      this.userInfoLoaded = false;
+      this.userInfoRequest = null;
 
       try {
-        await this.fetchUserInfo();
+        await this.fetchUserInfo(true);
       } catch (fetchError) {
         console.warn("Failed to fetch user info after login:", fetchError);
       }
@@ -63,12 +67,30 @@ class AuthService extends Service {
   /**
    * 获取当前用户信息
    */
-  async fetchUserInfo(): Promise<void> {
-    const userInfo = await getUserInfo();
-    this.user = {
-      ...(this.user ?? ({} as User)),
-      ...userInfo,
-    };
+  async fetchUserInfo(force = false): Promise<void> {
+    if (this.userInfoRequest) {
+      return this.userInfoRequest;
+    }
+
+    if (!force && this.userInfoLoaded) {
+      return;
+    }
+
+    const request = (async () => {
+      try {
+        const userInfo = await getUserInfo();
+        this.user = {
+          ...(this.user ?? ({} as User)),
+          ...userInfo,
+        };
+        this.userInfoLoaded = true;
+      } finally {
+        this.userInfoRequest = null;
+      }
+    })();
+
+    this.userInfoRequest = request;
+    return request;
   }
 
   /**
@@ -78,6 +100,8 @@ class AuthService extends Service {
     this.user = null;
     this.isAuthenticated = false;
     this.error = null;
+    this.userInfoLoaded = false;
+    this.userInfoRequest = null;
     clearToken();
     try {
       await clearTokenAsync();

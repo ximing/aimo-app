@@ -3,26 +3,31 @@
  * 使用 @rabjs/react 进行响应式状态管理
  */
 
-import { Service, ioc } from '@rabjs/react';
 import {
-  getMemos as apiGetMemos,
   deleteMemo as apiDeleteMemo,
+  getActivityStats as apiGetActivityStats,
   getMemo as apiGetMemo,
+  getMemos as apiGetMemos,
   getRelatedMemos as apiGetRelatedMemos,
-  getActivityStats as apiGetActivityStats
-} from '@/api/memo';
+} from "@/api/memo";
 import type {
-  Memo,
-  MemoListResponse,
   ListMemosParams,
+  Memo,
+  MemoActivityStatsDto,
+  MemoListResponse,
   RelatedMemoItem,
-  MemoActivityStatsDto
-} from '@/types/memo';
-import FilterService, { type SortField, type SortOrder } from './filter-service';
+} from "@/types/memo";
+import { Service, resolve } from "@rabjs/react";
+import FilterService, {
+  type SortField,
+  type SortOrder,
+} from "./filter-service";
 
 class MemoService extends Service {
   // FilterService 实例（通过依赖注入获取）
-  private filterService = ioc(FilterService);
+  private get filterService() {
+    return resolve(FilterService);
+  }
 
   // 响应式属性
   memos: Memo[] = [];
@@ -34,14 +39,14 @@ class MemoService extends Service {
 
   // 筛选相关属性（从 FilterService 同步）
   categoryFilter: string | undefined = undefined;
-  sortField: SortField = 'createdAt';
-  sortOrder: SortOrder = 'desc';
+  sortField: SortField = "createdAt";
+  sortOrder: SortOrder = "desc";
 
   // 搜索相关属性
   searchQuery = "";
   searchLoading = false;
   searchPage = 1;
-  
+
   // 详情页相关属性
   currentMemo: Memo | null = null;
   relatedMemos: RelatedMemoItem[] = [];
@@ -73,50 +78,27 @@ class MemoService extends Service {
     };
   }
 
-  /**
-   * 监听 FilterService 变化并自动刷新列表
-   */
-  watchFilterChanges(): () => void {
-    // 初始同步
-    this.syncFilterState();
-
-    // 监听 FilterService 的状态变化
-    const dispose = this.filterService.$reactive(() => {
-      const prevCategory = this.categoryFilter;
-      const prevSortField = this.sortField;
-      const prevSortOrder = this.sortOrder;
-
-      // 同步最新状态
-      this.syncFilterState();
-
-      // 如果筛选条件发生变化，自动刷新列表
-      if (
-        prevCategory !== this.categoryFilter ||
-        prevSortField !== this.sortField ||
-        prevSortOrder !== this.sortOrder
-      ) {
-        this.refreshMemos();
-      }
-    });
-
-    return dispose;
-  }
-
   private resolvePagination(
     response: MemoListResponse,
     fallbackPage: number,
-    fallbackLimit: number
+    fallbackLimit: number,
   ): { hasMore: boolean; nextPage: number; pageSize: number } {
-    const pagination = (response as {
-      pagination?: { page?: number; limit?: number; totalPages?: number };
-    }).pagination;
-    const page = pagination?.page ?? (response as { page?: number }).page ?? fallbackPage;
+    const pagination = (
+      response as {
+        pagination?: { page?: number; limit?: number; totalPages?: number };
+      }
+    ).pagination;
+    const page =
+      pagination?.page ?? (response as { page?: number }).page ?? fallbackPage;
     const limit =
-      pagination?.limit ?? (response as { limit?: number }).limit ?? fallbackLimit;
+      pagination?.limit ??
+      (response as { limit?: number }).limit ??
+      fallbackLimit;
     const totalPages =
-      pagination?.totalPages ?? (response as { totalPages?: number }).totalPages;
+      pagination?.totalPages ??
+      (response as { totalPages?: number }).totalPages;
     const hasMore =
-      typeof totalPages === 'number'
+      typeof totalPages === "number"
         ? page < totalPages
         : response.items.length === limit;
 
@@ -160,7 +142,7 @@ class MemoService extends Service {
       this.pageSize = paginationState.pageSize;
       this.currentPage = paginationState.nextPage;
     } catch (err) {
-      this.error = err instanceof Error ? err.message : '获取 memo 列表失败';
+      this.error = err instanceof Error ? err.message : "获取 memo 列表失败";
       throw err;
     } finally {
       this.loading = false;
@@ -197,11 +179,15 @@ class MemoService extends Service {
       });
 
       this.memos = response.items;
-      const paginationState = this.resolvePagination(response, 1, this.pageSize);
+      const paginationState = this.resolvePagination(
+        response,
+        1,
+        this.pageSize,
+      );
       this.hasMore = paginationState.hasMore;
       this.searchPage = paginationState.nextPage;
     } catch (err) {
-      this.error = err instanceof Error ? err.message : '搜索失败';
+      this.error = err instanceof Error ? err.message : "搜索失败";
       throw err;
     } finally {
       this.loading = false;
@@ -235,12 +221,12 @@ class MemoService extends Service {
       const paginationState = this.resolvePagination(
         response,
         page,
-        this.pageSize
+        this.pageSize,
       );
       this.hasMore = paginationState.hasMore;
       this.searchPage = paginationState.nextPage;
     } catch (err) {
-      this.error = err instanceof Error ? err.message : '加载更多失败';
+      this.error = err instanceof Error ? err.message : "加载更多失败";
       throw err;
     } finally {
       this.loading = false;
@@ -254,6 +240,18 @@ class MemoService extends Service {
     this.searchQuery = "";
     this.searchPage = 1;
     await this.refreshMemos();
+  }
+
+  /**
+   * 处理搜索入口
+   * @param query - 搜索关键词，为空时清除搜索
+   */
+  async handleSearch(query: string): Promise<void> {
+    if (query) {
+      await this.searchMemos(query);
+    } else {
+      await this.clearSearch();
+    }
   }
 
   /**
@@ -277,9 +275,9 @@ class MemoService extends Service {
     try {
       await apiDeleteMemo(memoId);
       // 从列表中删除
-      this.memos = this.memos.filter(memo => memo.memoId !== memoId);
+      this.memos = this.memos.filter((memo) => memo.memoId !== memoId);
     } catch (err) {
-      this.error = err instanceof Error ? err.message : '删除 memo 失败';
+      this.error = err instanceof Error ? err.message : "删除 memo 失败";
       throw err;
     }
   }
@@ -294,13 +292,14 @@ class MemoService extends Service {
     try {
       const [memo, relatedData] = await Promise.all([
         apiGetMemo(memoId),
-        apiGetRelatedMemos(memoId, 1, 10)
+        apiGetRelatedMemos(memoId, 1, 10),
       ]);
 
       this.currentMemo = memo;
       this.relatedMemos = relatedData.items;
     } catch (err) {
-      this.detailError = err instanceof Error ? err.message : '获取 memo 详情失败';
+      this.detailError =
+        err instanceof Error ? err.message : "获取 memo 详情失败";
       throw err;
     } finally {
       this.detailLoading = false;
@@ -327,7 +326,8 @@ class MemoService extends Service {
       const stats = await apiGetActivityStats(days);
       this.activityStats = stats;
     } catch (err) {
-      this.activityStatsError = err instanceof Error ? err.message : '获取活动统计失败';
+      this.activityStatsError =
+        err instanceof Error ? err.message : "获取活动统计失败";
     } finally {
       this.activityStatsLoading = false;
     }
