@@ -3,20 +3,15 @@
  * 使用 @rabjs/react 进行响应式状态管理
  */
 
+import { getActivityStats as apiGetActivityStats } from "@/api/insights";
 import {
   deleteMemo as apiDeleteMemo,
-  getActivityStats as apiGetActivityStats,
   getMemo as apiGetMemo,
   getMemos as apiGetMemos,
   getRelatedMemos as apiGetRelatedMemos,
 } from "@/api/memo";
-import type {
-  ListMemosParams,
-  Memo,
-  MemoActivityStatsDto,
-  MemoListResponse,
-  RelatedMemoItem,
-} from "@/types/memo";
+import type { MemoActivityStatsDto } from "@/types/insights";
+import type { ListMemosParams, Memo, RelatedMemoItem } from "@/types/memo";
 import { Service, resolve } from "@rabjs/react";
 import FilterService, {
   type SortField,
@@ -41,11 +36,6 @@ class MemoService extends Service {
   categoryFilter: string | undefined = undefined;
   sortField: SortField = "createdAt";
   sortOrder: SortOrder = "desc";
-
-  // 搜索相关属性
-  searchQuery = "";
-  searchLoading = false;
-  searchPage = 1;
 
   // 详情页相关属性
   currentMemo: Memo | null = null;
@@ -78,37 +68,6 @@ class MemoService extends Service {
     };
   }
 
-  private resolvePagination(
-    response: MemoListResponse,
-    fallbackPage: number,
-    fallbackLimit: number,
-  ): { hasMore: boolean; nextPage: number; pageSize: number } {
-    const pagination = (
-      response as {
-        pagination?: { page?: number; limit?: number; totalPages?: number };
-      }
-    ).pagination;
-    const page =
-      pagination?.page ?? (response as { page?: number }).page ?? fallbackPage;
-    const limit =
-      pagination?.limit ??
-      (response as { limit?: number }).limit ??
-      fallbackLimit;
-    const totalPages =
-      pagination?.totalPages ??
-      (response as { totalPages?: number }).totalPages;
-    const hasMore =
-      typeof totalPages === "number"
-        ? page < totalPages
-        : response.items.length === limit;
-
-    return {
-      hasMore,
-      nextPage: page + 1,
-      pageSize: limit,
-    };
-  }
-
   /**
    * 获取 memo 列表
    */
@@ -122,6 +81,7 @@ class MemoService extends Service {
 
       // 合并筛选和排序参数
       const filterParams = this.getFilterParams();
+      console.log("filterParams", filterParams);
       const response = await apiGetMemos({
         page,
         limit,
@@ -131,16 +91,15 @@ class MemoService extends Service {
 
       if (page > 1) {
         // 加载更多
-        this.memos.push(...response.items);
+        this.memos = [...this.memos, ...response.items];
       } else {
         // 首次加载或刷新
         this.memos = response.items;
       }
-
-      const paginationState = this.resolvePagination(response, page, limit);
-      this.hasMore = paginationState.hasMore;
-      this.pageSize = paginationState.pageSize;
-      this.currentPage = paginationState.nextPage;
+      console.log("response", response.pagination);
+      const pagination = response.pagination;
+      this.hasMore = this.currentPage < (pagination?.totalPages || 1);
+      this.currentPage = this.currentPage + 1;
     } catch (err) {
       this.error = err instanceof Error ? err.message : "获取 memo 列表失败";
       throw err;
@@ -161,111 +120,13 @@ class MemoService extends Service {
   }
 
   /**
-   * 搜索笔记
-   * @param query - 搜索关键词
-   */
-  async searchMemos(query: string): Promise<void> {
-    this.searchQuery = query;
-    this.searchPage = 1;
-    this.hasMore = true;
-    this.loading = true;
-    this.error = null;
-
-    try {
-      const response = await apiGetMemos({
-        page: 1,
-        limit: this.pageSize,
-        search: query || undefined,
-      });
-
-      this.memos = response.items;
-      const paginationState = this.resolvePagination(
-        response,
-        1,
-        this.pageSize,
-      );
-      this.hasMore = paginationState.hasMore;
-      this.searchPage = paginationState.nextPage;
-    } catch (err) {
-      this.error = err instanceof Error ? err.message : "搜索失败";
-      throw err;
-    } finally {
-      this.loading = false;
-    }
-  }
-
-  /**
-   * 搜索分页加载更多
-   */
-  async loadNextSearchPage(): Promise<void> {
-    if (!this.hasMore || this.loading || !this.searchQuery) return;
-
-    this.loading = true;
-    this.error = null;
-
-    try {
-      const page = this.searchPage;
-      const response = await apiGetMemos({
-        page,
-        limit: this.pageSize,
-        search: this.searchQuery || undefined,
-      });
-
-      // searchPage > 1 时是追加数据，searchPage === 1 时是替换
-      if (page > 1) {
-        this.memos.push(...response.items);
-      } else {
-        this.memos = response.items;
-      }
-
-      const paginationState = this.resolvePagination(
-        response,
-        page,
-        this.pageSize,
-      );
-      this.hasMore = paginationState.hasMore;
-      this.searchPage = paginationState.nextPage;
-    } catch (err) {
-      this.error = err instanceof Error ? err.message : "加载更多失败";
-      throw err;
-    } finally {
-      this.loading = false;
-    }
-  }
-
-  /**
-   * 清除搜索，恢复正常列表
-   */
-  async clearSearch(): Promise<void> {
-    this.searchQuery = "";
-    this.searchPage = 1;
-    await this.refreshMemos();
-  }
-
-  /**
-   * 处理搜索入口
-   * @param query - 搜索关键词，为空时清除搜索
-   */
-  async handleSearch(query: string): Promise<void> {
-    if (query) {
-      await this.searchMemos(query);
-    } else {
-      await this.clearSearch();
-    }
-  }
-
-  /**
    * 加载下一页
    */
   async loadNextPage(): Promise<void> {
+    console.log("this.hasMore", this.hasMore);
     if (!this.hasMore || this.loading) return;
 
-    // 如果有搜索词，使用搜索分页
-    if (this.searchQuery) {
-      await this.loadNextSearchPage();
-    } else {
-      await this.fetchMemos({ page: this.currentPage, limit: this.pageSize });
-    }
+    await this.fetchMemos({ page: this.currentPage, limit: this.pageSize });
   }
 
   /**
@@ -349,8 +210,6 @@ class MemoService extends Service {
     this.error = null;
     this.hasMore = true;
     this.currentPage = 1;
-    this.searchQuery = "";
-    this.searchPage = 1;
     this.clearDetail();
   }
 

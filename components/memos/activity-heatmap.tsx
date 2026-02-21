@@ -10,7 +10,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { view } from "@rabjs/react";
 import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import type { MemoActivityStatsItemDto } from "@/types/memo";
+import type { MemoActivityStatsItemDto } from "@/types/insights";
 
 interface ActivityHeatmapProps {
   data: MemoActivityStatsItemDto[];

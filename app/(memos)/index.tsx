@@ -76,30 +76,6 @@ const MemosListContent = () => {
 
   // 渲染空状态
   const renderEmpty = () => {
-    // 搜索无结果
-    if (memoService.searchQuery) {
-      return (
-        <View style={styles.emptyContainer}>
-          <Text
-            style={[
-              styles.emptyText,
-              { color: theme.colors.foregroundTertiary },
-            ]}
-          >
-            未找到相关笔记
-          </Text>
-          <Text
-            style={[
-              styles.emptySubText,
-              { color: theme.colors.foregroundSecondary },
-            ]}
-          >
-            试试其他关键词
-          </Text>
-        </View>
-      );
-    }
-
     // 暂无备忘录
     return (
       <View style={styles.emptyContainer}>
@@ -170,7 +146,6 @@ const MemosListContent = () => {
       {/* 搜索头部 */}
       <SearchHeader
         onDrawerToggle={() => setDrawerVisible(!drawerVisible)}
-        onSearch={memoService.handleSearch}
         onFilterPress={() => setFilterDrawerVisible(true)}
       />
 
