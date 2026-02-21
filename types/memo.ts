@@ -15,6 +15,8 @@ export interface AttachmentDto {
   type: string;
   size: number;
   createdAt: number;
+  /** 附件属性：audio(duration), image(width,height), video(duration) */
+  properties?: Record<string, unknown>;
 }
 
 /**
