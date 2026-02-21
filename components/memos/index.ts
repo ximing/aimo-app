@@ -16,3 +16,4 @@ export { ActivityHeatmap } from "./activity-heatmap";
 export { RelatedMemoList } from "./related-memo-list";
 export { RelevanceScore } from "./relevance-score";
 export { VoiceRecorderModal } from "./voice-recorder-modal";
+export { FilterDrawer } from "./filter-drawer";
