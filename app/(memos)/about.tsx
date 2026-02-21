@@ -6,17 +6,17 @@
 import { useTheme } from "@/hooks/use-theme";
 import { MaterialIcons } from "@expo/vector-icons";
 import { bindServices, view } from "@rabjs/react";
-import { Image } from "expo-image";
 import Constants from "expo-constants";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
-    Linking,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -82,7 +82,11 @@ const AboutContent = view(() => {
         {/* 应用Logo和名称 */}
         <View style={styles.appInfoSection}>
           <Image
-            source={theme.isDark ? require("@/assets/logo-dark.png") : require("@/assets/logo.png")}
+            source={
+              theme.isDark
+                ? require("@/assets/logo-dark.png")
+                : require("@/assets/logo.png")
+            }
             style={styles.appLogo}
             contentFit="contain"
           />
@@ -184,7 +188,7 @@ const AboutContent = view(() => {
           <Text
             style={[styles.developerText, { color: theme.colors.foreground }]}
           >
-            美团技术团队
+            ximing
           </Text>
         </View>
 
