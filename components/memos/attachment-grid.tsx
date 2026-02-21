@@ -20,6 +20,159 @@ import { useTheme } from '@/hooks/use-theme';
 import type { AttachmentDto } from '@/types/memo';
 import { getFileTypeFromMime, getFileIcon, formatFileName } from '@/utils/attachment';
 
+interface AudioAttachmentProps {
+  attachment: AttachmentDto;
+  isPlaying: boolean;
+  theme: ReturnType<typeof useTheme>;
+  onPress?: () => void;
+}
+
+// 音频附件组件 - 独立使用 hooks
+const AudioAttachment = ({ attachment, isPlaying, theme, onPress }: AudioAttachmentProps) => {
+  const audioWidth = calculateAudioWidth(attachment);
+  const duration = formatAudioDuration(attachment);
+
+  // 创建波形动画
+  const wave1Anim = useRef(new Animated.Value(8)).current;
+  const wave2Anim = useRef(new Animated.Value(12)).current;
+  const wave3Anim = useRef(new Animated.Value(16)).current;
+  const wave4Anim = useRef(new Animated.Value(12)).current;
+  const wave5Anim = useRef(new Animated.Value(8)).current;
+
+  useEffect(() => {
+    if (isPlaying) {
+      let isCancelled = false;
+
+      const animateWave = () => {
+        if (isCancelled) return;
+
+        const duration = 300;
+        Animated.parallel([
+          Animated.sequence([
+            Animated.timing(wave1Anim, { toValue: 16, duration, useNativeDriver: false }),
+            Animated.timing(wave1Anim, { toValue: 8, duration, useNativeDriver: false }),
+          ]),
+          Animated.sequence([
+            Animated.timing(wave2Anim, { toValue: 8, duration, useNativeDriver: false }),
+            Animated.timing(wave2Anim, { toValue: 16, duration, useNativeDriver: false }),
+          ]),
+          Animated.sequence([
+            Animated.timing(wave3Anim, { toValue: 12, duration, useNativeDriver: false }),
+            Animated.timing(wave3Anim, { toValue: 20, duration, useNativeDriver: false }),
+          ]),
+          Animated.sequence([
+            Animated.timing(wave4Anim, { toValue: 16, duration, useNativeDriver: false }),
+            Animated.timing(wave4Anim, { toValue: 8, duration, useNativeDriver: false }),
+          ]),
+          Animated.sequence([
+            Animated.timing(wave5Anim, { toValue: 12, duration, useNativeDriver: false }),
+            Animated.timing(wave5Anim, { toValue: 8, duration, useNativeDriver: false }),
+          ]),
+        ]).start((finished) => {
+          if (!isCancelled && finished) {
+            animateWave();
+          }
+        });
+      };
+      animateWave();
+
+      // 清理函数：停止动画
+      return () => {
+        isCancelled = true;
+        wave1Anim.stopAnimation();
+        wave2Anim.stopAnimation();
+        wave3Anim.stopAnimation();
+        wave4Anim.stopAnimation();
+        wave5Anim.stopAnimation();
+        // 重置为默认值
+        wave1Anim.setValue(8);
+        wave2Anim.setValue(12);
+        wave3Anim.setValue(16);
+        wave4Anim.setValue(12);
+        wave5Anim.setValue(8);
+      };
+    } else {
+      // 停止动画并重置
+      wave1Anim.stopAnimation();
+      wave2Anim.stopAnimation();
+      wave3Anim.stopAnimation();
+      wave4Anim.stopAnimation();
+      wave5Anim.stopAnimation();
+      wave1Anim.setValue(8);
+      wave2Anim.setValue(12);
+      wave3Anim.setValue(16);
+      wave4Anim.setValue(12);
+      wave5Anim.setValue(8);
+    }
+  }, [isPlaying, wave1Anim, wave2Anim, wave3Anim, wave4Anim, wave5Anim]);
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.audioContainer,
+        {
+          backgroundColor: theme.colors.card,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+        },
+        { width: audioWidth },
+      ]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      {/* 小尖角 - 上边框偏左 */}
+      <View style={[styles.audioArrow, { borderBottomColor: theme.colors.card }]} />
+      <View style={[styles.audioArrowBorder, { borderBottomColor: theme.colors.border }]} />
+
+      <View style={styles.audioContent}>
+        <View style={styles.audioWavePlaceholder}>
+          {/* 使用多个小竖条模拟波形 */}
+          <Animated.View
+            style={[
+              styles.waveBar,
+              { backgroundColor: theme.colors.primary, height: wave1Anim },
+            ]}
+          />
+          <Animated.View
+            style={[
+              styles.waveBar,
+              { backgroundColor: theme.colors.primary, height: wave2Anim },
+            ]}
+          />
+          <Animated.View
+            style={[
+              styles.waveBar,
+              { backgroundColor: theme.colors.primary, height: wave3Anim },
+            ]}
+          />
+          <Animated.View
+            style={[
+              styles.waveBar,
+              { backgroundColor: theme.colors.primary, height: wave4Anim },
+            ]}
+          />
+          <Animated.View
+            style={[
+              styles.waveBar,
+              { backgroundColor: theme.colors.primary, height: wave5Anim },
+            ]}
+          />
+        </View>
+        {duration && (
+          <Text
+            style={[
+              styles.audioDuration,
+              { color: theme.colors.foregroundSecondary },
+            ]}
+          >
+            {duration}
+          </Text>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+};
+
 interface AttachmentGridProps {
   attachments: AttachmentDto[];
   onAttachmentPress?: (attachment: AttachmentDto) => void;
@@ -91,149 +244,16 @@ export const AttachmentGrid = view(({
 
   // 渲染音频附件（类似微信录音样式）
   const renderAudioAttachment = (attachment: AttachmentDto) => {
-    const audioWidth = calculateAudioWidth(attachment);
-    const duration = formatAudioDuration(attachment);
     const isPlaying = playingAttachmentId === attachment.attachmentId;
 
-    // 创建波形动画
-    const wave1Anim = useRef(new Animated.Value(8)).current;
-    const wave2Anim = useRef(new Animated.Value(12)).current;
-    const wave3Anim = useRef(new Animated.Value(16)).current;
-    const wave4Anim = useRef(new Animated.Value(12)).current;
-    const wave5Anim = useRef(new Animated.Value(8)).current;
-
-    useEffect(() => {
-      if (isPlaying) {
-        let isCancelled = false;
-
-        const animateWave = () => {
-          if (isCancelled) return;
-
-          const duration = 300;
-          Animated.parallel([
-            Animated.sequence([
-              Animated.timing(wave1Anim, { toValue: 16, duration, useNativeDriver: false }),
-              Animated.timing(wave1Anim, { toValue: 8, duration, useNativeDriver: false }),
-            ]),
-            Animated.sequence([
-              Animated.timing(wave2Anim, { toValue: 8, duration, useNativeDriver: false }),
-              Animated.timing(wave2Anim, { toValue: 16, duration, useNativeDriver: false }),
-            ]),
-            Animated.sequence([
-              Animated.timing(wave3Anim, { toValue: 12, duration, useNativeDriver: false }),
-              Animated.timing(wave3Anim, { toValue: 20, duration, useNativeDriver: false }),
-            ]),
-            Animated.sequence([
-              Animated.timing(wave4Anim, { toValue: 16, duration, useNativeDriver: false }),
-              Animated.timing(wave4Anim, { toValue: 8, duration, useNativeDriver: false }),
-            ]),
-            Animated.sequence([
-              Animated.timing(wave5Anim, { toValue: 12, duration, useNativeDriver: false }),
-              Animated.timing(wave5Anim, { toValue: 8, duration, useNativeDriver: false }),
-            ]),
-          ]).start((finished) => {
-            if (!isCancelled && finished) {
-              animateWave();
-            }
-          });
-        };
-        animateWave();
-
-        // 清理函数：停止动画
-        return () => {
-          isCancelled = true;
-          wave1Anim.stopAnimation();
-          wave2Anim.stopAnimation();
-          wave3Anim.stopAnimation();
-          wave4Anim.stopAnimation();
-          wave5Anim.stopAnimation();
-          // 重置为默认值
-          wave1Anim.setValue(8);
-          wave2Anim.setValue(12);
-          wave3Anim.setValue(16);
-          wave4Anim.setValue(12);
-          wave5Anim.setValue(8);
-        };
-      } else {
-        // 停止动画并重置
-        wave1Anim.stopAnimation();
-        wave2Anim.stopAnimation();
-        wave3Anim.stopAnimation();
-        wave4Anim.stopAnimation();
-        wave5Anim.stopAnimation();
-        wave1Anim.setValue(8);
-        wave2Anim.setValue(12);
-        wave3Anim.setValue(16);
-        wave4Anim.setValue(12);
-        wave5Anim.setValue(8);
-      }
-    }, [isPlaying, playingAttachmentId]);
-
     return (
-      <TouchableOpacity
+      <AudioAttachment
         key={attachment.attachmentId}
-        style={[
-          styles.audioContainer,
-          {
-            backgroundColor: theme.colors.card,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-          },
-          { width: audioWidth },
-        ]}
+        attachment={attachment}
+        isPlaying={isPlaying}
+        theme={theme}
         onPress={() => onAttachmentPress?.(attachment)}
-        activeOpacity={0.7}
-      >
-        {/* 小尖角 - 上边框偏左 */}
-        <View style={[styles.audioArrow, { borderBottomColor: theme.colors.card }]} />
-        <View style={[styles.audioArrowBorder, { borderBottomColor: theme.colors.border }]} />
-
-        <View style={styles.audioContent}>
-          <View style={styles.audioWavePlaceholder}>
-            {/* 使用多个小竖条模拟波形 */}
-            <Animated.View
-              style={[
-                styles.waveBar,
-                { backgroundColor: theme.colors.primary, height: wave1Anim },
-              ]}
-            />
-            <Animated.View
-              style={[
-                styles.waveBar,
-                { backgroundColor: theme.colors.primary, height: wave2Anim },
-              ]}
-            />
-            <Animated.View
-              style={[
-                styles.waveBar,
-                { backgroundColor: theme.colors.primary, height: wave3Anim },
-              ]}
-            />
-            <Animated.View
-              style={[
-                styles.waveBar,
-                { backgroundColor: theme.colors.primary, height: wave4Anim },
-              ]}
-            />
-            <Animated.View
-              style={[
-                styles.waveBar,
-                { backgroundColor: theme.colors.primary, height: wave5Anim },
-              ]}
-            />
-          </View>
-          {duration && (
-            <Text
-              style={[
-                styles.audioDuration,
-                { color: theme.colors.foregroundSecondary },
-              ]}
-            >
-              {duration}
-            </Text>
-          )}
-        </View>
-      </TouchableOpacity>
+      />
     );
   };
 
