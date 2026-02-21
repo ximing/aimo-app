@@ -7,10 +7,10 @@
 import { useTheme } from "@/hooks/use-theme";
 import { MaterialIcons } from "@expo/vector-icons";
 import { view } from "@rabjs/react";
-import React, { useState } from "react";
+import { useRouter } from "expo-router";
+import React from "react";
 import {
   StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
   View,
@@ -23,21 +23,14 @@ interface SearchHeaderProps {
   onFilterPress?: () => void;
 }
 
-export const SearchHeader = view(({ onDrawerToggle, onSearch, onFilterPress }: SearchHeaderProps) => {
+export const SearchHeader = view(({ onDrawerToggle, onFilterPress }: SearchHeaderProps) => {
   const theme = useTheme();
-  const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  // 处理搜索提交
-  const handleSearchSubmit = () => {
-    if (onSearch) {
-      onSearch(searchQuery.trim());
-    }
-  };
-
-  // 处理输入变化
-  const handleSearchChange = (text: string) => {
-    setSearchQuery(text);
+  // 处理搜索框点击 - 跳转到搜索页面
+  const handleSearchPress = () => {
+    router.push("/search");
   };
 
   return (
@@ -61,14 +54,16 @@ export const SearchHeader = view(({ onDrawerToggle, onSearch, onFilterPress }: S
           </TouchableOpacity>
         </View>
 
-        {/* 搜索输入框 */}
-        <View
+        {/* 搜索输入框 - 点击跳转到搜索页面 */}
+        <TouchableOpacity
           style={[
             styles.searchContainer,
-            { 
+            {
               backgroundColor: theme.colors.card,
             },
           ]}
+          onPress={handleSearchPress}
+          activeOpacity={0.7}
         >
           <MaterialIcons
             name="search"
@@ -77,32 +72,12 @@ export const SearchHeader = view(({ onDrawerToggle, onSearch, onFilterPress }: S
           />
           <TextInput
             style={[styles.searchInput, { color: theme.colors.foreground }]}
-            placeholder="搜索笔记"
+            placeholder="搜索笔记..."
             placeholderTextColor={theme.colors.foregroundTertiary}
-            value={searchQuery}
-            onChangeText={handleSearchChange}
-            onSubmitEditing={handleSearchSubmit}
-            returnKeyType="search"
-            clearButtonMode="while-editing"
+            editable={false}
+            pointerEvents="none"
           />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity
-              onPress={() => {
-                setSearchQuery("");
-                if (onSearch) {
-                  onSearch("");
-                }
-              }}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <MaterialIcons
-                name="close"
-                size={18}
-                color={theme.colors.foregroundTertiary}
-              />
-            </TouchableOpacity>
-          )}
-        </View>
+        </TouchableOpacity>
       </View>
     </View>
   );
