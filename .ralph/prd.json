@@ -181,8 +181,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created DateFilterDropdown with 'all', 'last7days', 'last30days', 'custom' options. Created CategoryFilterDropdown reusing FilterDrawer patterns. Both dropdowns show active state on buttons with selected label. Filter changes trigger search immediately if keyword exists."
     },
     {
       "id": "US-011",

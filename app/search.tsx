@@ -12,7 +12,7 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { bindServices, useService } from "@rabjs/react";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef, useCallback } from "react";
+import React, { useEffect, useRef, useCallback, useState } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -25,8 +25,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme } from "@/hooks/use-theme";
 import { MemoItem } from "@/components/memos/memo-item";
+import { DateFilterDropdown, CategoryFilterDropdown } from "@/components/memos";
 import CategoryService from "@/services/category-service";
 import SearchService from "@/services/search-service";
+import type { DateFilterOption, DateRange } from "@/components/memos/date-filter-dropdown";
 
 const SearchPageContent = () => {
   const theme = useTheme();
@@ -35,6 +37,10 @@ const SearchPageContent = () => {
   const searchService = useService(SearchService);
   const categoryService = useService(CategoryService);
   const inputRef = useRef<TextInput>(null);
+
+  // 筛选状态
+  const [dateFilterOption, setDateFilterOption] = useState<DateFilterOption>("all");
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
 
   // 初始化加载最近搜索历史和分类
   useEffect(() => {
@@ -107,6 +113,49 @@ const SearchPageContent = () => {
   const handleClearAllRecent = useCallback(async () => {
     await searchService.clearRecentSearches();
   }, [searchService]);
+
+  // 处理日期筛选变化
+  const handleDateFilterChange = useCallback(
+    (option: DateFilterOption, range?: DateRange) => {
+      setDateFilterOption(option);
+      setCustomDateRange(range);
+
+      // 更新 SearchService 的筛选条件
+      searchService.setSearchFilters({
+        ...searchService.searchFilters,
+        dateRange: range,
+      });
+
+      // 如果已有搜索关键词，立即触发搜索
+      if (searchService.searchKeyword.trim()) {
+        searchService.search(searchService.searchKeyword, {
+          ...searchService.searchFilters,
+          dateRange: range,
+        });
+      }
+    },
+    [searchService]
+  );
+
+  // 处理分类筛选变化
+  const handleCategoryFilterChange = useCallback(
+    (categoryId: string | undefined) => {
+      // 更新 SearchService 的筛选条件
+      searchService.setSearchFilters({
+        ...searchService.searchFilters,
+        categoryId,
+      });
+
+      // 如果已有搜索关键词，立即触发搜索
+      if (searchService.searchKeyword.trim()) {
+        searchService.search(searchService.searchKeyword, {
+          ...searchService.searchFilters,
+          categoryId,
+        });
+      }
+    },
+    [searchService]
+  );
 
   // 渲染最近搜索项
   const renderRecentSearchItem = useCallback(
@@ -186,47 +235,16 @@ const SearchPageContent = () => {
 
       {/* 筛选栏 */}
       <View style={styles.filterBar}>
-        <TouchableOpacity style={styles.filterButton} activeOpacity={0.7}>
-          <MaterialIcons
-            name="calendar-today"
-            size={18}
-            color={theme.colors.foregroundSecondary}
-          />
-          <Text
-            style={[
-              styles.filterButtonText,
-              { color: theme.colors.foregroundSecondary },
-            ]}
-          >
-            日期
-          </Text>
-          <MaterialIcons
-            name="keyboard-arrow-down"
-            size={18}
-            color={theme.colors.foregroundTertiary}
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.filterButton} activeOpacity={0.7}>
-          <MaterialIcons
-            name="folder"
-            size={18}
-            color={theme.colors.foregroundSecondary}
-          />
-          <Text
-            style={[
-              styles.filterButtonText,
-              { color: theme.colors.foregroundSecondary },
-            ]}
-          >
-            分类
-          </Text>
-          <MaterialIcons
-            name="keyboard-arrow-down"
-            size={18}
-            color={theme.colors.foregroundTertiary}
-          />
-        </TouchableOpacity>
+        <DateFilterDropdown
+          selectedOption={dateFilterOption}
+          customRange={customDateRange}
+          onSelectOption={handleDateFilterChange}
+        />
+        <CategoryFilterDropdown
+          categories={categoryService.categories}
+          selectedCategoryId={searchService.searchFilters.categoryId}
+          onSelectCategory={handleCategoryFilterChange}
+        />
       </View>
     </>
   );
@@ -449,19 +467,6 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 8,
     gap: 12,
-  },
-  filterButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.1)",
-  },
-  filterButtonText: {
-    fontSize: 14,
-    marginHorizontal: 6,
   },
   emptyContainer: {
     flex: 1,

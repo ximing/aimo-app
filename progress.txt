@@ -217,3 +217,39 @@
   - Recent search persistence is automatic via SearchService - component just calls service methods
 
 ---
+
+## 2026-02-21 - US-010 - 实现搜索页面的日期和分类筛选
+- What was implemented:
+  - Created DateFilterDropdown component (components/memos/date-filter-dropdown.tsx)
+    - Date options: all, last7days, last30days, custom
+    - Custom range with preset buttons (3, 7, 14, 30 days)
+    - Displays selected range on button label (e.g., "7天内", "2/15-2/21")
+    - Animated dropdown with Modal + Pressable backdrop
+  - Created CategoryFilterDropdown component (components/memos/category-filter-dropdown.tsx)
+    - Reuses FilterDrawer category selection UI pattern
+    - Options: 全部分类, 无分类, user custom categories
+    - Shows category color dot for custom categories
+    - Scrollable dropdown for long category lists
+  - Updated app/search.tsx
+    - Added dateFilterOption and customDateRange local state
+    - Added handleDateFilterChange and handleCategoryFilterChange handlers
+    - Filter changes trigger immediate search if keyword exists
+    - Integrated DateFilterDropdown and CategoryFilterDropdown in filter bar
+  - Updated components/memos/index.ts to export new dropdown components
+
+- Files changed:
+  - components/memos/date-filter-dropdown.tsx (new)
+  - components/memos/category-filter-dropdown.tsx (new)
+  - components/memos/index.ts (added exports)
+  - app/search.tsx (integrated dropdowns, added filter state and handlers)
+
+- **Learnings for future iterations:**
+  - DateFilterDropdown uses DateFilterOption type ('all' | 'last7days' | 'last30days' | 'custom')
+  - Custom date range UI uses preset day buttons (3, 7, 14, 30) for quick selection
+  - Both dropdowns use Modal with Animated scaleY for dropdown animation
+  - Filter changes trigger search via searchService.search() with updated filters
+  - Category dropdown reuses patterns from FilterDrawer for consistency
+  - Date range display format: "M/D" for short, "YYYY/MM/DD" for full display
+  - Use `selectedOption !== 'all'` to determine if filter button shows active state
+
+---
