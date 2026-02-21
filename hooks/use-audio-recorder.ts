@@ -1,11 +1,12 @@
 /**
  * 音频录制 Hook
  * 处理语音录制功能，管理录音状态和权限
- * 需要: expo-av
+ * 需要: expo-av, expo-file-system
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { Audio, AudioMode } from 'expo-av';
+import { Audio } from "expo-av";
+import { cacheDirectory, copyAsync } from "expo-file-system/legacy";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export interface AudioRecorderState {
   /** 是否正在录音 */
@@ -73,9 +74,9 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   const requestPermissions = useCallback(async (): Promise<boolean> => {
     try {
       const { status } = await Audio.requestPermissionsAsync();
-      return status === 'granted';
+      return status === "granted";
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : '权限请求失败';
+      const errorMsg = err instanceof Error ? err.message : "权限请求失败";
       setError(errorMsg);
       return false;
     }
@@ -92,7 +93,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         playThroughEarpieceAndroid: false,
       });
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : '音频模式配置失败';
+      const errorMsg = err instanceof Error ? err.message : "音频模式配置失败";
       setError(errorMsg);
     }
   }, []);
@@ -107,7 +108,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       // 请求权限
       const hasPermission = await requestPermissions();
       if (!hasPermission) {
-        setError('需要麦克风权限才能录音');
+        setError("需要麦克风权限才能录音");
         return;
       }
 
@@ -116,7 +117,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
       // 创建录音实例
       const { recording: newRecording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
+        Audio.RecordingOptionsPresets.HIGH_QUALITY,
       );
 
       recordingInstanceRef.current = newRecording;
@@ -129,7 +130,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         setDuration(elapsed);
       }, 100);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : '开始录音失败';
+      const errorMsg = err instanceof Error ? err.message : "开始录音失败";
       setError(errorMsg);
       setRecording(false);
     }
@@ -156,13 +157,24 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       recordingInstanceRef.current = null;
 
       if (recordingUri) {
-        setUri(recordingUri);
+        // 将文件复制到持久化目录（cache 目录），避免被系统清理
+        const fileName = `voice-memo-${Date.now()}.m4a`;
+        const destUri = `${cacheDirectory}${fileName}`;
+
+        await copyAsync({
+          from: recordingUri,
+          to: destUri,
+        });
+
+        setUri(destUri);
+        setRecording(false);
+        return destUri;
       }
 
       setRecording(false);
       return recordingUri;
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : '停止录音失败';
+      const errorMsg = err instanceof Error ? err.message : "停止录音失败";
       setError(errorMsg);
       setRecording(false);
       return null;
@@ -204,5 +216,5 @@ export function formatDuration(millis: number): string {
   const totalSeconds = Math.floor(millis / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }

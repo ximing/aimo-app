@@ -3,7 +3,7 @@
  * 提供编辑标题、内容、上传媒体等功能
  */
 
-import { uploadAttachment } from "@/api/attachment";
+import { uploadAttachment, deleteLocalFile } from "@/api/attachment";
 import { createMemo, updateMemo } from "@/api/memo";
 import { MediaPreview } from "@/components/memos/media-preview";
 import { useMediaPicker } from "@/hooks/use-media-picker";
@@ -58,6 +58,7 @@ const CreateMemoContent = view(() => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [audioUri, setAudioUri] = useState<string | null>(null);
 
   // 初始化加载编辑数据
   useEffect(() => {
@@ -124,6 +125,9 @@ const CreateMemoContent = view(() => {
         try {
           // 解码音频 URI
           const decodedUri = decodeURIComponent(queryAudioUri);
+          
+          // 保存音频 URI，供后续删除使用
+          setAudioUri(decodedUri);
 
           // 添加音频到 selectedMedia
           const audioMedia = {
@@ -217,6 +221,12 @@ const CreateMemoContent = view(() => {
 
         console.log("Memo created:", memo);
         showSuccess("创建成功");
+
+        // 删除本地录音文件
+        if (audioUri) {
+          await deleteLocalFile(audioUri);
+          setAudioUri(null);
+        }
 
         // 刷新列表
         await memoService.refreshMemos();

@@ -168,14 +168,14 @@ export const VoiceRecorderModal = view(
       }
     }, [visible, reset]);
 
-    // 处理停止录音
-    const handleStopRecording = async () => {
-      const uri = await stopRecording();
-      if (uri) {
-        onRecordingComplete(uri);
-      }
-      onClose();
-    };
+  // 处理停止录音
+  const handleStopRecording = async () => {
+    const uri = await stopRecording();
+    if (uri) {
+      onRecordingComplete(uri);
+    }
+    onClose();
+  };
 
     // 处理取消录音
     const handleCancel = () => {

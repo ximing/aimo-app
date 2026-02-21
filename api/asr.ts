@@ -3,13 +3,13 @@
  * 文档: /docs/api/asr.md
  */
 
-import { apiGet, apiPost } from './common';
 import type {
   SubmitTranscriptionRequest,
   SubmitTranscriptionResponse,
-  TranscriptionTaskStatusResponse,
   TranscriptionResultResponse,
-} from '@/types/asr';
+  TranscriptionTaskStatusResponse,
+} from "@/types/asr";
+import { apiGet, apiPost } from "./common";
 
 /**
  * 提交语音转写任务
@@ -21,17 +21,20 @@ import type {
  */
 export const submitTranscriptionTask = async (
   fileUrls: string[],
-  languageHints: string[] = ['zh', 'en']
+  languageHints: string[] = ["zh", "en"],
 ): Promise<SubmitTranscriptionResponse> => {
   const request: SubmitTranscriptionRequest = {
     fileUrls,
     languageHints,
   };
 
-  const response = await apiPost<SubmitTranscriptionResponse>('/asr/transcribe', request);
+  const response = await apiPost<SubmitTranscriptionResponse>(
+    "/asr/transcribe",
+    request,
+  );
 
   if (response.code !== 0) {
-    throw new Error(response.message || '提交转写任务失败');
+    throw new Error(response.message || "提交转写任务失败");
   }
 
   return response.data;
@@ -45,12 +48,14 @@ export const submitTranscriptionTask = async (
  * @returns 任务状态信息
  */
 export const getTaskStatus = async (
-  taskId: string
+  taskId: string,
 ): Promise<TranscriptionTaskStatusResponse> => {
-  const response = await apiGet<TranscriptionTaskStatusResponse>(`/asr/task/${taskId}`);
+  const response = await apiGet<TranscriptionTaskStatusResponse>(
+    `/asr/task/${taskId}`,
+  );
 
   if (response.code !== 0) {
-    throw new Error(response.message || '获取任务状态失败');
+    throw new Error(response.message || "获取任务状态失败");
   }
 
   return response.data;
@@ -64,12 +69,14 @@ export const getTaskStatus = async (
  * @returns 转写结果
  */
 export const getTranscriptionResult = async (
-  taskId: string
+  taskId: string,
 ): Promise<TranscriptionResultResponse> => {
-  const response = await apiGet<TranscriptionResultResponse>(`/asr/result/${taskId}`);
+  const response = await apiGet<TranscriptionResultResponse>(
+    `/asr/result/${taskId}`,
+  );
 
   if (response.code !== 0) {
-    throw new Error(response.message || '获取转写结果失败');
+    throw new Error(response.message || "获取转写结果失败");
   }
 
   return response.data;

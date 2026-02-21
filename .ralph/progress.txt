@@ -1,0 +1,42 @@
+# Ralph Progress: voice-to-text
+
+## Current Status
+
+In progress. Completed US-001.
+
+## Codebase Patterns
+
+- Timer refs: Use `ReturnType<typeof setInterval>` instead of `NodeJS.Timeout` for React Native compatibility
+- Hooks pattern: Use React's useState/useCallback with JSDoc comments for documentation
+- Error handling: Use try/catch with `err instanceof Error` pattern
+- File naming: kebab-case with `use-` prefix for hooks
+
+## Stories
+
+- [x] US-001: 安装 expo-av 并创建 useAudioRecorder hook
+- [ ] US-002: 实现 ASR API 接口
+- [ ] US-003: 实现录音浮层组件 VoiceRecorderModal
+- [ ] US-004: 修改 floating-action-bar 绑定录音按钮
+- [ ] US-005: MediaPreview 组件支持音频类型
+- [ ] US-006: 修改 create 页面接收 audioUri 并显示音频附件
+- [ ] US-007: 创建 VoiceMemoService 管理转写流程
+- [ ] US-008: create 页面集成 ASR 转写流程
+
+## Notes
+
+
+
+## 2026-02-20T14:07:00Z - US-001
+- Implemented useAudioRecorder hook at hooks/use-audio-recorder.ts
+- Hook provides: recording state, uri, duration, startRecording, stopRecording, reset, clearError
+- Uses expo-av Audio.Recording with HIGH_QUALITY preset (m4a/AAC format)
+- Handles microphone permission requests
+- Timer ref type: `ReturnType<typeof setInterval>` for React Native compatibility
+- Files changed: hooks/use-audio-recorder.ts (created)
+- Commit: 5641562 feat: [us-001] install expo-av and create useAudioRecorder hook
+- **Learnings for future iterations:**
+  - Use `ReturnType<typeof setInterval>` for timer refs in React Native
+  - expo-av was already installed in the project
+  - Hook pattern follows use-media-picker.ts structure
+  - Commit message subject must be lowercase (commitlint rule)
+---
