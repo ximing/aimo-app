@@ -89,3 +89,27 @@
   - The API query parameter construction uses URLSearchParams with proper null/undefined checks
 
 ---
+
+## 2026-02-21 - US-005 - MemoService 集成筛选和排序功能
+- What was implemented:
+  - Modified services/memo-service.ts to integrate filter and sort functionality
+  - Added filter-related state: categoryFilter, sortField, sortOrder
+  - Added FilterService dependency using ioc() from @rabjs/react
+  - Created syncFilterState() method to sync state from FilterService
+  - Created getFilterParams() method to build API params from filter state
+  - Created watchFilterChanges() method to auto-refresh list when filters change
+  - Modified fetchMemos() to include filter/sort params in API calls
+  - Modified refreshMemos() to sync filter state before fetching
+  - Added applyFilterAndRefresh() helper method for explicit filter application
+
+- Files changed:
+  - services/memo-service.ts (modified)
+
+- **Learnings for future iterations:**
+  - Use `ioc(ServiceClass)` from @rabjs/react to access another service instance
+  - Use `$reactive()` method to watch for service state changes
+  - Filter params mapping: FilterService.sortField maps to API sortBy param
+  - Always sync filter state before refresh to ensure consistency
+  - MemoService now automatically reacts to FilterService changes when watchFilterChanges() is called
+
+---

@@ -3,9 +3,9 @@
  * 使用 @rabjs/react 进行响应式状态管理
  */
 
-import { Service } from '@rabjs/react';
-import { 
-  getMemos as apiGetMemos, 
+import { Service, ioc } from '@rabjs/react';
+import {
+  getMemos as apiGetMemos,
   deleteMemo as apiDeleteMemo,
   getMemo as apiGetMemo,
   getRelatedMemos as apiGetRelatedMemos,
@@ -18,8 +18,12 @@ import type {
   RelatedMemoItem,
   MemoActivityStatsDto
 } from '@/types/memo';
+import FilterService, { type SortField, type SortOrder } from './filter-service';
 
 class MemoService extends Service {
+  // FilterService 实例（通过依赖注入获取）
+  private filterService = ioc(FilterService);
+
   // 响应式属性
   memos: Memo[] = [];
   loading = false;
@@ -27,6 +31,11 @@ class MemoService extends Service {
   hasMore = true;
   currentPage = 1;
   pageSize = 20;
+
+  // 筛选相关属性（从 FilterService 同步）
+  categoryFilter: string | undefined = undefined;
+  sortField: SortField = 'createdAt';
+  sortOrder: SortOrder = 'desc';
 
   // 搜索相关属性
   searchQuery = "";
@@ -43,6 +52,55 @@ class MemoService extends Service {
   activityStats: MemoActivityStatsDto | null = null;
   activityStatsLoading = false;
   activityStatsError: string | null = null;
+
+  /**
+   * 从 FilterService 同步筛选状态
+   */
+  private syncFilterState(): void {
+    this.categoryFilter = this.filterService.selectedCategoryId;
+    this.sortField = this.filterService.sortField;
+    this.sortOrder = this.filterService.sortOrder;
+  }
+
+  /**
+   * 获取当前的筛选参数
+   */
+  private getFilterParams(): Partial<ListMemosParams> {
+    return {
+      categoryId: this.categoryFilter,
+      sortBy: this.sortField,
+      sortOrder: this.sortOrder,
+    };
+  }
+
+  /**
+   * 监听 FilterService 变化并自动刷新列表
+   */
+  watchFilterChanges(): () => void {
+    // 初始同步
+    this.syncFilterState();
+
+    // 监听 FilterService 的状态变化
+    const dispose = this.filterService.$reactive(() => {
+      const prevCategory = this.categoryFilter;
+      const prevSortField = this.sortField;
+      const prevSortOrder = this.sortOrder;
+
+      // 同步最新状态
+      this.syncFilterState();
+
+      // 如果筛选条件发生变化，自动刷新列表
+      if (
+        prevCategory !== this.categoryFilter ||
+        prevSortField !== this.sortField ||
+        prevSortOrder !== this.sortOrder
+      ) {
+        this.refreshMemos();
+      }
+    });
+
+    return dispose;
+  }
 
   private resolvePagination(
     response: MemoListResponse,
@@ -79,9 +137,13 @@ class MemoService extends Service {
     try {
       const page = params?.page ?? this.currentPage;
       const limit = params?.limit ?? this.pageSize;
+
+      // 合并筛选和排序参数
+      const filterParams = this.getFilterParams();
       const response = await apiGetMemos({
         page,
         limit,
+        ...filterParams,
         ...params,
       });
 
@@ -111,6 +173,8 @@ class MemoService extends Service {
   async refreshMemos(): Promise<void> {
     this.currentPage = 1;
     this.hasMore = true;
+    // 同步最新筛选状态
+    this.syncFilterState();
     await this.fetchMemos({ page: 1, limit: this.pageSize });
   }
 
@@ -285,7 +349,18 @@ class MemoService extends Service {
     this.error = null;
     this.hasMore = true;
     this.currentPage = 1;
+    this.searchQuery = "";
+    this.searchPage = 1;
     this.clearDetail();
+  }
+
+  /**
+   * 应用筛选并刷新列表
+   * 由 FilterService 变化触发时调用
+   */
+  async applyFilterAndRefresh(): Promise<void> {
+    this.syncFilterState();
+    await this.refreshMemos();
   }
 }
 
