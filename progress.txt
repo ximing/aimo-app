@@ -1,0 +1,306 @@
+## Codebase Patterns
+- **Service Pattern**: All state management uses @rabjs/react Service class with observable properties
+- **bindServices**: Page components using services must be wrapped with bindServices([Service1, Service2])
+- **API Layer**: Pure async functions in api/ directory, returning data or throwing errors
+- **Component Structure**: Page-specific components go in components/[feature]/ with index.ts for exports
+- **Hooks Pattern**: Custom hooks for reusable logic (e.g., useAudioRecorder), following React patterns
+- **Type Safety**: All API functions have proper TypeScript types, interfaces in types/ directory
+- **Error Handling**: API functions throw errors for callers to handle; Services manage error state
+- **Theme Access**: Use useTheme() hook and view decorator from @rabjs/react for theme reactivity
+
+---
+
+## 2026-02-20 - Voice-to-Text Feature Implementation
+- What was implemented:
+  - Created ASR API (api/asr.ts) with submitTranscriptionTask, getTaskStatus, getTranscriptionResult
+  - Created VoiceMemoService (services/voice-memo-service.ts) managing recording + transcription flow
+  - Updated useAudioRecorder hook to add formatDuration helper
+  - Created VoiceRecorderModal component with recording animation, waveform, duration display
+  - Updated floating-action-bar.tsx to integrate VoiceRecorderModal and navigate to create page with audioUri
+  - Updated create.tsx to support audioUri query param, auto-upload and transcribe, show status
+  - Updated media-preview.tsx to support audio type with mic icon
+  - Updated use-media-picker.ts SelectedMedia type to include 'audio'
+  - Updated components/memos/index.ts to export VoiceRecorderModal
+
+- Files changed:
+  - types/asr.ts (new)
+  - api/asr.ts (new)
+  - services/voice-memo-service.ts (new)
+  - components/memos/voice-recorder-modal.tsx (new)
+  - hooks/use-audio-recorder.ts (added formatDuration)
+  - hooks/use-media-picker.ts (added 'audio' type)
+  - components/memos/floating-action-bar.tsx (integrated VoiceRecorderModal)
+  - components/memos/media-preview.tsx (added audio support)
+  - components/memos/index.ts (added VoiceRecorderModal export)
+  - app/(memos)/create.tsx (integrated VoiceMemoService, audio handling)
+
+- **Learnings for future iterations:**
+  - `expo-av` is already installed in the project, use Audio from expo-av for recording
+  - Service polling intervals should use `ReturnType<typeof setInterval>` type, not `NodeJS.Timeout` (for React Native compatibility)
+  - When navigating with URIs as query params, always use `encodeURIComponent()` to handle special characters
+  - The project uses bindServices pattern for page-level components that consume services
+  - Media types are defined in SelectedMedia interface in use-media-picker.ts
+  - For audio file MIME type, use 'audio/m4a' format
+  - The ASR API expects language hints as ['zh', 'en'] and fileUrls as array
+  - Toast notifications use showError/showSuccess from @/utils/toast
+  - When adding new media types, update both SelectedMedia interface and MediaPreview component
+  - Use view decorator from @rabjs/react for components that need theme reactivity
+  - Keep API functions pure - no state management, just HTTP calls with error throwing
+
+---
+
+## 2026-02-20 - Voice-to-Text Feature Completion Verification
+- What was done:
+  - Verified all user stories US-002 through US-008 have been implemented
+  - Ran npm run lint - all pass (16 warnings are pre-existing, not related to voice-to-text)
+  - Updated prd.json to mark US-002 through US-008 as `passes: true`
+  - All acceptance criteria met for each story
+
+- Stories verified:
+  - US-002: ASR API interface (api/asr.ts, types/asr.ts)
+  - US-003: VoiceRecorderModal component with animation and controls
+  - US-004: FloatingActionBar integration with VoiceRecorderModal
+  - US-005: MediaPreview audio type support with mic icon
+  - US-006: Create page audioUri handling and MediaPreview display
+  - US-007: VoiceMemoService with polling and state management
+  - US-008: Create page ASR integration with status display and toast notifications
+
+- **No new learnings** - all patterns already documented in previous entry
+
+---
+
+## 2026-02-21 - US-004 - API 层支持筛选和排序参数
+- What was implemented:
+  - Verified that api/memo.ts getMemos function already supports all required filtering and sorting parameters
+  - ListMemosParams type includes: categoryId, sortBy ('createdAt' | 'updatedAt'), sortOrder ('asc' | 'desc')
+  - API correctly passes these parameters as query strings
+  - Error handling with friendly Chinese error messages is already in place
+  - No code changes required - functionality was already implemented
+
+- Files reviewed:
+  - api/memo.ts - getMemos function and ListMemosParams handling
+  - types/memo.ts - ListMemosParams interface definition
+  - services/filter-service.ts - FilterService for filter state management
+  - components/memos/filter-drawer.tsx - UI for filter selection
+
+- **Learnings for future iterations:**
+  - The API layer already uses `categoryId` parameter for filtering (including `__uncategorized__` for no category)
+  - Sort parameters use `sortBy` (not `sortField`) in the API, but FilterService uses `sortField` - this mapping happens in the service layer
+  - The API query parameter construction uses URLSearchParams with proper null/undefined checks
+
+---
+
+## 2026-02-21 - US-005 - MemoService 集成筛选和排序功能
+- What was implemented:
+  - Modified services/memo-service.ts to integrate filter and sort functionality
+  - Added filter-related state: categoryFilter, sortField, sortOrder
+  - Added FilterService dependency using ioc() from @rabjs/react
+  - Created syncFilterState() method to sync state from FilterService
+  - Created getFilterParams() method to build API params from filter state
+  - Created watchFilterChanges() method to auto-refresh list when filters change
+  - Modified fetchMemos() to include filter/sort params in API calls
+  - Modified refreshMemos() to sync filter state before fetching
+  - Added applyFilterAndRefresh() helper method for explicit filter application
+
+- Files changed:
+  - services/memo-service.ts (modified)
+
+- **Learnings for future iterations:**
+  - Use `ioc(ServiceClass)` from @rabjs/react to access another service instance
+  - Use `$reactive()` method to watch for service state changes
+  - Filter params mapping: FilterService.sortField maps to API sortBy param
+  - Always sync filter state before refresh to ensure consistency
+  - MemoService now automatically reacts to FilterService changes when watchFilterChanges() is called
+
+---
+
+## 2026-02-21 - US-006 - 搜索入口改造 - 点击跳转搜索页面
+- What was implemented:
+  - Modified components/memos/search-header.tsx
+  - Wrapped search container with TouchableOpacity for navigation
+  - Made TextInput read-only with `editable={false}` and `pointerEvents="none"`
+  - Added router.push('/search') navigation using expo-router's useRouter
+  - Changed placeholder text from "搜索笔记" to "搜索笔记..."
+  - Removed local search state (searchQuery, setSearchQuery) and search handlers
+  - Cleaned up unused imports (useState, Text from react-native)
+
+- Files changed:
+  - components/memos/search-header.tsx (modified)
+
+- **Learnings for future iterations:**
+  - To make a search box read-only and clickable, wrap it with TouchableOpacity and set TextInput's `editable={false}` and `pointerEvents="none"`
+  - Use `useRouter` from expo-router for navigation in React Native components
+  - The project pattern for navigation is `router.push('/route-path')`
+  - When removing state management from a component, remember to clean up unused imports
+
+---
+
+## 2026-02-21 - US-007 - 创建 SearchService 管理搜索状态和最近搜索历史
+- What was implemented:
+  - Created services/search-service.ts extending @rabjs/react Service class
+  - State management: searchKeyword, searchResults, isSearching, recentSearches, searchFilters
+  - SearchFilters interface with categoryId and dateRange (start/end Date)
+  - AsyncStorage persistence for recentSearches (key: 'recentSearches'), max 10 items
+  - Methods implemented:
+    - loadRecentSearches() - load from AsyncStorage on init
+    - addRecentSearch(keyword) - insert at top, deduplicate, limit to 10
+    - removeRecentSearch(keyword) - remove single entry
+    - clearRecentSearches() - clear all history
+    - search(keyword, filters) - execute search (API integration placeholder for US-012)
+    - setSearchKeyword(), setSearchFilters(), clearSearchFilters()
+    - loadNextPage() - pagination support
+    - clearSearchResults(), reset() - cleanup methods
+
+- Files changed:
+  - services/search-service.ts (new)
+
+- **Learnings for future iterations:**
+  - SearchService follows same pattern as FilterService for AsyncStorage persistence
+  - Use splice() to modify observable arrays in @rabjs/react (direct assignment works but splice is cleaner for array modifications)
+  - Date range filters use Date objects internally, will convert to ISO strings for API calls
+  - The search() method has TODO placeholder for API integration (US-012)
+  - Recent searches are stored as simple string array, not complex objects (simpler UX)
+  - SearchService manages its own pagination state (currentPage, pageSize, hasMore)
+
+---
+
+## 2026-02-21 - US-008 - 创建搜索页面 SearchPage 基础结构
+- What was implemented:
+  - Created app/search.tsx with full search page structure
+  - Top header with back button (router.back()) and search input
+  - Search input with autoFocus using ref and setTimeout
+  - Clear button appears when input has text, clears input and refocuses
+  - Recent searches section with history icon and keyword
+  - Delete (X) button on each recent search to remove single entry
+  - Clear All button to clear all recent searches
+  - Filter bar with Date and Category buttons (UI only, functionality in US-010)
+  - Empty state with search icon and "输入关键词开始搜索" message
+  - Integrated SearchService and CategoryService via bindServices
+
+- Files changed:
+  - app/search.tsx (new)
+
+- **Learnings for future iterations:**
+  - Use `useRef<TextInput>(null)` + `inputRef.current?.focus()` for auto-focus
+  - Delay auto-focus with setTimeout to ensure page is fully loaded
+  - For search input with clear button, use conditional rendering based on text length
+  - Recent search items: Use history icon + text with delete button on right
+  - Use `hitSlop` prop on TouchableOpacity to increase touch target without affecting visual size
+  - Filter bar buttons use row layout with icon + text + dropdown arrow
+  - Empty state pattern: Large icon (64px) + descriptive text, centered with paddingTop
+
+---
+
+## 2026-02-21 - US-009 - 实现最近搜索词功能和展示
+- What was implemented:
+  - Verified SearchService already has all recent search functionality (AsyncStorage persistence, add/remove/clear methods)
+  - Enhanced app/search.tsx to display search results using MemoItem component
+  - Search results integration: FlatList now uses searchService.searchResults data
+  - Added renderSearchResult callback using MemoItem with onPress navigation to memo detail
+  - Updated renderEmpty to show "未找到相关笔记" when search has no results
+  - Added pull-to-refresh functionality for search results
+  - Click recent search item: fills search box AND executes search via handleRecentSearchPress
+  - Delete single recent search: removeRecentSearch method with AsyncStorage update
+  - Clear all recent searches: clearRecentSearches method
+  - Max 10 recent searches enforced in addRecentSearch method
+
+- Files changed:
+  - app/search.tsx (modified)
+
+- **Learnings for future iterations:**
+  - MemoItem component can be reused for search results - it accepts memo and onPress props
+  - Empty state should have two modes: initial ("输入关键词开始搜索") and no-results ("未找到相关笔记")
+  - Use MaterialIcons "search-off" for no results state
+  - SearchService.searchResults is reactive - changes will trigger FlatList re-render via @rabjs/react
+  - Add refreshing/onRefresh props to FlatList for pull-to-refresh functionality
+  - When using MemoItem in search results, pass router.push for navigation to detail page
+  - Recent search persistence is automatic via SearchService - component just calls service methods
+
+---
+
+## 2026-02-21 - US-010 - 实现搜索页面的日期和分类筛选
+- What was implemented:
+  - Created DateFilterDropdown component (components/memos/date-filter-dropdown.tsx)
+    - Date options: all, last7days, last30days, custom
+    - Custom range with preset buttons (3, 7, 14, 30 days)
+    - Displays selected range on button label (e.g., "7天内", "2/15-2/21")
+    - Animated dropdown with Modal + Pressable backdrop
+  - Created CategoryFilterDropdown component (components/memos/category-filter-dropdown.tsx)
+    - Reuses FilterDrawer category selection UI pattern
+    - Options: 全部分类, 无分类, user custom categories
+    - Shows category color dot for custom categories
+    - Scrollable dropdown for long category lists
+  - Updated app/search.tsx
+    - Added dateFilterOption and customDateRange local state
+    - Added handleDateFilterChange and handleCategoryFilterChange handlers
+    - Filter changes trigger immediate search if keyword exists
+    - Integrated DateFilterDropdown and CategoryFilterDropdown in filter bar
+  - Updated components/memos/index.ts to export new dropdown components
+
+- Files changed:
+  - components/memos/date-filter-dropdown.tsx (new)
+  - components/memos/category-filter-dropdown.tsx (new)
+  - components/memos/index.ts (added exports)
+  - app/search.tsx (integrated dropdowns, added filter state and handlers)
+
+- **Learnings for future iterations:**
+  - DateFilterDropdown uses DateFilterOption type ('all' | 'last7days' | 'last30days' | 'custom')
+  - Custom date range UI uses preset day buttons (3, 7, 14, 30) for quick selection
+  - Both dropdowns use Modal with Animated scaleY for dropdown animation
+  - Filter changes trigger search via searchService.search() with updated filters
+  - Category dropdown reuses patterns from FilterDrawer for consistency
+  - Date range display format: "M/D" for short, "YYYY/MM/DD" for full display
+  - Use `selectedOption !== 'all'` to determine if filter button shows active state
+
+---
+
+## 2026-02-21 - US-012 - API 层支持搜索接口
+- What was implemented:
+  - Added SearchMemosParams interface in types/memo.ts
+  - Added SearchResultItem type alias (reuses Memo type)
+  - Added SearchMemosResponse interface extending PaginatedResponse
+  - Created searchMemos function in api/memo.ts
+  - Function supports: keyword (required), categoryId, dateRange, page, pageSize
+  - Uses POST /memos/search endpoint with query params for pagination
+  - Request body contains keyword, optional categoryId, and optional dateRange (ISO strings)
+  - Error handling with friendly Chinese error message "搜索笔记失败"
+
+- Files changed:
+  - types/memo.ts (added SearchMemosParams, SearchResultItem, SearchMemosResponse)
+  - api/memo.ts (added searchMemos function)
+
+- **Learnings for future iterations:**
+  - Search API uses POST method with query string for pagination params
+  - Date objects are converted to ISO strings for API transmission
+  - Reuse existing Memo type for search results via type alias
+  - Pattern: separate URLSearchParams for query params vs request body for filter criteria
+  - Pagination params (page, pageSize) use query string; filter params use request body
+
+---
+
+## 2026-02-21 - US-011 - 实现搜索结果展示功能
+- What was implemented:
+  - Connected SearchService to actual searchMemos API (removed TODO placeholders)
+  - Implemented search() method to call searchMemos with keyword, categoryId, dateRange, page, pageSize
+  - Implemented loadNextPage() method to fetch next page of results
+  - Added pagination support to search page with onEndReached and onEndReachedThreshold (0.5)
+  - Added initial search loading indicator (centered spinner with "搜索中..." text)
+  - Added footer loading indicator for pagination ("加载中..." text)
+  - Reused MemoItem component for search results display
+  - Search results show title, content summary, creation time (via MemoItem)
+  - Clicking search result navigates to memo detail page /(memos)/[id]
+  - Empty state displays "未找到相关笔记" when search returns no results
+
+- Files changed:
+  - services/search-service.ts (connected search() and loadNextPage() to API)
+  - app/search.tsx (added onEndReached, loading indicators, ListFooterComponent)
+
+- **Learnings for future iterations:**
+  - SearchService pagination pattern: currentPage, pageSize (20), hasMore flags
+  - Use `onEndReached` with `onEndReachedThreshold={0.5}` for pagination in FlatList
+  - Separate loading states: initial search (centered spinner) vs pagination (footer loading)
+  - MemoItem component can be directly reused for search results - no need for separate SearchResultItem
+  - API returns `items` array and `total` count; hasMore = items.length === pageSize
+  - SearchService.push() to add new items to existing results array
+
+---

@@ -53,6 +53,13 @@ export const MediaPreview = view(({
                 style={styles.media}
                 contentFit="cover"
               />
+            ) : item.type === 'audio' ? (
+              <View style={[styles.media, { backgroundColor: theme.colors.card }]}>
+                <MaterialIcons name="mic" size={32} color={theme.colors.primary} />
+                <Text style={[styles.audioLabel, { color: theme.colors.foregroundSecondary }]}>
+                  {item.name}
+                </Text>
+              </View>
             ) : (
               <View style={[styles.media, { backgroundColor: theme.colors.card }]}>
                 <MaterialIcons name="videocam" size={32} color={theme.colors.warning} />
@@ -101,5 +108,11 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  audioLabel: {
+    fontSize: 10,
+    marginTop: 4,
+    maxWidth: 80,
+    textAlign: 'center',
   },
 });

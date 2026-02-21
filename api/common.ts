@@ -1,16 +1,21 @@
 /**
  * API 通用工具和配置
- * 所有接口的 host 地址为: https://memo.aisoil.fun
+ * 所有接口的 host 地址为: https://aimo.plus
  */
 
 import type { ApiRequestOptions, ApiResponse } from "@/types/common";
 
+// const API_HOST = "https://aimo.plus";
 const API_HOST = "https://memo.aisoil.fun";
 const API_VERSION = "/api/v1";
 export const BASE_URL = `${API_HOST}${API_VERSION}`;
 
 // Token 存储的 key
 const TOKEN_KEY = "aimo_token";
+
+// Token 缓存（用于同步获取）
+let tokenCache: string | null = null;
+let tokenCacheInitialized = false;
 
 // AsyncStorage 实例（支持跨平台）
 let asyncStorage: any = null;
@@ -48,21 +53,48 @@ const initAsyncStorage = async () => {
  * - 如果返回 null，说明 token 未被保存或已过期
  */
 export const getToken = (): string | null => {
-  // 同步版本的降级方案：在初始化时从 AsyncStorage 缓存
-  // 实际应该使用 getTokenAsync 以获得准确的值
+  // 如果有缓存，直接返回
+  if (tokenCacheInitialized && tokenCache !== null) {
+    return tokenCache;
+  }
+
+  // 尝试从 localStorage 获取（Web 环境）
   try {
     if (typeof localStorage !== "undefined") {
       const token = localStorage.getItem(TOKEN_KEY);
-      if (!token) {
-        console.debug("No token found in localStorage");
+      if (token) {
+        tokenCache = token;
+        tokenCacheInitialized = true;
+        return token;
       }
-      return token;
     }
   } catch (e) {
-    // 环境不支持 localStorage
     console.warn("localStorage not available:", e);
   }
-  return null;
+
+  // 尝试从 AsyncStorage 获取（React Native 环境）
+  // 这是一个异步操作，但我们在同步函数中尝试同步读取
+  if (asyncStorage) {
+    try {
+      // 注意：这是同步读取，可能会失败，但值得尝试
+      // 最好的做法是使用 getTokenAsync
+      const syncGet = async () => {
+        const t = await asyncStorage.getItem(TOKEN_KEY);
+        if (t) {
+          tokenCache = t;
+          tokenCacheInitialized = true;
+        }
+      };
+      // 不阻塞等待，只是触发异步操作
+      syncGet();
+    } catch (e) {
+      console.warn("AsyncStorage sync read failed:", e);
+    }
+  }
+
+  // 标记已初始化，这样不会每次都尝试
+  tokenCacheInitialized = true;
+  return tokenCache;
 };
 
 /**
@@ -84,6 +116,10 @@ export const getTokenAsync = async (): Promise<string | null> => {
  * 保存 token
  */
 export const saveToken = (token: string): void => {
+  // 更新缓存
+  tokenCache = token;
+  tokenCacheInitialized = true;
+
   try {
     if (typeof localStorage !== "undefined") {
       localStorage.setItem(TOKEN_KEY, token);
@@ -105,6 +141,10 @@ export const saveToken = (token: string): void => {
  * 异步保存 token
  */
 export const saveTokenAsync = async (token: string): Promise<void> => {
+  // 更新缓存
+  tokenCache = token;
+  tokenCacheInitialized = true;
+
   try {
     await initAsyncStorage();
     if (asyncStorage) {
@@ -119,6 +159,10 @@ export const saveTokenAsync = async (token: string): Promise<void> => {
  * 清除 token
  */
 export const clearToken = (): void => {
+  // 清除缓存
+  tokenCache = null;
+  tokenCacheInitialized = false;
+
   try {
     if (typeof localStorage !== "undefined") {
       localStorage.removeItem(TOKEN_KEY);
@@ -140,6 +184,10 @@ export const clearToken = (): void => {
  * 异步清除 token
  */
 export const clearTokenAsync = async (): Promise<void> => {
+  // 清除缓存
+  tokenCache = null;
+  tokenCacheInitialized = false;
+
   try {
     await initAsyncStorage();
     if (asyncStorage) {
@@ -241,16 +289,13 @@ export const apiRequest = async <T = any>(
   const requestHeaders: Record<string, string> = {
     ...headers,
   };
-  console.log("requestHeaders", requestHeaders);
-  // 添加认证 token
+
+  // 添加 Authorization header
   if (tokenToUse) {
     requestHeaders["Authorization"] = `Bearer ${tokenToUse}`;
-    console.log("✓ Token attached to request");
-  } else {
-    console.warn(
-      "⚠️ WARNING: No token found for request - this may cause 401 errors",
-    );
   }
+
+  console.log("requestHeaders", requestHeaders);
 
   // 设置 Content-Type
   // 重要：FormData 不应该手动设置 Content-Type header，让浏览器/RN 自动处理
@@ -267,12 +312,15 @@ export const apiRequest = async <T = any>(
   }
 
   try {
-    const response = await fetch(fullUrl, {
+    // React Native 中不需要 credentials: "include"
+    // 因为我们已经通过 Authorization header 传递 token
+    const fetchOptions: RequestInit = {
       method,
       headers: requestHeaders,
       body: requestBody,
-      credentials: "include", // 包含 Cookie
-    });
+    };
+
+    const response = await fetch(fullUrl, fetchOptions);
 
     // 尝试解析响应为 JSON，如果失败则返回文本
     let data: ApiResponse<T>;

@@ -2,7 +2,7 @@
 
 Base URL: `/api/v1/memos`
 
-笔记相关的 API 端点，包括创建、读取、更新、删除笔记以及向量搜索、功能统计等功能。
+笔记相关的 API 端点，包括创建、读取、更新、删除、向量搜索、关联与反向链接等功能。
 
 **认证要求：** 所有端点都需要有效的 JWT token
 
@@ -37,6 +37,18 @@ Base URL: `/api/v1/memos`
 | startDate  | number | -         | 开始时间戳（毫秒）                              |
 | endDate    | number | -         | 结束时间戳（毫秒）                              |
 
+**过滤未分类:**
+
+- 传入 `categoryId=__uncategorized__` 仅返回未分类笔记（`categoryId` 为 `null` 或未设置）。
+- 不传 `categoryId` 则返回全部分类。
+
+**Example Request (Uncategorized):**
+
+```bash
+curl -X GET "http://localhost:3000/api/v1/memos?categoryId=__uncategorized__" \
+  -H "Authorization: Bearer <jwt_token>"
+```
+
 **Example Request:**
 
 ```bash
@@ -60,6 +72,7 @@ curl -X GET "http://localhost:3000/api/v1/memos?page=1&limit=20&sortBy=updatedAt
 >   type: string; // MIME 类型
 >   size: number; // 文件大小（字节）
 >   createdAt: number; // 创建时间戳（毫秒）
+>   properties?: Record<string, unknown>; // 附件属性：audio(duration), image(width,height), video(duration)
 > }
 >
 > interface MemoListItemDto {
@@ -165,6 +178,7 @@ curl -X GET http://localhost:3000/api/v1/memos/memo_123456 \
 >   type: string; // MIME 类型
 >   size: number; // 文件大小（字节）
 >   createdAt: number; // 创建时间戳（毫秒）
+>   properties?: Record<string, unknown>; // 附件属性：audio(duration), image(width,height), video(duration)
 > }
 >
 > interface MemoWithAttachmentsDto {
@@ -288,6 +302,7 @@ curl -X POST http://localhost:3000/api/v1/memos \
 >   type: string; // MIME 类型
 >   size: number; // 文件大小（字节）
 >   createdAt: number; // 创建时间戳（毫秒）
+>   properties?: Record<string, unknown>; // 附件属性：audio(duration), image(width,height), video(duration)
 > }
 >
 > interface MemoWithAttachmentsDto {
@@ -416,6 +431,7 @@ curl -X PUT http://localhost:3000/api/v1/memos/memo_123456 \
 >   type: string; // MIME 类型
 >   size: number; // 文件大小（字节）
 >   createdAt: number; // 创建时间戳（毫秒）
+>   properties?: Record<string, unknown>; // 附件属性：audio(duration), image(width,height), video(duration)
 > }
 >
 > interface MemoWithAttachmentsDto {
@@ -534,11 +550,19 @@ curl -X DELETE http://localhost:3000/api/v1/memos/memo_123456 \
 
 **Body Parameters (JSON):**
 
-| Parameter | Type   | Required | Description           |
-| --------- | ------ | -------- | --------------------- |
-| query     | string | Yes      | 搜索查询文本          |
-| page      | number | No       | 页码，默认为 1        |
-| limit     | number | No       | 每页记录数，默认为 20 |
+| Parameter  | Type   | Required | Description                                     |
+| ---------- | ------ | -------- | ----------------------------------------------- |
+| query      | string | Yes      | 搜索查询文本                                    |
+| page       | number | No       | 页码，默认为 1                                  |
+| limit      | number | No       | 每页记录数，默认为 20                           |
+| categoryId | string | No       | 按分类过滤，使用 `__uncategorized__` 查询未分类 |
+| startDate  | number | No       | 开始时间戳（毫秒）                              |
+| endDate    | number | No       | 结束时间戳（毫秒）                              |
+
+**过滤说明:**
+
+- 传入 `categoryId=__uncategorized__` 仅返回未分类笔记（`categoryId` 为 `null` 或未设置）。
+- `startDate`/`endDate` 为创建时间的毫秒级时间戳。
 
 **Example Request:**
 
@@ -548,6 +572,22 @@ curl -X POST http://localhost:3000/api/v1/memos/search/vector \
   -H "Authorization: Bearer <jwt_token>" \
   -d '{
     "query": "如何学习编程",
+    "page": 1,
+    "limit": 20
+  }'
+```
+
+**Example Request (With Filters):**
+
+```bash
+curl -X POST http://localhost:3000/api/v1/memos/search/vector \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <jwt_token>" \
+  -d '{
+    "query": "如何学习编程",
+    "categoryId": "__uncategorized__",
+    "startDate": 1704067200000,
+    "endDate": 1706659200000,
     "page": 1,
     "limit": 20
   }'
@@ -569,6 +609,7 @@ curl -X POST http://localhost:3000/api/v1/memos/search/vector \
 >   type: string; // MIME 类型
 >   size: number; // 文件大小（字节）
 >   createdAt: number; // 创建时间戳（毫秒）
+>   properties?: Record<string, unknown>; // 附件属性：audio(duration), image(width,height), video(duration)
 > }
 >
 > interface MemoListItemWithScoreDto {
@@ -833,152 +874,6 @@ curl -X GET "http://localhost:3000/api/v1/memos/memo_123456/backlinks?page=1&lim
 | ------ | ----------- |
 | 401    | 未授权      |
 | 404    | 笔记不存在  |
-| 500    | 数据库错误  |
-
----
-
-### 9. Get Activity Stats
-
-**GET** `/api/v1/memos/stats/activity`
-
-获取笔记活动统计数据（过去 N 天的创建统计）。
-
-#### Request
-
-**Headers:**
-
-| Header        | Required | Description |
-| ------------- | -------- | ----------- |
-| Authorization | Yes      | JWT Token   |
-
-**Query Parameters:**
-
-| Parameter | Type   | Default | Description      |
-| --------- | ------ | ------- | ---------------- |
-| days      | number | 90      | 统计天数 (1-365) |
-
-**Example Request:**
-
-```bash
-curl -X GET "http://localhost:3000/api/v1/memos/stats/activity?days=90" \
-  -H "Authorization: Bearer <jwt_token>"
-```
-
-#### Response
-
-**Success Response (200 OK):**
-
-> **Response Type:** `ApiSuccessDto<MemoActivityStatsDto>`
->
-> **MemoActivityStatsDto 类型定义:**
->
-> ```typescript
-> interface MemoActivityStatsItemDto {
->   date: string; // ISO 日期字符串 (YYYY-MM-DD)
->   count: number; // 该日期创建的笔记数量
-> }
->
-> interface MemoActivityStatsDto {
->   items: MemoActivityStatsItemDto[]; // 每日活动统计列表
->   startDate: string; // 统计开始日期（ISO 格式）
->   endDate: string; // 统计结束日期（ISO 格式）
-> }
-> ```
-
-```json
-{
-  "code": 0,
-  "message": "success",
-  "data": {
-    "items": [
-      {
-        "date": "2024-01-01",
-        "count": 5
-      }
-    ],
-    "startDate": "2024-01-01",
-    "endDate": "2024-03-31"
-  }
-}
-```
-
-**Error Responses:**
-
-| Status | Description |
-| ------ | ----------- |
-| 401    | 未授权      |
-| 500    | 数据库错误  |
-
----
-
-### 10. Get On This Day Memos
-
-**GET** `/api/v1/memos/on-this-day`
-
-获取历史上的今天创建的笔记。
-
-#### Request
-
-**Headers:**
-
-| Header        | Required | Description |
-| ------------- | -------- | ----------- |
-| Authorization | Yes      | JWT Token   |
-
-**Example Request:**
-
-```bash
-curl -X GET http://localhost:3000/api/v1/memos/on-this-day \
-  -H "Authorization: Bearer <jwt_token>"
-```
-
-#### Response
-
-**Success Response (200 OK):**
-
-> **Response Type:** `ApiSuccessDto<OnThisDayResponseDto>`
->
-> **OnThisDayResponseDto 类型定义:**
->
-> ```typescript
-> interface OnThisDayMemoDto {
->   memoId: string; // 笔记唯一标识符
->   content: string; // 笔记内容
->   createdAt: number; // 创建时间戳（毫秒）
->   year: number; // 创建年份
-> }
->
-> interface OnThisDayResponseDto {
->   items: OnThisDayMemoDto[]; // 历史上的今天创建的笔记列表
->   total: number; // 总数量
->   todayMonthDay: string; // 当天月日（MM-DD 格式）
-> }
-> ```
-
-```json
-{
-  "code": 0,
-  "message": "success",
-  "data": {
-    "items": [
-      {
-        "memoId": "memo_123456",
-        "content": "去年今天的笔记...",
-        "createdAt": 1704067200000,
-        "year": 2023
-      }
-    ],
-    "total": 3,
-    "todayMonthDay": "02-18"
-  }
-}
-```
-
-**Error Responses:**
-
-| Status | Description |
-| ------ | ----------- |
-| 401    | 未授权      |
 | 500    | 数据库错误  |
 
 ---

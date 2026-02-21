@@ -15,3 +15,7 @@ export { VideoPlayer } from "./video-player";
 export { ActivityHeatmap } from "./activity-heatmap";
 export { RelatedMemoList } from "./related-memo-list";
 export { RelevanceScore } from "./relevance-score";
+export { VoiceRecorderModal } from "./voice-recorder-modal";
+export { FilterDrawer } from "./filter-drawer";
+export { DateFilterDropdown } from "./date-filter-dropdown";
+export { CategoryFilterDropdown } from "./category-filter-dropdown";

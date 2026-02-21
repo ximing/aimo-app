@@ -3,11 +3,11 @@
  * 使用 @rabjs/react 进行响应式状态管理
  */
 
-import { Service } from '@rabjs/react';
-import { login as apiLogin, register as apiRegister } from '@/api/auth';
-import { clearToken, clearTokenAsync } from '@/api/common';
-import { getUserInfo } from '@/api/user';
-import type { User, LoginRequest, RegisterRequest } from '@/types/auth';
+import { login as apiLogin, register as apiRegister } from "@/api/auth";
+import { clearToken, clearTokenAsync } from "@/api/common";
+import { getUserInfo } from "@/api/user";
+import type { LoginRequest, RegisterRequest, User } from "@/types/auth";
+import { Service } from "@rabjs/react";
 
 class AuthService extends Service {
   // 响应式属性
@@ -15,6 +15,8 @@ class AuthService extends Service {
   isAuthenticated = false;
   loading = false;
   error: string | null = null;
+  private userInfoLoaded = false;
+  private userInfoRequest: Promise<void> | null = null;
 
   /**
    * 用户登录
@@ -27,14 +29,16 @@ class AuthService extends Service {
       const response = await apiLogin(params);
       this.user = response.user;
       this.isAuthenticated = true;
+      this.userInfoLoaded = false;
+      this.userInfoRequest = null;
 
       try {
-        await this.fetchUserInfo();
+        await this.fetchUserInfo(true);
       } catch (fetchError) {
-        console.warn('Failed to fetch user info after login:', fetchError);
+        console.warn("Failed to fetch user info after login:", fetchError);
       }
     } catch (err) {
-      this.error = err instanceof Error ? err.message : '登录失败';
+      this.error = err instanceof Error ? err.message : "登录失败";
       this.isAuthenticated = false;
       throw err;
     } finally {
@@ -53,7 +57,7 @@ class AuthService extends Service {
       await apiRegister(params);
       // 注册成功后需要用户手动登录
     } catch (err) {
-      this.error = err instanceof Error ? err.message : '注册失败';
+      this.error = err instanceof Error ? err.message : "注册失败";
       throw err;
     } finally {
       this.loading = false;
@@ -63,12 +67,30 @@ class AuthService extends Service {
   /**
    * 获取当前用户信息
    */
-  async fetchUserInfo(): Promise<void> {
-    const userInfo = await getUserInfo();
-    this.user = {
-      ...(this.user ?? ({} as User)),
-      ...userInfo,
-    };
+  async fetchUserInfo(force = false): Promise<void> {
+    if (this.userInfoRequest) {
+      return this.userInfoRequest;
+    }
+
+    if (!force && this.userInfoLoaded) {
+      return;
+    }
+
+    const request = (async () => {
+      try {
+        const userInfo = await getUserInfo();
+        this.user = {
+          ...(this.user ?? ({} as User)),
+          ...userInfo,
+        };
+        this.userInfoLoaded = true;
+      } finally {
+        this.userInfoRequest = null;
+      }
+    })();
+
+    this.userInfoRequest = request;
+    return request;
   }
 
   /**
@@ -78,11 +100,13 @@ class AuthService extends Service {
     this.user = null;
     this.isAuthenticated = false;
     this.error = null;
+    this.userInfoLoaded = false;
+    this.userInfoRequest = null;
     clearToken();
     try {
       await clearTokenAsync();
     } catch (err) {
-      console.error('Failed to clear token asynchronously:', err);
+      console.error("Failed to clear token asynchronously:", err);
     }
   }
 

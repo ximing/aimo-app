@@ -9,8 +9,9 @@ import { useTheme } from "@/hooks/use-theme";
 import MemoService from "@/services/memo-service";
 import type { AttachmentDto, Memo } from "@/types/memo";
 import { getFileTypeFromMime } from "@/utils/attachment";
-import { showSuccess } from "@/utils/toast";
+import { showSuccess, showError } from "@/utils/toast";
 import { MaterialIcons } from "@expo/vector-icons";
+import { Audio } from "expo-av";
 import { useService, view } from "@rabjs/react";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -51,12 +52,17 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
-  const [imageViewerVisible, setImageViewerVisible] = useState(false);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [videoPlayerVisible, setVideoPlayerVisible] = useState(false);
-  const [selectedVideo, setSelectedVideo] = useState<AttachmentDto | null>(
-    null,
-  );
+const [imageViewerVisible, setImageViewerVisible] = useState(false);
+const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+const [videoPlayerVisible, setVideoPlayerVisible] = useState(false);
+const [selectedVideo, setSelectedVideo] = useState<AttachmentDto | null>(
+  null,
+);
+const [playingAttachmentId, setPlayingAttachmentId] = useState<string | null>(
+  null,
+);
+// 保存当前音频播放对象，用于停止播放
+const soundRef = useRef<Audio.Sound | null>(null);
 
   // 动画值
   const slideAnim = useRef(new Animated.Value(300)).current;
@@ -213,7 +219,7 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
   };
 
   // 处理附件点击
-  const handleAttachmentPress = (attachment: AttachmentDto) => {
+  const handleAttachmentPress = async (attachment: AttachmentDto) => {
     const fileType = getFileTypeFromMime(attachment.type);
 
     if (fileType === "image") {
@@ -231,6 +237,55 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
       // 视频：打开视频播放器
       setSelectedVideo(attachment);
       setVideoPlayerVisible(true);
+    } else if (attachment.type.startsWith("audio/")) {
+      // 音频：直接播放或停止
+      try {
+        // 如果当前正在播放这个音频，点击停止
+        if (playingAttachmentId === attachment.attachmentId && soundRef.current) {
+          await soundRef.current.stopAsync();
+          await soundRef.current.unloadAsync();
+          soundRef.current = null;
+          setPlayingAttachmentId(null);
+          return;
+        }
+
+        // 先停止当前播放的音频
+        if (soundRef.current) {
+          await soundRef.current.stopAsync();
+          await soundRef.current.unloadAsync();
+          soundRef.current = null;
+        }
+
+        // 设置音频模式
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+        });
+
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: attachment.url },
+          { shouldPlay: true },
+        );
+
+        soundRef.current = sound;
+
+        // 设置正在播放的附件 ID
+        setPlayingAttachmentId(attachment.attachmentId);
+
+        // 播放完成后释放资源
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            sound.unloadAsync();
+            soundRef.current = null;
+            setPlayingAttachmentId(null);
+          }
+        });
+      } catch (error) {
+        console.error("播放音频失败:", error);
+        showError("播放音频失败");
+        setPlayingAttachmentId(null);
+        soundRef.current = null;
+      }
     } else {
       // 其他文件类型：直接下载
       Linking.openURL(attachment.url).catch((err) =>
@@ -309,15 +364,16 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
           </View>
         </View>
 
-        {/* 附件展示 - 在内容和关联备忘录之间 */}
-        {memo.attachments && memo.attachments.length > 0 && (
-          <View style={styles.attachmentsContainer}>
-            <AttachmentGrid
-              attachments={memo.attachments}
-              onAttachmentPress={handleAttachmentPress}
-            />
-          </View>
-        )}
+{/* 附件展示 - 在内容和关联备忘录之间 */}
+{memo.attachments && memo.attachments.length > 0 && (
+<View style={styles.attachmentsContainer}>
+<AttachmentGrid
+  attachments={memo.attachments}
+  onAttachmentPress={handleAttachmentPress}
+  playingAttachmentId={playingAttachmentId}
+/>
+</View>
+)}
 
         {/* 关联Memo列表 - 在内容和页脚之间 */}
         {memo.relations && memo.relations.length > 0 && (

@@ -4,10 +4,10 @@
  */
 
 import type {
-    AuthResponse,
-    LoginRequest,
-    RegisterRequest,
-    RegisterResponse,
+  AuthResponse,
+  LoginRequest,
+  RegisterRequest,
+  RegisterResponse,
 } from "@/types/auth";
 import { apiPost, saveToken, saveTokenAsync } from "./common";
 

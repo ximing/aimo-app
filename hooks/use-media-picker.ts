@@ -8,7 +8,7 @@ import { useState, useCallback } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 
 export interface SelectedMedia {
-  type: 'image' | 'video';
+  type: 'image' | 'video' | 'audio';
   uri: string;
   name: string;
   mimeType: string;

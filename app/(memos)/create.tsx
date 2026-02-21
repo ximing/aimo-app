@@ -3,27 +3,28 @@
  * 提供编辑标题、内容、上传媒体等功能
  */
 
-import { uploadAttachment } from "@/api/attachment";
+import { deleteLocalFile, uploadAttachment } from "@/api/attachment";
 import { createMemo, updateMemo } from "@/api/memo";
 import { MediaPreview } from "@/components/memos/media-preview";
 import { useMediaPicker } from "@/hooks/use-media-picker";
 import { useTheme } from "@/hooks/use-theme";
 import MemoService from "@/services/memo-service";
+import VoiceMemoService from "@/services/voice-memo-service";
 import { showError, showSuccess } from "@/utils/toast";
 import { MaterialIcons } from "@expo/vector-icons";
-import { Camera, Delete, Image, Video, X, Check } from "lucide-react-native";
-import { useService, view } from "@rabjs/react";
+import { bindServices, useService, view } from "@rabjs/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { Camera, Check, Image, Mic, Video, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -32,10 +33,17 @@ const CreateMemoContent = view(() => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const memoService = useService(MemoService);
-  const { memoId: queryMemoId, imageUri: queryImageUri, imageType: queryImageType } = useLocalSearchParams<{
+  const voiceMemoService = useService(VoiceMemoService);
+  const {
+    memoId: queryMemoId,
+    imageUri: queryImageUri,
+    imageType: queryImageType,
+    audioUri: queryAudioUri,
+  } = useLocalSearchParams<{
     memoId?: string;
     imageUri?: string;
     imageType?: string;
+    audioUri?: string;
   }>();
   const {
     selectedMedia,
@@ -55,6 +63,7 @@ const CreateMemoContent = view(() => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [audioUri, setAudioUri] = useState<string | null>(null);
 
   // 初始化加载编辑数据
   useEffect(() => {
@@ -114,6 +123,57 @@ const CreateMemoContent = view(() => {
     initMediaFromQuery();
   }, [queryImageUri, queryImageType]);
 
+  // 处理从外部传入的录音（录音完成后）
+  useEffect(() => {
+    const initAudioFromQuery = async () => {
+      if (queryAudioUri) {
+        try {
+          // 解码音频 URI
+          const decodedUri = decodeURIComponent(queryAudioUri);
+
+          // 保存音频 URI，供后续删除使用
+          setAudioUri(decodedUri);
+
+          // 添加音频到 selectedMedia
+          const audioMedia = {
+            type: "audio" as const,
+            uri: decodedUri,
+            name: `voice-memo-${Date.now()}.m4a`,
+            mimeType: "audio/m4a",
+          };
+          addMedia(audioMedia);
+
+          // 启动上传和转写流程
+          await voiceMemoService.uploadAndTranscribe(decodedUri);
+        } catch (err) {
+          console.error("Failed to process audio from query:", err);
+          showError("语音处理失败，请稍后重试");
+        }
+      }
+    };
+
+    initAudioFromQuery();
+
+    // 组件卸载时清理轮询
+    return () => {
+      voiceMemoService.stopPolling();
+    };
+  }, [queryAudioUri, addMedia, voiceMemoService]);
+
+  // 监听转写结果，自动填入内容
+  useEffect(() => {
+    if (voiceMemoService.transcriptionText && !content) {
+      setContent(voiceMemoService.transcriptionText);
+    }
+  }, [voiceMemoService.transcriptionText, content]);
+
+  // 监听转写错误
+  useEffect(() => {
+    if (voiceMemoService.transcriptionError) {
+      showError("语音转文字失败，请手动输入");
+    }
+  }, [voiceMemoService.transcriptionError]);
+
   // 处理返回
   const handleGoBack = useCallback(() => {
     router.back();
@@ -144,6 +204,11 @@ const CreateMemoContent = view(() => {
       // 构建 memo 内容
       const memoContent = content.trim();
 
+      // 判断是否有音频类型的附件
+      const hasAudio =
+        selectedMedia.some((media) => media.type === "audio") || !!audioUri;
+      // [{"mimeType": "audio/m4a", "name": "voice-memo-1771646384864.m4a", "type": "audio", "uri": "file:///data/user/0/host.exp.exponent/cache/voice-memo-1771646384764.m4a"}, {"mimeType": "image/jpeg", "name": "image-1771646396244-0.jpg", "size": 4195546, "type": "image", "uri": "file:///data/user/0/host.exp.exponent/cache/ImagePicker/ed72ce81-e878-4191-b1d3-34ca2e8084d0.jpeg"}]
+      // console.log("selectedMedia", selectedMedia);
       if (isEditMode && queryMemoId) {
         // 编辑模式
         const memo = await updateMemo(queryMemoId, {
@@ -161,11 +226,18 @@ const CreateMemoContent = view(() => {
         // 创建模式
         const memo = await createMemo({
           content: memoContent,
+          type: hasAudio ? "audio" : "text",
           attachments: attachmentIds.length > 0 ? attachmentIds : undefined,
         });
 
         console.log("Memo created:", memo);
         showSuccess("创建成功");
+
+        // 删除本地录音文件
+        if (audioUri) {
+          await deleteLocalFile(audioUri);
+          setAudioUri(null);
+        }
 
         // 刷新列表
         await memoService.refreshMemos();
@@ -190,13 +262,6 @@ const CreateMemoContent = view(() => {
       setSubmitting(false);
     }
   }, [content, selectedMedia, router, memoService, isEditMode, queryMemoId]);
-
-  // 处理清空
-  const handleClear = useCallback(() => {
-    setContent("");
-    clearMedia();
-    setError(null);
-  }, [clearMedia]);
 
   if (isLoading && isEditMode) {
     return (
@@ -240,10 +305,7 @@ const CreateMemoContent = view(() => {
           onPress={handleGoBack}
           disabled={submitting}
         >
-          <X
-            size={20}
-            color={theme.colors.foreground}
-          />
+          <X size={20} color={theme.colors.foreground} />
         </TouchableOpacity>
 
         <View style={{ flex: 1 }} />
@@ -262,10 +324,7 @@ const CreateMemoContent = view(() => {
           {submitting ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Check
-              size={20}
-              color="#fff"
-            />
+            <Check size={20} color="#fff" />
           )}
         </TouchableOpacity>
       </View>
@@ -310,6 +369,53 @@ const CreateMemoContent = view(() => {
         </View>
       )}
 
+      {/* 转写状态提示 */}
+      {voiceMemoService.transcriptionFlowStatus !== "idle" &&
+        voiceMemoService.transcriptionFlowStatus !== "success" &&
+        voiceMemoService.transcriptionFlowStatus !== "failed" && (
+          <View
+            style={[
+              styles.transcriptionStatusContainer,
+              { backgroundColor: theme.colors.backgroundSecondary },
+            ]}
+          >
+            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <Text
+              style={[
+                styles.transcriptionStatusText,
+                { color: theme.colors.foregroundSecondary },
+              ]}
+            >
+              {voiceMemoService.transcriptionFlowStatus === "uploading" &&
+                "正在上传音频..."}
+              {voiceMemoService.transcriptionFlowStatus === "submitting" &&
+                "正在提交转写任务..."}
+              {voiceMemoService.transcriptionFlowStatus === "polling" &&
+                "正在转写语音..."}
+            </Text>
+          </View>
+        )}
+
+      {/* 转写失败提示 */}
+      {voiceMemoService.transcriptionFlowStatus === "failed" && (
+        <View
+          style={[
+            styles.transcriptionStatusContainer,
+            { backgroundColor: theme.colors.destructive + "15" },
+          ]}
+        >
+          <Mic size={16} color={theme.colors.destructive} />
+          <Text
+            style={[
+              styles.transcriptionStatusText,
+              { color: theme.colors.destructive },
+            ]}
+          >
+            语音转文字失败，请手动输入
+          </Text>
+        </View>
+      )}
+
       {/* 错误信息 */}
       {(error || mediaError) && (
         <View
@@ -341,18 +447,6 @@ const CreateMemoContent = view(() => {
           },
         ]}
       >
-        {/* 清空按钮 */}
-        <TouchableOpacity
-          style={[styles.actionButton, { opacity: submitting ? 0.5 : 1 }]}
-          onPress={handleClear}
-          disabled={submitting}
-        >
-          <Delete
-            size={20}
-            color={theme.colors.foregroundSecondary}
-          />
-        </TouchableOpacity>
-
         {/* 拍照按钮 */}
         <TouchableOpacity
           style={[styles.actionButton, { opacity: mediaLoading ? 0.5 : 1 }]}
@@ -365,10 +459,7 @@ const CreateMemoContent = view(() => {
               color={theme.colors.foregroundSecondary}
             />
           ) : (
-            <Camera
-              size={20}
-              color={theme.colors.foregroundSecondary}
-            />
+            <Camera size={20} color={theme.colors.foregroundSecondary} />
           )}
         </TouchableOpacity>
 
@@ -378,10 +469,7 @@ const CreateMemoContent = view(() => {
           onPress={pickImage}
           disabled={mediaLoading}
         >
-          <Image
-            size={20}
-            color={theme.colors.foregroundSecondary}
-          />
+          <Image size={20} color={theme.colors.foregroundSecondary} />
         </TouchableOpacity>
 
         {/* 视频按钮 */}
@@ -390,17 +478,14 @@ const CreateMemoContent = view(() => {
           onPress={pickVideo}
           disabled={mediaLoading}
         >
-          <Video
-            size={20}
-            color={theme.colors.foregroundSecondary}
-          />
+          <Video size={20} color={theme.colors.foregroundSecondary} />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
 });
 
-export default CreateMemoContent;
+export default bindServices(CreateMemoContent, [VoiceMemoService]);
 
 const styles = StyleSheet.create({
   container: {
@@ -471,5 +556,20 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     justifyContent: "center",
     alignItems: "center",
+  },
+  // 转写状态
+  transcriptionStatusContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 16,
+    marginVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+  transcriptionStatusText: {
+    fontSize: 13,
   },
 });

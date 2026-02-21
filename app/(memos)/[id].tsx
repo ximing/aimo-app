@@ -16,9 +16,9 @@ import type { AttachmentDto } from "@/types/memo";
 import { getFileTypeFromMime } from "@/utils/attachment";
 import { showSuccess } from "@/utils/toast";
 import { MaterialIcons } from "@expo/vector-icons";
-import { Sparkles } from "lucide-react-native";
 import { bindServices, useService, view } from "@rabjs/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { Sparkles } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,

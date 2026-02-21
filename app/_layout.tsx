@@ -9,15 +9,22 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import "react-native-reanimated";
 
-import { getTokenAsync, onUnauthorized } from "@/api/common";
+import { getTokenAsync, onUnauthorized, saveToken } from "@/api/common";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Toast } from "@/components/ui/toast";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import AuthService from "@/services/auth-service";
+import CategoryService from "@/services/category-service";
+import FilterService from "@/services/filter-service";
 import MemoService from "@/services/memo-service";
+import SearchService from "@/services/search-service";
 import ThemeService from "@/services/theme-service";
+
 register(AuthService);
+register(CategoryService);
+register(FilterService);
 register(MemoService);
+register(SearchService);
 register(ThemeService);
 
 const Layout = view(() => {
@@ -37,10 +44,11 @@ const Layout = view(() => {
       try {
         // 初始化主题服务
         await themeService.initialize();
-        
+
         // 检查是否已登录
         const token = await getTokenAsync();
         if (token) {
+          saveToken(token);
           // 如果有存储的 token，标记为已认证
           authService.isAuthenticated = true;
           authService.fetchUserInfo().catch((error) => {
@@ -104,10 +112,7 @@ const Layout = view(() => {
           {/* 声明所有可能的屏幕，导航逻辑在上面处理 */}
           <Stack.Screen name="(memos)" />
           <Stack.Screen name="auth" />
-          <Stack.Screen
-            name="modal"
-            options={{ presentation: "modal" }}
-          />
+          <Stack.Screen name="modal" options={{ presentation: "modal" }} />
         </Stack>
         <Toast />
         <StatusBar style="auto" />
