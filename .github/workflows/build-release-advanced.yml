@@ -59,15 +59,15 @@ jobs:
         run: |
           echo "Starting Android build..."
           eas build --platform android --profile production --non-interactive --wait --json > build-output.json
-          
+
           # Extract build ID and artifact URL
           BUILD_ID=$(cat build-output.json | jq -r '.[0].id')
           ARTIFACT_URL=$(cat build-output.json | jq -r '.[0].artifacts.buildUrl')
-          
+
           echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
           echo "artifact_url=$ARTIFACT_URL" >> $GITHUB_OUTPUT
           echo "Android build completed: $BUILD_ID"
-          
+
           # Download APK
           echo "Downloading APK from EAS..."
           curl -L -o app-release.apk "$ARTIFACT_URL"
@@ -80,6 +80,23 @@ jobs:
         run: |
           gh release upload "v${{ steps.version.outputs.version }}-${{ github.run_number }}" \
             app-release.apk \
+            --clobber
+
+      - name: 📄 Generate latest.json
+        if: steps.build_android.outputs.artifact_url != ''
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          CREATE_TIME=$(date +%s%3N)
+          echo "{\"version\":\"$VERSION\",\"releaseDate\":$CREATE_TIME,\"path\":\"app-release.apk\"}" > latest.json
+          cat latest.json
+
+      - name: 📤 Upload latest.json to GitHub Release
+        if: steps.build_android.outputs.artifact_url != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "v${{ steps.version.outputs.version }}-${{ github.run_number }}" \
+            latest.json \
             --clobber
 
       - name: 📦 Build Summary
