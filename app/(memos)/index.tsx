@@ -38,6 +38,16 @@ const MemosListContent = () => {
     memoService.refreshMemos();
   }, [memoService]);
 
+  // 处理搜索
+  const handleSearch = useCallback((query: string) => {
+    if (query) {
+      memoService.searchMemos(query);
+    } else {
+      // 清除搜索，恢复正常列表
+      memoService.clearSearch();
+    }
+  }, [memoService]);
+
   // 处理刷新
   const handleRefresh = useCallback(() => {
     memoService.refreshMemos();
@@ -71,23 +81,47 @@ const MemosListContent = () => {
   );
 
   // 渲染空状态
-  const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
-      <Text
-        style={[styles.emptyText, { color: theme.colors.foregroundTertiary }]}
-      >
-        暂无备忘录
-      </Text>
-      <Text
-        style={[
-          styles.emptySubText,
-          { color: theme.colors.foregroundSecondary },
-        ]}
-      >
-        下拉刷新或创建新的备忘录
-      </Text>
-    </View>
-  );
+  const renderEmpty = () => {
+    // 搜索无结果
+    if (memoService.searchQuery) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text
+            style={[styles.emptyText, { color: theme.colors.foregroundTertiary }]}
+          >
+            未找到相关笔记
+          </Text>
+          <Text
+            style={[
+              styles.emptySubText,
+              { color: theme.colors.foregroundSecondary },
+            ]}
+          >
+            试试其他关键词
+          </Text>
+        </View>
+      );
+    }
+
+    // 暂无备忘录
+    return (
+      <View style={styles.emptyContainer}>
+        <Text
+          style={[styles.emptyText, { color: theme.colors.foregroundTertiary }]}
+        >
+          暂无备忘录
+        </Text>
+        <Text
+          style={[
+            styles.emptySubText,
+            { color: theme.colors.foregroundSecondary },
+          ]}
+        >
+          下拉刷新或创建新的备忘录
+        </Text>
+      </View>
+    );
+  };
 
   // 渲染列表项
   const renderItem = ({ item }: { item: Memo }) => (
@@ -96,13 +130,13 @@ const MemosListContent = () => {
 
   // 渲染页脚（加载更多指示器）
   const renderFooter = () => {
-    // 只在有列表项且正在加载时显示
+    // 没有列表时不显示
     if (memoService.memos.length === 0) {
       return null;
     }
 
-    // 只在加载更多时显示（不是初始加载）
-    if (memoService.loading && memoService.currentPage > 1) {
+    // 正在加载时显示加载指示器
+    if (memoService.loading) {
       return (
         <View style={styles.footer}>
           <ActivityIndicator color={theme.colors.info} />
@@ -118,7 +152,7 @@ const MemosListContent = () => {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       {/* 搜索头部 */}
-      <SearchHeader onDrawerToggle={() => setDrawerVisible(!drawerVisible)} />
+      <SearchHeader onDrawerToggle={() => setDrawerVisible(!drawerVisible)} onSearch={handleSearch} />
 
       {/* 侧边栏抽屉 */}
       <SidebarDrawer
@@ -146,7 +180,7 @@ const MemosListContent = () => {
         onScroll={handleScroll}
         scrollEventThrottle={16}
         scrollEnabled={true}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
       />
 
       {/* 回到顶部按钮 */}

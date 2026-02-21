@@ -1,150 +1,226 @@
 {
   "project": "Aimo",
-  "branchName": "ralph/voice-to-text",
-  "description": "录音转文字功能 - 用户点击录音按钮录制语音，自动转写为文本填入新建备忘录",
+  "branchName": "ralph/memo-list-filter-search",
+  "description": "Memo 列表筛选与搜索功能优化 - 分类筛选抽屉、排序策略、搜索页面重构",
   "userStories": [
     {
       "id": "US-001",
-      "title": "安装 expo-av 并创建 useAudioRecorder hook",
-      "description": "作为开发者，我需要安装录音库并创建可复用的录音 hook 来管理录音状态。",
+      "title": "创建 FilterService 管理筛选状态和持久化",
+      "description": "作为开发者，我需要 Service 来管理筛选状态并持久化到 AsyncStorage。",
       "acceptanceCriteria": [
-        "安装 expo-av 依赖",
-        "创建 hooks/use-audio-recorder.ts",
-        "Hook 返回：recording、uri、duration、startRecording、stopRecording、error 状态",
-        "录音格式配置为 m4a，编码为 AAC",
-        "处理麦克风权限请求和错误",
+        "创建 services/filter-service.ts",
+        "Service 包含状态：selectedCategoryId、sortField、sortOrder",
+        "使用 AsyncStorage 键名 memoFilterPrefs 持久化状态",
+        "提供 loadFilterPrefs() 方法从 AsyncStorage 恢复状态",
+        "提供 saveFilterPrefs() 方法保存状态到 AsyncStorage",
+        "默认值：全部分类、按创建时间从新到旧排序",
+        "Service 继承 @rabjs/react 的 Service 类",
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": "expo-av already installed; hook created with all required functionality"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-002",
-      "title": "实现 ASR API 接口",
-      "description": "作为开发者，我需要实现 ASR 相关的 API 接口用于语音转文字。",
+      "title": "创建分类筛选抽屉 FilterDrawer 组件",
+      "description": "作为用户，我希望通过侧边栏旁的筛选按钮快速筛选笔记分类。",
       "acceptanceCriteria": [
-        "创建 api/asr.ts",
-        "实现 submitTranscriptionTask(fileUrls: string[]) 调用 POST /api/v1/asr/transcribe",
-        "实现 getTaskStatus(taskId: string) 调用 GET /api/v1/asr/task/:taskId",
-        "实现 getTranscriptionResult(taskId: string) 调用 GET /api/v1/asr/result/:taskId",
-        "语言提示固定为 ['zh', 'en']",
-        "定义 ASR 相关的 TypeScript 类型（ASRTaskResponse、ASRTaskStatus、ASRResult）",
-        "正确处理 API 错误响应",
-        "Typecheck passes"
+        "创建 components/memos/filter-drawer.tsx",
+        "组件 props：visible、onClose、categories、selectedCategoryId、onSelectCategory、sortField、sortOrder、onChangeSort",
+        "抽屉从右侧滑入，宽度占屏幕 75%-80%",
+        "支持点击遮罩或滑动关闭",
+        "显示「分类」区域：全部分类、无分类、用户自定义分类列表",
+        "分类支持单选，选中后立即应用筛选并关闭抽屉",
+        "显示「排序方式」区域：按创建时间/编辑时间，从新到旧/从旧到新",
+        "使用 RadioButton 或勾选图标表示选中状态",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "ASR API implemented with submitTranscriptionTask, getTaskStatus, getTranscriptionResult; types defined in types/asr.ts"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-003",
-      "title": "实现录音浮层组件 VoiceRecorderModal",
-      "description": "作为用户，我需要一个直观的录音界面来控制录音过程。",
+      "title": "集成筛选按钮和 FilterDrawer 到 SearchHeader",
+      "description": "作为用户，我可以通过搜索 header 的筛选按钮打开分类筛选抽屉。",
       "acceptanceCriteria": [
-        "创建 components/memos/voice-recorder-modal.tsx",
-        "组件 props：visible、onClose、onRecordingComplete(audioUri: string)",
-        "显示录音时长，格式 MM:SS",
-        "录音中显示红色脉冲动画或录音标识",
-        "提供停止录音按钮（方形图标）和取消按钮（X 图标）",
-        "使用 @rabjs/react 的 view 装饰器响应主题",
-        "弹窗样式使用 Modal 组件，背景半透明遮罩",
+        "修改 components/memos/search-header.tsx",
+        "在现有侧边栏按钮右侧新增筛选按钮（Filter/Sliders 图标）",
+        "点击筛选按钮打开 FilterDrawer",
+        "从 CategoryService 获取用户自定义分类列表",
+        "使用 FilterService 管理筛选状态",
+        "筛选变更后触发 memo 列表重新获取",
         "Typecheck passes",
-        "Verify in browser/simulator using dev-browser skill"
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "VoiceRecorderModal implemented with recording animation, waveform, duration display, stop/cancel buttons"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-004",
-      "title": "修改 floating-action-bar 绑定录音按钮",
-      "description": "作为用户，我点击录音按钮后应该唤起录音浮层。",
+      "title": "API 层支持筛选和排序参数",
+      "description": "作为开发者，我需要确保前端筛选和排序参数正确传递给后端 API。",
       "acceptanceCriteria": [
-        "修改 components/memos/floating-action-bar.tsx",
-        "添加 VoiceRecorderModal 状态管理（visible、audioUri）",
-        "点击录音按钮显示 VoiceRecorderModal",
-        "录音完成后获取 audioUri，跳转到 /(memos)/create?audioUri={encodedUri}",
-        "对 audioUri 进行 encodeURIComponent 编码",
-        "Typecheck passes",
-        "Verify in browser/simulator using dev-browser skill"
+        "修改 api/memo.ts 中的 getMemos 函数",
+        "支持传递 categoryId: string | undefined（undefined 表示全部分类，__uncategorized__ 表示无分类）",
+        "支持传递 sortField: 'createdAt' | 'updatedAt'",
+        "支持传递 sortOrder: 'asc' | 'desc'",
+        "API 调用错误时显示友好的错误提示",
+        "Typecheck passes"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "FloatingActionBar integrated with VoiceRecorderModal, navigates to create page with encoded audioUri on complete"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-005",
-      "title": "MediaPreview 组件支持音频类型",
-      "description": "作为用户，我希望在 create 页面能看到已添加的录音附件。",
+      "title": "MemoService 集成筛选和排序功能",
+      "description": "作为开发者，我需要 MemoService 支持按筛选条件和排序获取笔记列表。",
       "acceptanceCriteria": [
-        "修改 components/memos/media-preview.tsx",
-        "MediaItem 类型添加 'audio' 类型支持",
-        "音频附件显示音频图标（Headphones 或 Mic）",
-        "显示文件名和时长（如果有）",
-        "保留删除按钮功能",
-        "样式与现有图片/视频预览保持一致",
-        "Typecheck passes",
-        "Verify in browser/simulator using dev-browser skill"
+        "修改 services/memo-service.ts",
+        "添加 filter 相关状态：categoryFilter、sortField、sortOrder",
+        "修改 fetchMemos 方法，传入筛选和排序参数",
+        "监听 FilterService 状态变化自动刷新列表",
+        "Typecheck passes"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "MediaPreview updated to support audio type with mic icon and filename display"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-006",
-      "title": "修改 create 页面接收 audioUri 并显示音频附件",
-      "description": "作为用户，我结束录音后跳转到 create 页面应该看到录音附件已添加。",
+      "title": "搜索入口改造 - 点击跳转搜索页面",
+      "description": "作为用户，我点击搜索框后跳转到专门的搜索页面。",
       "acceptanceCriteria": [
-        "修改 app/(memos)/create.tsx",
-        "从 useLocalSearchParams 获取 audioUri 参数",
-        "useEffect 监听 audioUri，解码后添加到 selectedMedia 作为音频类型",
-        "音频文件显示在 MediaPreview 中",
-        "用户保存 memo 时，音频文件正常上传为附件",
+        "修改 components/memos/search-header.tsx",
+        "搜索框设为只读/禁用输入状态（pointer-events: none 或 editable=false）",
+        "点击搜索框触发跳转到独立搜索页面 /search",
+        "搜索框显示占位符文字「搜索笔记...」",
+        "使用 router.push('/search') 跳转",
         "Typecheck passes",
-        "Verify in browser/simulator using dev-browser skill"
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": true,
-      "notes": "Create page updated to receive audioUri from query params and display in MediaPreview"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-007",
-      "title": "创建 VoiceMemoService 管理转写流程",
-      "description": "作为开发者，我需要 Service 来管理语音转写的状态和流程。",
+      "title": "创建 SearchService 管理搜索状态和最近搜索历史",
+      "description": "作为开发者，我需要 Service 来管理搜索逻辑和最近搜索历史。",
       "acceptanceCriteria": [
-        "创建 services/voice-memo-service.ts",
-        "Service 包含状态：transcriptionTaskId、transcriptionText、transcriptionStatus、isTranscribing",
-        "实现 uploadAndTranscribe(audioUri: string) 方法：上传文件→获取 URL→提交 ASR 任务",
-        "实现 pollTranscriptionResult(taskId: string) 方法：轮询 task 状态直到完成或失败",
-        "轮询间隔 2 秒，最多 30 次（60秒超时）",
-        "转写成功返回提取的 text，失败抛出错误",
+        "创建 services/search-service.ts",
+        "状态包括：searchKeyword、searchResults、isSearching、recentSearches、searchFilters（categoryId、dateRange）",
+        "使用 AsyncStorage 键名 recentSearches 存储最近搜索词，最多 10 条",
+        "提供 addRecentSearch(keyword) 方法，新搜索词插入顶部，重复去重",
+        "提供 removeRecentSearch(keyword) 方法删除单条记录",
+        "提供 clearRecentSearches() 方法清空所有历史",
+        "提供 search(keyword, filters) 方法执行搜索",
         "Service 继承 @rabjs/react 的 Service 类",
         "Typecheck passes"
       ],
       "priority": 7,
-      "passes": true,
-      "notes": "VoiceMemoService created with uploadAndTranscribe, pollTranscriptionResult, 2s interval, 30 max polls, reactive state management"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-008",
-      "title": "create 页面集成 ASR 转写流程",
-      "description": "作为用户，我进入 create 页面后应该自动进行语音转写并将结果填入内容区。",
+      "title": "创建搜索页面 SearchPage 基础结构",
+      "description": "作为用户，我需要一个专门的搜索页面来执行高级搜索操作。",
       "acceptanceCriteria": [
-        "修改 app/(memos)/create.tsx",
-        "使用 VoiceMemoService 进行转写",
-        "页面加载后，如果有 audioUri，自动调用 uploadAndTranscribe",
-        "显示转写状态：转写中、转写成功、转写失败",
-        "转写成功后将文本追加到 content 输入框",
-        "转写失败时 toast 提示 '语音转文字失败，请手动输入'",
-        "转写失败时保留音频附件",
-        "用户可以在转写过程中编辑其他内容",
+        "创建 app/search.tsx",
+        "页面顶部有返回按钮，点击返回上一页（router.back()）",
+        "页面顶部有搜索输入框（真实可输入），自动聚焦",
+        "搜索框有清除按钮，点击清空输入",
+        "搜索框下方显示「最近搜索」区域（如果有历史记录）",
+        "搜索框下方显示筛选栏：日期按钮、分类按钮",
+        "页面底部/适当位置显示搜索结果列表区域（初始为空状态）",
+        "空状态显示「输入关键词开始搜索」提示",
         "Typecheck passes",
-        "Verify in browser/simulator using dev-browser skill"
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 8,
-      "passes": true,
-      "notes": "Create page integrated with VoiceMemoService for ASR flow, shows transcription status, appends text to content on success, toast on failure"
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "实现最近搜索词功能和展示",
+      "description": "作为用户，我希望看到最近的搜索历史以便快速重新搜索。",
+      "acceptanceCriteria": [
+        "在 app/search.tsx 中集成 SearchService",
+        "最近搜索词使用 AsyncStorage 持久化",
+        "每条记录显示搜索关键词和搜索图标",
+        "点击最近搜索词立即填入搜索框并执行搜索",
+        "每条记录右侧有删除按钮（X 图标）删除单条记录",
+        "提供「清除全部」按钮清空所有历史",
+        "最多显示 10 条最近搜索记录",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "实现搜索页面的日期和分类筛选",
+      "description": "作为用户，我希望在搜索时能通过日期范围和分类进一步精确筛选结果。",
+      "acceptanceCriteria": [
+        "在 app/search.tsx 中添加筛选栏",
+        「日期」按钮点击展开日期范围选择下拉/弹窗",
+        "日期选项：全部时间、最近7天、最近30天、自定义范围",
+        "自定义范围使用日期选择器选择起止日期",
+        「分类」按钮点击展开分类选择（复用 FilterDrawer 或新建简单下拉）",
+        "选中的筛选条件在按钮上显示标签（如「7天内」、「工作笔记」）",
+        "筛选条件改变时立即触发搜索（如果已有搜索关键词）",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "实现搜索结果展示功能",
+      "description": "作为用户，我希望在搜索页面直接看到搜索结果以便快速浏览和选择。",
+      "acceptanceCriteria": [
+        "在 app/search.tsx 中实现搜索结果列表",
+        "执行搜索后，搜索结果以列表形式显示",
+        "复用现有的 Memo 列表项组件或创建简化版 SearchResultItem",
+        "搜索结果项显示笔记标题、摘要、创建时间和分类标签",
+        "点击搜索结果项跳转到笔记详情页 /(memos)/[id]",
+        "无结果时显示空状态提示「未找到相关笔记」",
+        "搜索结果支持分页加载（触底加载更多）",
+        "搜索过程中显示加载状态",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "API 层支持搜索接口",
+      "description": "作为开发者，我需要确保搜索参数正确传递给后端 API。",
+      "acceptanceCriteria": [
+        "在 api/memo.ts 中创建 searchMemos 函数",
+        "支持传递 keyword: string（搜索关键词）",
+        "支持传递 categoryId: string | undefined",
+        "支持传递 dateRange: { start: Date, end: Date } | undefined",
+        "支持分页参数：page、pageSize",
+        "返回搜索结果列表和总数量",
+        "API 调用错误时显示友好的错误提示",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
     }
   ]
 }

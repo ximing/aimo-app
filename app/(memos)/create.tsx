@@ -17,7 +17,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   Camera,
   Check,
-  Delete,
   Image,
   Mic,
   Video,
@@ -271,13 +270,6 @@ const CreateMemoContent = view(() => {
     }
   }, [content, selectedMedia, router, memoService, isEditMode, queryMemoId]);
 
-  // 处理清空
-  const handleClear = useCallback(() => {
-    setContent("");
-    clearMedia();
-    setError(null);
-  }, [clearMedia]);
-
   if (isLoading && isEditMode) {
     return (
       <View
@@ -462,15 +454,6 @@ const CreateMemoContent = view(() => {
           },
         ]}
       >
-        {/* 清空按钮 */}
-        <TouchableOpacity
-          style={[styles.actionButton, { opacity: submitting ? 0.5 : 1 }]}
-          onPress={handleClear}
-          disabled={submitting}
-        >
-          <Delete size={20} color={theme.colors.foregroundSecondary} />
-        </TouchableOpacity>
-
         {/* 拍照按钮 */}
         <TouchableOpacity
           style={[styles.actionButton, { opacity: mediaLoading ? 0.5 : 1 }]}

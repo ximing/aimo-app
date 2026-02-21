@@ -19,12 +19,25 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface SearchHeaderProps {
   onDrawerToggle: () => void;
+  onSearch?: (query: string) => void;
 }
 
-export const SearchHeader = view(({ onDrawerToggle }: SearchHeaderProps) => {
+export const SearchHeader = view(({ onDrawerToggle, onSearch }: SearchHeaderProps) => {
   const theme = useTheme();
   const [searchQuery, setSearchQuery] = useState("");
   const insets = useSafeAreaInsets();
+
+  // 处理搜索提交
+  const handleSearchSubmit = () => {
+    if (onSearch) {
+      onSearch(searchQuery.trim());
+    }
+  };
+
+  // 处理输入变化
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+  };
 
   return (
     <View
@@ -60,8 +73,28 @@ export const SearchHeader = view(({ onDrawerToggle }: SearchHeaderProps) => {
             placeholder="搜索笔记"
             placeholderTextColor={theme.colors.foregroundTertiary}
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={handleSearchChange}
+            onSubmitEditing={handleSearchSubmit}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => {
+                setSearchQuery("");
+                if (onSearch) {
+                  onSearch("");
+                }
+              }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <MaterialIcons
+                name="close"
+                size={18}
+                color={theme.colors.foregroundTertiary}
+              />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </View>
