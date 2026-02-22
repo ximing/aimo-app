@@ -106,7 +106,7 @@ export function Button({
   const sizeStyles = getSizeStyles();
   const isDisabled = disabled || loading;
 
-  return (
+      return (
     <TouchableOpacity
       disabled={isDisabled}
       activeOpacity={0.7}
@@ -124,7 +124,6 @@ export function Button({
           borderColor: colors.borderColor,
         },
         fullWidth && styles.fullWidth,
-        theme.shadows?.md,
         style,
       ]}
       {...props}

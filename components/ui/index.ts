@@ -13,3 +13,7 @@ export type { InputProps } from './input';
 
 export { Collapsible, CollapsibleTrigger, CollapsibleContent } from './collapsible';
 export type { CollapsibleProps, CollapsibleTriggerProps, CollapsibleContentProps } from './collapsible';
+
+export { Toast } from './toast';
+
+export { UpdateDialog } from './update-dialog';

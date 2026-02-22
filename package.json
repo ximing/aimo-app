@@ -1,6 +1,6 @@
 {
   "name": "aimo-app",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "一款简洁、高效的跨平台备忘录应用，支持富媒体记录、智能搜索和分类管理，帮助你随时随地记录生活中的点滴灵感与重要事项。",
   "packageManager": "npm@10.9.3",
   "engines": {
@@ -32,6 +32,7 @@
     "expo-haptics": "~15.0.8",
     "expo-image": "~3.0.11",
     "expo-image-picker": "~17.0.10",
+    "expo-intent-launcher": "~13.0.8",
     "expo-linking": "~8.0.11",
     "expo-router": "~6.0.23",
     "expo-splash-screen": "~31.0.13",

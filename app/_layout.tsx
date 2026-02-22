@@ -11,7 +11,7 @@ import "react-native-reanimated";
 
 import { getTokenAsync, onUnauthorized, saveToken } from "@/api/common";
 import { ErrorBoundary } from "@/components/error-boundary";
-import { Toast } from "@/components/ui/toast";
+import { Toast, UpdateDialog } from "@/components/ui";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import AuthService from "@/services/auth-service";
 import CategoryService from "@/services/category-service";
@@ -19,6 +19,7 @@ import FilterService from "@/services/filter-service";
 import MemoService from "@/services/memo-service";
 import SearchService from "@/services/search-service";
 import ThemeService from "@/services/theme-service";
+import UpdateService from "@/services/update-service";
 
 register(AuthService);
 register(CategoryService);
@@ -26,14 +27,17 @@ register(FilterService);
 register(MemoService);
 register(SearchService);
 register(ThemeService);
+register(UpdateService);
 
 const Layout = view(() => {
   const systemColorScheme = useColorScheme();
   const authService = useService(AuthService);
   const themeService = useService(ThemeService);
+  const updateService = useService(UpdateService);
   const router = useRouter();
   const navigationState = useRootNavigationState();
   const [isInitialized, setIsInitialized] = useState(false);
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
 
   // 获取实际使用的颜色方案（考虑 ThemeService 的设置）
   const colorScheme = themeService.colorScheme;
@@ -54,6 +58,12 @@ const Layout = view(() => {
           authService.fetchUserInfo().catch((error) => {
             console.warn("Failed to fetch user info on init:", error);
           });
+        }
+
+        // 检查应用更新
+        const hasUpdate = await updateService.checkForUpdate();
+        if (hasUpdate) {
+          setShowUpdateDialog(true);
         }
       } catch (err) {
         console.error("Failed to initialize app:", err);
@@ -115,6 +125,10 @@ const Layout = view(() => {
           <Stack.Screen name="modal" options={{ presentation: "modal" }} />
         </Stack>
         <Toast />
+        <UpdateDialog
+          visible={showUpdateDialog}
+          onClose={() => setShowUpdateDialog(false)}
+        />
         <StatusBar style="auto" />
       </ErrorBoundary>
     </ThemeProvider>
