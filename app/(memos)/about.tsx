@@ -464,6 +464,7 @@ const AboutContent = view(() => {
                 size="sm"
                 onPress={() => setShowUpdateDialog(false)}
                 style={styles.dialogButton}
+                disabled={updateService.downloading}
               >
                 稍后再说
               </Button>
@@ -471,12 +472,13 @@ const AboutContent = view(() => {
                 variant="primary"
                 size="sm"
                 onPress={() => {
-                  updateService.openReleasePage();
-                  setShowUpdateDialog(false);
+                  updateService.downloadAndInstallApk();
                 }}
                 style={styles.dialogButton}
+                loading={updateService.downloading}
+                disabled={updateService.downloading}
               >
-                查看详情
+                {updateService.downloading ? `下载中 ${updateService.downloadProgress}%` : "下载并安装"}
               </Button>
             </View>
           </View>
