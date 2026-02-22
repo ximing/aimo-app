@@ -11,9 +11,10 @@
 /**
  * 解析版本号为可比较的数字数组
  * @param version 版本号字符串，如 "v1.0.0-18" 或 "1.1.0"
+ * @param ignoreBuildNumber 是否忽略构建号，默认为 true
  * @returns [主版本, 次版本, 补丁版本, 构建号]
  */
-export const parseVersion = (version: string): number[] => {
+export const parseVersion = (version: string, ignoreBuildNumber = true): number[] => {
   // 移除 v 前缀
   const cleanVersion = version.replace(/^v/, "");
 
@@ -28,7 +29,7 @@ export const parseVersion = (version: string): number[] => {
   });
 
   // 构建号 (18)
-  const buildNumber = parts[1] ? parseInt(parts[1], 10) : 0;
+  const buildNumber = ignoreBuildNumber ? 0 : parts[1] ? parseInt(parts[1], 10) : 0;
 
   // 返回 [主版本, 次版本, 补丁版本, 构建号]
   return [
@@ -43,14 +44,15 @@ export const parseVersion = (version: string): number[] => {
  * 比较两个版本号
  * @param current 当前版本
  * @param latest 最新版本
- * @returns
- *   - 正数: current < latest (需要升级)
- *   - 0: current === latest (已是最新)
- *   - 负数: current > latest (比最新版本还新)
+ * @param ignoreBuildNumber 是否忽略构建号，默认为 true
  */
-export const compareVersions = (current: string, latest: string): number => {
-  const currentParts = parseVersion(current);
-  const latestParts = parseVersion(latest);
+export const compareVersions = (
+  current: string,
+  latest: string,
+  ignoreBuildNumber = true
+): number => {
+  const currentParts = parseVersion(current, ignoreBuildNumber);
+  const latestParts = parseVersion(latest, ignoreBuildNumber);
 
   // 逐级比较
   for (let i = 0; i < 4; i++) {
