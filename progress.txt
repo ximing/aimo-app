@@ -327,3 +327,27 @@
   - All API functions in api/ are pure async functions that throw errors on failure
 
 ---
+
+## 2026-02-25 - US-003 - Display tags in memo list
+- What was implemented:
+  - Added `tags?: TagDto[]` field to MemoListItemDto interface (types/memo.ts)
+  - Added TagDto import to memo.ts
+  - Updated MemoItem component to display tags in card footer
+  - Tags display as small chips with primary color background
+  - Max 3 tags visible, +N indicator shows for more tags
+  - Uses flexWrap to handle multiple tags properly
+  - Typecheck passes (0 new errors, pre-existing warnings in other files)
+  - Lint passes (0 errors, 19 pre-existing warnings)
+
+- Files changed:
+  - types/memo.ts (added tags field and import)
+  - components/memos/memo-item.tsx (added tag display in card footer)
+
+- **Learnings for future iterations:**
+  - Tag display in list uses same color scheme as TagSelector (primary color with transparency)
+  - MemoItem uses TagDto type directly - no need for additional type alias
+  - Browser verification requires authentication credentials (could not fully test)
+  - When adding tags to existing interfaces, check both the type definition and UI components
+  - Use flexWrap in leftMeta to handle both tags and date in same row
+
+---
