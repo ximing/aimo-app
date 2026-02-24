@@ -13,6 +13,7 @@ import { useTheme } from "@/hooks/use-theme";
 import MemoService from "@/services/memo-service";
 import RelatedMemoService from "@/services/related-memo-service";
 import type { AttachmentDto } from "@/types/memo";
+import type { TagDto } from "@/types/tag";
 import { getFileTypeFromMime } from "@/utils/attachment";
 import { showSuccess } from "@/utils/toast";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -540,6 +541,38 @@ const MemoDetailContent = view(() => {
             </Text>
           </View>
 
+          {/* 标签展示 */}
+          {memo.tags && memo.tags.length > 0 && (
+            <View
+              style={[
+                styles.tagsSection,
+                { borderTopColor: theme.colors.border },
+              ]}
+            >
+              <View style={styles.tagsContainer}>
+                {memo.tags.map((tag: TagDto) => (
+                  <View
+                    key={tag.tagId}
+                    style={[
+                      styles.tagChip,
+                      { backgroundColor: theme.colors.primary + "20" },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.tagText,
+                        { color: theme.colors.primary },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {tag.name}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
           {/* 时间信息 */}
           <View
             style={[
@@ -830,6 +863,25 @@ const styles = StyleSheet.create({
   contentText: {
     fontSize: 15,
     lineHeight: 24,
+  },
+  tagsSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  tagsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  tagChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  tagText: {
+    fontSize: 12,
+    fontWeight: "500",
   },
   timeSection: {
     flexDirection: "row",
