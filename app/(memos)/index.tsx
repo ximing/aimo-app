@@ -13,6 +13,7 @@ import { useTheme } from "@/hooks/use-theme";
 import CategoryService from "@/services/category-service";
 import FilterService from "@/services/filter-service";
 import MemoService from "@/services/memo-service";
+import TagService from "@/services/tag-service";
 import type { Memo } from "@/types/memo";
 import { MaterialIcons } from "@expo/vector-icons";
 import { bindServices, useService } from "@rabjs/react";
@@ -34,6 +35,7 @@ const MemosListContent = () => {
   const memoService = useService(MemoService);
   const categoryService = useService(CategoryService);
   const filterService = useService(FilterService);
+  const tagService = useService(TagService);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [filterDrawerVisible, setFilterDrawerVisible] = useState(false);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
@@ -44,7 +46,8 @@ const MemosListContent = () => {
     memoService.refreshMemos();
     categoryService.initialize();
     filterService.loadFilterPrefs();
-  }, [memoService, categoryService, filterService]);
+    tagService.fetchTags();
+  }, [memoService, categoryService, filterService, tagService]);
 
   // 监听筛选变化，刷新列表
   useEffect(() => {
@@ -54,20 +57,7 @@ const MemosListContent = () => {
     }
   }, [
     filterService.selectedCategoryId,
-    filterService.sortField,
-    filterService.sortOrder,
-    filterService.initialized,
-    memoService,
-  ]);
-
-  // 监听筛选变化，刷新列表
-  useEffect(() => {
-    // 当筛选条件变化时，刷新 memo 列表
-    if (filterService.initialized) {
-      memoService.refreshMemos();
-    }
-  }, [
-    filterService.selectedCategoryId,
+    filterService.selectedTags,
     filterService.sortField,
     filterService.sortOrder,
     filterService.initialized,
@@ -162,6 +152,9 @@ const MemosListContent = () => {
         categories={categoryService.categories}
         selectedCategoryId={filterService.selectedCategoryId}
         onSelectCategory={filterService.setSelectedCategory}
+        tags={tagService.tags}
+        selectedTagIds={filterService.selectedTags}
+        onToggleTag={filterService.toggleTag}
         sortField={filterService.sortField}
         sortOrder={filterService.sortOrder}
         onChangeSort={filterService.setSortOption}

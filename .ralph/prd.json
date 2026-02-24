@@ -68,8 +68,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented with tag section in FilterDrawer, TagService integration, tag selection UI with chips"
     },
     {
       "id": "US-005",
@@ -83,8 +83,8 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented with FilterService.selectedTags array, tagsParam getter, ListMemosParams.tags, and filter change listener"
     },
     {
       "id": "US-006",

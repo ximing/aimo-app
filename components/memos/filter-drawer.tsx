@@ -4,6 +4,7 @@
  *
  * 功能：
  * - 分类筛选（全部分类、无分类、用户自定义分类）
+ * - 标签筛选（多选）
  * - 排序方式（按创建时间/编辑时间，从新到旧/从旧到新）
  * - 点击遮罩或选中后关闭
  *
@@ -14,6 +15,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { CreateCategoryModal } from "@/components/memos";
 import type { SortField, SortOrder } from "@/services/filter-service";
 import type { Category } from "@/types/category";
+import type { TagDto } from "@/types/tag";
 import { MaterialIcons } from "@expo/vector-icons";
 import { view } from "@rabjs/react";
 import React, { useEffect, useRef, useState } from "react";
@@ -22,6 +24,7 @@ import {
   Dimensions,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -37,6 +40,9 @@ interface FilterDrawerProps {
   categories: Category[];
   selectedCategoryId: string | undefined;
   onSelectCategory: (categoryId: string | undefined) => void;
+  tags: TagDto[];
+  selectedTagIds: string[];
+  onToggleTag: (tagId: string) => void;
   sortField: SortField;
   sortOrder: SortOrder;
   onChangeSort: (field: SortField, order: SortOrder) => void;
@@ -49,6 +55,9 @@ export const FilterDrawer = view(
     categories,
     selectedCategoryId,
     onSelectCategory,
+    tags,
+    selectedTagIds,
+    onToggleTag,
     sortField,
     sortOrder,
     onChangeSort,
@@ -343,6 +352,113 @@ export const FilterDrawer = view(
                   新建分类
                 </Text>
               </TouchableOpacity>
+            </View>
+
+            {/* 标签区域 */}
+            <View style={styles.section}>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  { color: theme.colors.foregroundSecondary },
+                ]}
+              >
+                标签
+              </Text>
+
+              {/* 标签按名称排序 */}
+              {(() => {
+                const sortedTags = [...tags].sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+                return sortedTags.length === 0 ? (
+                <Text
+                  style={[
+                    styles.emptyText,
+                    { color: theme.colors.foregroundTertiary },
+                  ]}
+                >
+                  暂无标签
+                </Text>
+              ) : (
+                <ScrollView
+                  horizontal={false}
+                  showsVerticalScrollIndicator={false}
+                  style={styles.tagContainer}
+                >
+                  <View style={styles.tagGrid}>
+                    {sortedTags.map((tag) => {
+                      const isSelected = selectedTagIds.includes(tag.tagId);
+                      return (
+                        <TouchableOpacity
+                          key={tag.tagId}
+                          style={[
+                            styles.tagChip,
+                            isSelected && [
+                              styles.tagChipSelected,
+                              { backgroundColor: theme.colors.primary + "20" },
+                            ],
+                          ]}
+                          onPress={() => onToggleTag(tag.tagId)}
+                        >
+                          <MaterialIcons
+                            name="label"
+                            size={14}
+                            color={
+                              isSelected
+                                ? theme.colors.primary
+                                : theme.colors.foregroundSecondary
+                            }
+                          />
+                          <Text
+                            style={[
+                              styles.tagChipText,
+                              {
+                                color: isSelected
+                                  ? theme.colors.primary
+                                  : theme.colors.foreground,
+                              },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {tag.name}
+                          </Text>
+                          {isSelected && (
+                            <MaterialIcons
+                              name="check"
+                              size={14}
+                              color={theme.colors.primary}
+                            />
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
+              );
+              })()}
+
+              {/* 清除标签筛选按钮 */}
+              {selectedTagIds.length > 0 && (
+                <TouchableOpacity
+                  style={[
+                    styles.optionItem,
+                    styles.clearTagsButton,
+                  ]}
+                  onPress={() => selectedTagIds.forEach(id => onToggleTag(id))}
+                >
+                  <MaterialIcons
+                    name="clear"
+                    size={18}
+                    color={theme.colors.destructive}
+                  />
+                  <Text
+                    style={[
+                      styles.optionText,
+                      { color: theme.colors.destructive },
+                    ]}
+                  >
+                    清除标签筛选
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* 排序区域 */}
@@ -680,5 +796,40 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 13,
     textAlign: "center",
+  },
+  emptyText: {
+    fontSize: 14,
+    textAlign: "center",
+    paddingVertical: 12,
+  },
+  tagContainer: {
+    maxHeight: 150,
+  },
+  tagGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  tagChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "transparent",
+    marginBottom: 4,
+  },
+  tagChipSelected: {
+    borderRadius: 16,
+  },
+  tagChipText: {
+    fontSize: 13,
+    marginLeft: 4,
+    marginRight: 2,
+  },
+  clearTagsButton: {
+    marginTop: 8,
   },
 });

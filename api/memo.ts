@@ -36,6 +36,7 @@ export const getMemos = async (
   if (params?.categoryId) queryParams.append("categoryId", params.categoryId);
   if (params?.startDate) queryParams.append("startDate", params.startDate);
   if (params?.endDate) queryParams.append("endDate", params.endDate);
+  if (params?.tags) queryParams.append("tags", params.tags);
 
   const queryString = queryParams.toString();
   const url = queryString ? `/memos?${queryString}` : "/memos";

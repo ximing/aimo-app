@@ -80,6 +80,7 @@ export interface ListMemosParams {
   categoryId?: string;
   startDate?: string;
   endDate?: string;
+  tags?: string; // 逗号分隔的标签ID列表
 }
 
 export interface MemoListResponse extends PaginatedResponse<Memo> {

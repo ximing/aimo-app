@@ -34,6 +34,7 @@ class MemoService extends Service {
 
   // 筛选相关属性（从 FilterService 同步）
   categoryFilter: string | undefined = undefined;
+  tagsFilter: string = '';
   sortField: SortField = "createdAt";
   sortOrder: SortOrder = "desc";
 
@@ -53,6 +54,7 @@ class MemoService extends Service {
    */
   private syncFilterState(): void {
     this.categoryFilter = this.filterService.selectedCategoryId;
+    this.tagsFilter = this.filterService.tagsParam;
     this.sortField = this.filterService.sortField;
     this.sortOrder = this.filterService.sortOrder;
   }
@@ -63,6 +65,7 @@ class MemoService extends Service {
   private getFilterParams(): Partial<ListMemosParams> {
     return {
       categoryId: this.categoryFilter,
+      tags: this.tagsFilter || undefined,
       sortBy: this.sortField,
       sortOrder: this.sortOrder,
     };

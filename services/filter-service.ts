@@ -5,6 +5,7 @@
  *
  * 功能：
  * - 分类筛选（全部分类、无分类、特定分类）
+ * - 标签筛选（多选）
  * - 排序字段（创建时间、编辑时间）
  * - 排序方向（从新到旧、从旧到新）
  * - 持久化筛选偏好
@@ -20,6 +21,7 @@ export type SortOrder = 'asc' | 'desc';
 
 export interface FilterPrefs {
   selectedCategoryId: string | undefined;
+  selectedTags: string[]; // 选中的标签ID数组
   sortField: SortField;
   sortOrder: SortOrder;
 }
@@ -32,6 +34,11 @@ class FilterService extends Service {
    * - string: 特定分类 ID
    */
   selectedCategoryId: string | undefined = undefined;
+
+  /**
+   * 选中的标签 ID 数组（多选）
+   */
+  selectedTags: string[] = [];
 
   /**
    * 排序字段
@@ -61,6 +68,7 @@ class FilterService extends Service {
       if (savedPrefs) {
         const prefs: FilterPrefs = JSON.parse(savedPrefs);
         this.selectedCategoryId = prefs.selectedCategoryId;
+        this.selectedTags = Array.isArray(prefs.selectedTags) ? prefs.selectedTags : [];
         this.sortField = this.isValidSortField(prefs.sortField) ? prefs.sortField : 'createdAt';
         this.sortOrder = this.isValidSortOrder(prefs.sortOrder) ? prefs.sortOrder : 'desc';
       }
@@ -80,6 +88,7 @@ class FilterService extends Service {
     try {
       const prefs: FilterPrefs = {
         selectedCategoryId: this.selectedCategoryId,
+        selectedTags: this.selectedTags,
         sortField: this.sortField,
         sortOrder: this.sortOrder,
       };
@@ -96,6 +105,51 @@ class FilterService extends Service {
   async setSelectedCategory(categoryId: string | undefined): Promise<void> {
     this.selectedCategoryId = categoryId;
     await this.saveFilterPrefs();
+  }
+
+  /**
+   * 切换标签选中状态
+   * @param tagId - 标签 ID
+   */
+  async toggleTag(tagId: string): Promise<void> {
+    const index = this.selectedTags.indexOf(tagId);
+    if (index === -1) {
+      this.selectedTags = [...this.selectedTags, tagId];
+    } else {
+      this.selectedTags = this.selectedTags.filter(id => id !== tagId);
+    }
+    await this.saveFilterPrefs();
+  }
+
+  /**
+   * 设置选中的标签（多选）
+   * @param tagIds - 标签 ID 数组
+   */
+  async setSelectedTags(tagIds: string[]): Promise<void> {
+    this.selectedTags = tagIds;
+    await this.saveFilterPrefs();
+  }
+
+  /**
+   * 清除所有选中的标签
+   */
+  async clearSelectedTags(): Promise<void> {
+    this.selectedTags = [];
+    await this.saveFilterPrefs();
+  }
+
+  /**
+   * 获取标签筛选参数的 API 字符串（逗号分隔）
+   */
+  get tagsParam(): string {
+    return this.selectedTags.length > 0 ? this.selectedTags.join(',') : '';
+  }
+
+  /**
+   * 判断是否有标签被选中
+   */
+  get hasTagsSelected(): boolean {
+    return this.selectedTags.length > 0;
   }
 
   /**
@@ -132,6 +186,7 @@ class FilterService extends Service {
    */
   async resetToDefaults(): Promise<void> {
     this.selectedCategoryId = undefined;
+    this.selectedTags = [];
     this.sortField = 'createdAt';
     this.sortOrder = 'desc';
     await this.saveFilterPrefs();
@@ -155,13 +210,21 @@ class FilterService extends Service {
    * 获取当前筛选条件的显示名称
    */
   get filterDisplayName(): string {
+    const parts: string[] = [];
+
+    if (this.hasTagsSelected) {
+      parts.push(`${this.selectedTags.length}个标签`);
+    }
+
     if (this.isAllCategoriesSelected) {
-      return '全部分类';
+      // categories = '全部分类'
+    } else if (this.isUncategorizedSelected) {
+      parts.push('无分类');
+    } else {
+      parts.push('特定分类');
     }
-    if (this.isUncategorizedSelected) {
-      return '无分类';
-    }
-    return '特定分类';
+
+    return parts.length > 0 ? parts.join(' · ') : '全部分类';
   }
 
   /**
