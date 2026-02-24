@@ -304,3 +304,26 @@
   - SearchService.push() to add new items to existing results array
 
 ---
+
+## 2026-02-25 - US-001 - Create TagService for tag state management
+- What was implemented:
+  - Created types/tag.ts with TagDto interface and related types (CreateTagRequest, UpdateTagRequest, TagsListResponse, TagResponse)
+  - Created api/tag.ts with getTags, getTag, createTag, updateTag, deleteTag functions
+  - Created services/tag-service.ts extending @rabjs/react Service
+  - Service manages tags array, loading state, and error state
+  - Implements fetchTags() and createTag(name) methods
+  - Typecheck passes (0 errors, 18 pre-existing warnings)
+
+- Files changed:
+  - types/tag.ts (new)
+  - api/tag.ts (new)
+  - services/tag-service.ts (new)
+
+- **Learnings for future iterations:**
+  - Tag API endpoints follow RESTful pattern: GET/POST /api/v1/tags, GET/PUT/DELETE /api/v1/tags/:tagId
+  - TagService follows same Service pattern as MemoService and FilterService
+  - API response uses code/message/data structure, throw errors for non-zero codes
+  - TagDto contains: tagId, uid, name, createdAt, updatedAt
+  - All API functions in api/ are pure async functions that throw errors on failure
+
+---
