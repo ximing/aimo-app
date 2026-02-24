@@ -14,6 +14,7 @@ import type {
   SearchMemosParams,
   SearchMemosResponse,
   UpdateMemoRequest,
+  UpdateMemoTagsRequest,
   VectorSearchRequest,
   VectorSearchResponse,
 } from "@/types/memo";
@@ -90,6 +91,23 @@ export const updateMemo = async (
 
   if (response.code !== 0) {
     throw new Error(response.message || "更新笔记失败");
+  }
+
+  return response.data.memo;
+};
+
+/**
+ * 更新笔记标签
+ * PUT /api/v1/memos/:memoId/tags
+ */
+export const updateMemoTags = async (
+  memoId: string,
+  params: UpdateMemoTagsRequest,
+): Promise<Memo> => {
+  const response = await apiPut<MemoResponse>(`/memos/${memoId}/tags`, params);
+
+  if (response.code !== 0) {
+    throw new Error(response.message || "更新笔记标签失败");
   }
 
   return response.data.memo;

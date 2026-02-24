@@ -56,6 +56,8 @@ export interface CreateMemoRequest {
   categoryId?: string;
   attachments?: string[];
   relations?: string[];
+  tags?: string[]; // 标签名称列表（新建标签）
+  tagIds?: string[]; // 标签 ID 列表（已有标签）
   createdAt?: number;
   updatedAt?: number;
 }
@@ -69,6 +71,14 @@ export interface UpdateMemoRequest {
   categoryId?: string;
   attachments?: string[];
   relations?: string[];
+}
+
+/**
+ * 更新笔记标签请求
+ */
+export interface UpdateMemoTagsRequest {
+  tags?: string[]; // 标签名称列表（新建标签）
+  tagIds?: string[]; // 标签 ID 列表（已有标签）
 }
 
 export interface ListMemosParams {

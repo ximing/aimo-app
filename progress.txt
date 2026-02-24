@@ -351,3 +351,61 @@
   - Use flexWrap in leftMeta to handle both tags and date in same row
 
 ---
+
+## 2026-02-25 - US-004, US-005 - Tag Filter in FilterDrawer and Multi-Select Filter Logic
+- What was implemented:
+  - Added tags parameter to ListMemosParams type (types/memo.ts)
+  - Updated getMemos API to pass tags query parameter (api/memo.ts)
+  - Added selectedTags array to FilterService with toggleTag, setSelectedTags, clearSelectedTags methods
+  - Added tagsParam getter to FilterService for comma-separated API string
+  - Added hasTagsSelected getter and updated filterDisplayName to show tag count
+  - Updated MemoService to sync tags filter and pass to API
+  - Added tag filter UI to FilterDrawer with sorted tag chips
+  - Added clear tags button to reset tag filters
+  - Added filter change listener for selectedTags in memos index page
+
+- Files changed:
+  - types/memo.ts (added tags parameter)
+  - api/memo.ts (added tags query param)
+  - services/filter-service.ts (added selectedTags, toggleTag, setSelectedTags, clearSelectedTags, tagsParam)
+  - services/memo-service.ts (added tagsFilter sync)
+  - components/memos/filter-drawer.tsx (added tag filter UI with chips)
+  - app/(memos)/index.tsx (integrated TagService, added filter listener)
+
+- **Learnings for future iterations:**
+  - FilterService.selectedTags stores tag IDs as string array, tagsParam getter joins with comma for API
+  - Use IIFE in JSX for sorted tags without mutating original array
+  - Tag filter UI uses chip-style with label icon, selected state shows check mark
+  - Filter change listener includes filterService.selectedTags to trigger refresh on tag toggle
+  - Clear tags button iterates through selectedTagIds and calls toggleTag for each to clear all
+  - Tags in FilterDrawer are sorted using localeCompare with 'zh-CN' for Chinese sorting
+
+---
+
+## 2026-02-25 - US-006 - 创建笔记页面添加标签选择
+- What was implemented:
+  - Added tags and tagIds to CreateMemoRequest type (types/memo.ts)
+  - Added UpdateMemoTagsRequest type for updating memo tags
+  - Added updateMemoTags API function (api/memo.ts) for PUT /api/v1/memos/:memoId/tags
+  - Integrated TagSelector component in create.tsx with selectedTags state
+  - Added TagService to bindServices call for accessing tags
+  - Added tag selection UI section between content input and media preview
+  - For create mode: passes tags (new tag names) and tagIds (existing tags) to createMemo API
+  - For edit mode: after updating memo content, also calls updateMemoTags to sync tag changes
+  - Loads existing tags when editing a memo
+
+- Files changed:
+  - types/memo.ts (added tags, tagIds to CreateMemoRequest, added UpdateMemoTagsRequest)
+  - api/memo.ts (added updateMemoTags function, added UpdateMemoTagsRequest import)
+  - app/(memos)/create.tsx (integrated TagSelector, added selectedTags state, updated handleSubmit)
+
+- **Learnings for future iterations:**
+  - TagSelector expects selectedTags array and onChange callback
+  - Separate new tags (only names, no tagId) from existing tags (have tagId) for API
+  - CreateMemoRequest accepts both tags (new tag names) and tagIds (existing tag IDs)
+  - Edit mode uses separate updateMemoTags API endpoint after updating memo content
+  - Memo type already has tags field from MemoListItemDto
+  - TagService needs to be bound to the page for TagSelector to work (autoFetch option)
+  - UI section title uses sectionTitle style with marginBottom for spacing
+
+---

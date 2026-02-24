@@ -4,16 +4,19 @@
  */
 
 import { deleteLocalFile, uploadAttachment } from "@/api/attachment";
-import { createMemo, updateMemo } from "@/api/memo";
+import { createMemo, updateMemo, updateMemoTags } from "@/api/memo";
 import { MediaPreview } from "@/components/memos/media-preview";
 import { VoiceRecorderModal } from "@/components/memos/voice-recorder-modal";
+import { TagSelector } from "@/components/ui/tag-selector";
 import { useMediaPicker } from "@/hooks/use-media-picker";
 import { useTheme } from "@/hooks/use-theme";
 import MemoService from "@/services/memo-service";
+import TagService from "@/services/tag-service";
 import VoiceMemoService from "@/services/voice-memo-service";
 import { showError, showSuccess } from "@/utils/toast";
 import { MaterialIcons } from "@expo/vector-icons";
 import { bindServices, useService, view } from "@rabjs/react";
+import type { TagDto } from "@/types/tag";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Camera, Check, Image, Mic, Video, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
@@ -35,6 +38,7 @@ const CreateMemoContent = view(() => {
   const insets = useSafeAreaInsets();
   const memoService = useService(MemoService);
   const voiceMemoService = useService(VoiceMemoService);
+  const tagService = useService(TagService);
   const {
     memoId: queryMemoId,
     imageUri: queryImageUri,
@@ -65,6 +69,7 @@ const CreateMemoContent = view(() => {
   const [isLoading, setIsLoading] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [audioUri, setAudioUri] = useState<string | null>(null);
+  const [selectedTags, setSelectedTags] = useState<TagDto[]>([]);
   const [voiceRecorderVisible, setVoiceRecorderVisible] = useState(false);
 
   // 初始化加载编辑数据
@@ -78,6 +83,7 @@ const CreateMemoContent = view(() => {
           if (memo && memo.memoId === queryMemoId) {
             // 使用已缓存的数据
             setContent(memo.content);
+            setSelectedTags(memo.tags || []);
             setIsEditMode(true);
           } else {
             // 需要重新加载数据
@@ -85,6 +91,7 @@ const CreateMemoContent = view(() => {
             const freshMemo = memoService.currentMemo;
             if (freshMemo) {
               setContent(freshMemo.content);
+              setSelectedTags(freshMemo.tags || []);
               setIsEditMode(true);
             }
           }
@@ -232,6 +239,12 @@ const CreateMemoContent = view(() => {
       // 构建 memo 内容
       const memoContent = content.trim();
 
+      // 分离新标签（只有名称）和已有标签（有tagId）
+      const newTags = selectedTags.filter((t) => !t.tagId).map((t) => t.name);
+      const existingTagIds = selectedTags
+        .filter((t) => !!t.tagId)
+        .map((t) => t.tagId as string);
+
       // 判断是否有音频类型的附件
       const hasAudio =
         selectedMedia.some((media) => media.type === "audio") || !!audioUri;
@@ -245,6 +258,13 @@ const CreateMemoContent = view(() => {
         });
 
         console.log("Memo updated:", memo);
+
+        // 更新标签
+        await updateMemoTags(queryMemoId, {
+          tags: newTags.length > 0 ? newTags : undefined,
+          tagIds: existingTagIds.length > 0 ? existingTagIds : undefined,
+        });
+
         showSuccess("编辑成功");
 
         // 刷新列表和详情
@@ -256,6 +276,8 @@ const CreateMemoContent = view(() => {
           content: memoContent,
           type: hasAudio ? "audio" : "text",
           attachments: attachmentIds.length > 0 ? attachmentIds : undefined,
+          tags: newTags.length > 0 ? newTags : undefined,
+          tagIds: existingTagIds.length > 0 ? existingTagIds : undefined,
         });
 
         console.log("Memo created:", memo);
@@ -383,6 +405,32 @@ const CreateMemoContent = view(() => {
           value={content}
           multiline
           scrollEnabled
+        />
+      </View>
+
+      {/* 标签选择器 */}
+      <View
+        style={[
+          styles.tagSection,
+          {
+            backgroundColor: theme.colors.background,
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.sectionTitle,
+            { color: theme.colors.foregroundSecondary },
+          ]}
+        >
+          标签
+        </Text>
+        <TagSelector
+          selectedTags={selectedTags}
+          onChange={setSelectedTags}
+          disabled={submitting}
         />
       </View>
 
@@ -543,7 +591,7 @@ const CreateMemoContent = view(() => {
   );
 });
 
-export default bindServices(CreateMemoContent, [VoiceMemoService]);
+export default bindServices(CreateMemoContent, [MemoService, TagService, VoiceMemoService]);
 
 const styles = StyleSheet.create({
   container: {
@@ -629,5 +677,15 @@ const styles = StyleSheet.create({
   },
   transcriptionStatusText: {
     fontSize: 13,
+  },
+  // 标签选择器
+  tagSection: {
+    borderTopWidth: 1,
+    borderTopColor: "rgba(128, 128, 128, 0.2)",
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: "500",
+    marginBottom: 8,
   },
 });
