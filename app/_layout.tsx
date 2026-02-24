@@ -20,9 +20,11 @@ import MemoService from "@/services/memo-service";
 import SearchService from "@/services/search-service";
 import ThemeService from "@/services/theme-service";
 import UpdateService from "@/services/update-service";
+import TagService from "@/services/tag-service";
 
 register(AuthService);
 register(CategoryService);
+register(TagService);
 register(FilterService);
 register(MemoService);
 register(SearchService);
