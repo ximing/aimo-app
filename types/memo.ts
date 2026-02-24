@@ -4,6 +4,7 @@
  */
 
 import type { PaginatedResponse } from "@/types/common";
+import type { TagDto } from "./tag";
 
 /**
  * 附件数据传输对象
@@ -30,6 +31,7 @@ export interface MemoListItemDto {
   categoryId?: string;
   attachments?: AttachmentDto[];
   relations?: MemoListItemDto[];
+  tags?: TagDto[];
   createdAt: number;
   updatedAt: number;
 }

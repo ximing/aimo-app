@@ -8,6 +8,7 @@ import { AttachmentGrid, ImageViewer, VideoPlayer } from "@/components/memos";
 import { useTheme } from "@/hooks/use-theme";
 import MemoService from "@/services/memo-service";
 import type { AttachmentDto, Memo } from "@/types/memo";
+import type { TagDto } from "@/types/tag";
 import { getFileTypeFromMime } from "@/utils/attachment";
 import { showSuccess, showError } from "@/utils/toast";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -409,6 +410,40 @@ const soundRef = useRef<Audio.Sound | null>(null);
         <View style={styles.cardFooter}>
           <View style={styles.metaInfo}>
             <View style={styles.leftMeta}>
+              {/* 标签展示 */}
+              {memo.tags && memo.tags.length > 0 && (
+                <View style={styles.tagsContainer}>
+                  {memo.tags.slice(0, 3).map((tag: TagDto) => (
+                    <View
+                      key={tag.tagId}
+                      style={[
+                        styles.tagChip,
+                        { backgroundColor: theme.colors.primary + "20" },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.tagText,
+                          { color: theme.colors.primary },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {tag.name}
+                      </Text>
+                    </View>
+                  ))}
+                  {memo.tags.length > 3 && (
+                    <Text
+                      style={[
+                        styles.tagMore,
+                        { color: theme.colors.foregroundTertiary },
+                      ]}
+                    >
+                      +{memo.tags.length - 3}
+                    </Text>
+                  )}
+                </View>
+              )}
               <Text
                 style={[
                   styles.date,
@@ -736,6 +771,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  tagsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 4,
+  },
+  tagChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  tagText: {
+    fontSize: 11,
+    fontWeight: "500",
+  },
+  tagMore: {
+    fontSize: 11,
+    fontWeight: "500",
   },
   date: {
     fontSize: 12,
