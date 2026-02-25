@@ -4,11 +4,11 @@
  */
 
 import type {
-  CreateTagRequest,
-  TagDto,
-  TagResponse,
-  TagsListResponse,
-  UpdateTagRequest,
+    CreateTagRequest,
+    TagDto,
+    TagResponse,
+    TagsListResponse,
+    UpdateTagRequest,
 } from "@/types/tag";
 import { apiDelete, apiGet, apiPost, apiPut } from "./common";
 
@@ -20,7 +20,7 @@ export const getTags = async (): Promise<TagDto[]> => {
   const response = await apiGet<TagsListResponse>("/tags");
 
   if (response.code !== 0) {
-    throw new Error(response.message || "获取标签列表失败");
+    throw new Error(response.msg || "获取标签列表失败");
   }
 
   return response.data.tags;
@@ -34,7 +34,7 @@ export const getTag = async (tagId: string): Promise<TagDto> => {
   const response = await apiGet<TagResponse>(`/tags/${tagId}`);
 
   if (response.code !== 0) {
-    throw new Error(response.message || "获取标签失败");
+    throw new Error(response.msg || "获取标签失败");
   }
 
   return response.data.tag;
@@ -48,7 +48,7 @@ export const createTag = async (params: CreateTagRequest): Promise<TagDto> => {
   const response = await apiPost<TagResponse>("/tags", params);
 
   if (response.code !== 0) {
-    throw new Error(response.message || "创建标签失败");
+    throw new Error(response.msg || "创建标签失败");
   }
 
   return response.data.tag;
@@ -65,7 +65,7 @@ export const updateTag = async (
   const response = await apiPut<TagResponse>(`/tags/${tagId}`, params);
 
   if (response.code !== 0) {
-    throw new Error(response.message || "更新标签失败");
+    throw new Error(response.msg || "更新标签失败");
   }
 
   return response.data.tag;
@@ -79,6 +79,6 @@ export const deleteTag = async (tagId: string): Promise<void> => {
   const response = await apiDelete<{ message: string }>(`/tags/${tagId}`);
 
   if (response.code !== 0) {
-    throw new Error(response.message || "删除标签失败");
+    throw new Error(response.msg || "删除标签失败");
   }
 };

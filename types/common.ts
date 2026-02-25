@@ -7,7 +7,7 @@
  */
 export interface ApiResponse<T = any> {
   code: number;
-  message: string;
+  msg: string;
   data: T;
 }
 
@@ -63,7 +63,7 @@ export interface ApiError {
  */
 
 export interface ApiRequestOptions {
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
   headers?: Record<string, string>;
   body?: any;
   isFormData?: boolean;

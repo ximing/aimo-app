@@ -18,7 +18,7 @@ export const parseImage = async (files: string[]): Promise<OcrResult[]> => {
   });
 
   if (response.code !== 0) {
-    throw new Error(response.message || "OCR 识别失败");
+    throw new Error(response.msg || "OCR 识别失败");
   }
 
   return response.data.results;

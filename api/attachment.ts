@@ -14,16 +14,14 @@ import type {
 import {
   apiDelete,
   apiGet,
+  apiPatch,
   apiPost,
   BASE_URL,
   createFormData,
   getToken,
 } from "./common";
 // expo-file-system legacy API
-import {
-  FileSystemUploadType,
-  uploadAsync,
-} from "expo-file-system/legacy";
+import { FileSystemUploadType, uploadAsync } from "expo-file-system/legacy";
 
 /**
  * 获取附件列表
@@ -43,7 +41,7 @@ export const getAttachments = async (
   const response = await apiGet<AttachmentsListResponse>(url);
 
   if (response.code !== 0) {
-    throw new Error(response.message || "获取附件列表失败");
+    throw new Error(response.msg || "获取附件列表失败");
   }
 
   return response.data;
@@ -59,7 +57,7 @@ export const getAttachment = async (
   const response = await apiGet<Attachment>(`/attachments/${attachmentId}`);
 
   if (response.code !== 0) {
-    throw new Error(response.message || "获取附件信息失败");
+    throw new Error(response.msg || "获取附件信息失败");
   }
 
   return response.data;
@@ -112,7 +110,7 @@ export const uploadAttachment = async (
   );
 
   if (response.code !== 0) {
-    throw new Error(response.message || "上传附件失败");
+    throw new Error(response.msg || "上传附件失败");
   }
 
   return response.data.attachment;
@@ -149,7 +147,7 @@ const uploadWithXHR = async (
         typeof result.body === "string" ? JSON.parse(result.body) : result.body;
 
       if (response.code !== 0) {
-        throw new Error(response.message || "上传附件失败");
+        throw new Error(response.msg || "上传附件失败");
       }
 
       return response.data.attachment;
@@ -172,7 +170,7 @@ export const deleteAttachment = async (attachmentId: string): Promise<void> => {
   );
 
   if (response.code !== 0) {
-    throw new Error(response.message || "删除附件失败");
+    throw new Error(response.msg || "删除附件失败");
   }
 };
 
@@ -287,11 +285,11 @@ export const getAttachmentUrl = (attachmentId: string): string => {
  */
 export const deleteLocalFile = async (uri: string): Promise<void> => {
   try {
-    const { deleteAsync } = await import('expo-file-system/legacy');
+    const { deleteAsync } = await import("expo-file-system/legacy");
     await deleteAsync(uri);
-    console.log('Local file deleted:', uri);
+    console.log("Local file deleted:", uri);
   } catch (error) {
-    console.warn('Failed to delete local file:', error);
+    console.warn("Failed to delete local file:", error);
     // 不抛出错误，只是警告
   }
 };
@@ -316,7 +314,7 @@ export const updateAttachmentProperties = async (
   );
 
   if (response.code !== 0) {
-    throw new Error(response.message || "更新附件属性失败");
+    throw new Error(response.msg || "更新附件属性失败");
   }
 
   return response.data;

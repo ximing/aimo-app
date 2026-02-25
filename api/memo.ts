@@ -4,19 +4,19 @@
  */
 
 import type {
-  BacklinksResponse,
-  CreateMemoRequest,
-  ListMemosParams,
-  Memo,
-  MemoListResponse,
-  MemoResponse,
-  RelatedMemosResponse,
-  SearchMemosParams,
-  SearchMemosResponse,
-  UpdateMemoRequest,
-  UpdateMemoTagsRequest,
-  VectorSearchRequest,
-  VectorSearchResponse,
+    BacklinksResponse,
+    CreateMemoRequest,
+    ListMemosParams,
+    Memo,
+    MemoListResponse,
+    MemoResponse,
+    RelatedMemosResponse,
+    SearchMemosParams,
+    SearchMemosResponse,
+    UpdateMemoRequest,
+    UpdateMemoTagsRequest,
+    VectorSearchRequest,
+    VectorSearchResponse,
 } from "@/types/memo";
 import { apiDelete, apiGet, apiPost, apiPut } from "./common";
 
@@ -45,7 +45,7 @@ export const getMemos = async (
   const response = await apiGet<MemoListResponse>(url);
 
   if (response.code !== 0) {
-    throw new Error(response.message || "获取笔记列表失败");
+    throw new Error(response.msg || "获取笔记列表失败");
   }
 
   return response.data;
@@ -59,7 +59,7 @@ export const getMemo = async (memoId: string): Promise<Memo> => {
   const response = await apiGet<Memo>(`/memos/${memoId}`);
 
   if (response.code !== 0) {
-    throw new Error(response.message || "获取笔记失败");
+    throw new Error(response.msg || "获取笔记失败");
   }
 
   return response.data;
@@ -73,7 +73,7 @@ export const createMemo = async (params: CreateMemoRequest): Promise<Memo> => {
   const response = await apiPost<MemoResponse>("/memos", params);
 
   if (response.code !== 0) {
-    throw new Error(response.message || "创建笔记失败");
+    throw new Error(response.msg || "创建笔记失败");
   }
 
   return response.data.memo;
@@ -90,7 +90,7 @@ export const updateMemo = async (
   const response = await apiPut<MemoResponse>(`/memos/${memoId}`, params);
 
   if (response.code !== 0) {
-    throw new Error(response.message || "更新笔记失败");
+    throw new Error(response.msg || "更新笔记失败");
   }
 
   return response.data.memo;
@@ -107,7 +107,7 @@ export const updateMemoTags = async (
   const response = await apiPut<MemoResponse>(`/memos/${memoId}/tags`, params);
 
   if (response.code !== 0) {
-    throw new Error(response.message || "更新笔记标签失败");
+    throw new Error(response.msg || "更新笔记标签失败");
   }
 
   return response.data.memo;
@@ -121,7 +121,7 @@ export const deleteMemo = async (memoId: string): Promise<void> => {
   const response = await apiDelete<{ message: string }>(`/memos/${memoId}`);
 
   if (response.code !== 0) {
-    throw new Error(response.message || "删除笔记失败");
+    throw new Error(response.msg || "删除笔记失败");
   }
 };
 
@@ -139,7 +139,7 @@ export const searchMemosByVector = async (
   });
 
   if (response.code !== 0) {
-    throw new Error(response.message || "向量搜索失败");
+    throw new Error(response.msg || "向量搜索失败");
   }
 
   return response.data;
@@ -167,7 +167,7 @@ export const getRelatedMemos = async (
   const response = await apiGet<RelatedMemosResponse>(url);
 
   if (response.code !== 0) {
-    throw new Error(response.message || "获取相关笔记失败");
+    throw new Error(response.msg || "获取相关笔记失败");
   }
 
   return response.data;
@@ -192,7 +192,7 @@ export const getBacklinks = async (
   const response = await apiGet<BacklinksResponse>(url);
 
   if (response.code !== 0) {
-    throw new Error(response.message || "获取反向链接失败");
+    throw new Error(response.msg || "获取反向链接失败");
   }
 
   return response.data;
@@ -233,7 +233,7 @@ export const searchMemos = async (
   const response = await apiPost<SearchMemosResponse>(url, body);
 
   if (response.code !== 0) {
-    throw new Error(response.message || "搜索笔记失败");
+    throw new Error(response.msg || "搜索笔记失败");
   }
 
   return response.data;

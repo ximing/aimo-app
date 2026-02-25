@@ -12,6 +12,7 @@ import "react-native-reanimated";
 
 import { getTokenAsync, onUnauthorized, saveToken } from "@/api/common";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { SplashScreen } from "@/components/splash-screen";
 import { Toast, UpdateDialog } from "@/components/ui";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import AuthService from "@/services/auth-service";
@@ -113,7 +114,7 @@ const Layout = view(() => {
   }, [authService.isAuthenticated, isInitialized]);
 
   if (!isInitialized) {
-    return null;
+    return <SplashScreen />;
   }
 
   return (

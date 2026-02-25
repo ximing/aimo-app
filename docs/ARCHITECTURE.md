@@ -54,24 +54,29 @@ aimo-app/
 **职责**: 直接调用 HTTP 接口，处理请求和响应
 
 **特点**:
+
 - 纯函数，无状态
 - 直接返回数据或抛出错误
 - 自动处理 token 附加
 - 支持 FormData 上传
 
 **示例**:
+
 ```typescript
 // api/memo.ts
-export const getMemos = async (params?: ListMemosParams): Promise<MemoListResponse> => {
-  const response = await apiGet<MemoListResponse>('/memos?...');
+export const getMemos = async (
+  params?: ListMemosParams,
+): Promise<MemoListResponse> => {
+  const response = await apiGet<MemoListResponse>("/memos?...");
   if (response.code !== 0) {
-    throw new Error(response.message);
+    throw new Error(response.msg);
   }
   return response.data;
 };
 ```
 
 **使用场景**:
+
 - 直接在组件中使用（简单页面）
 - 在 Service 中使用（推荐）
 - 在 Hook 中使用
@@ -81,11 +86,13 @@ export const getMemos = async (params?: ListMemosParams): Promise<MemoListRespon
 **职责**: 定义所有的 TypeScript 类型
 
 **特点**:
+
 - 按模块分离（一个 API 文档对应一个类型文件）
 - 明确区分请求和响应类型
 - 导出所有类型供外部使用
 
 **示例**:
+
 ```typescript
 // types/memo.ts
 export interface Memo {
@@ -105,12 +112,14 @@ export interface CreateMemoRequest {
 **职责**: 业务逻辑处理和状态管理
 
 **特点**:
+
 - 基于 `@rabjs/react` 的 Service 模式
 - 管理组件状态（loading、error、数据）
 - 响应式属性自动触发重新渲染
 - 支持依赖注入
 
 **示例**:
+
 ```typescript
 // services/memo-service.ts
 class MemoService extends Service {
@@ -132,10 +141,12 @@ class MemoService extends Service {
 ### 4. 应用层和 UI 层
 
 **应用层** (`app/`):
+
 - 路由配置
 - 页面布局
 
 **UI 层** (`components/`):
+
 - 可复用的 UI 组件
 - 使用 Service 获取数据
 
@@ -196,7 +207,7 @@ class MemoService extends Service {
 // 2. 组件中使用 Service
 const MemoList = view(() => {
   const memoService = useService(MemoService);
-  
+
   return (
     <View>
       {memoService.loading && <Text>加载中...</Text>}
@@ -242,10 +253,10 @@ class MemoService extends Service {
 ```typescript
 class MemoService extends Service {
   async fetchMemos() {
-    this.loading = true;    // 进入加载状态
+    this.loading = true; // 进入加载状态
     try {
       this.memos = await getMemos();
-      this.error = null;    // 清除错误
+      this.error = null; // 清除错误
     } catch (error) {
       this.error = error.message;
     } finally {
@@ -261,12 +272,12 @@ class MemoService extends Service {
 
 ```typescript
 export const getMemos = async (): Promise<Memo[]> => {
-  const response = await apiGet<MemoListResponse>('/memos');
-  
+  const response = await apiGet<MemoListResponse>("/memos");
+
   if (response.code !== 0) {
-    throw new Error(response.message); // 抛出错误让上层处理
+    throw new Error(response.msg); // 抛出错误让上层处理
   }
-  
+
   return response.data.items;
 };
 ```
@@ -293,7 +304,7 @@ class MemoService extends Service {
 ```typescript
 const MemoList = view(() => {
   const memoService = useService(MemoService);
-  
+
   return (
     <View>
       {memoService.error && (
@@ -309,15 +320,17 @@ const MemoList = view(() => {
 ### 1. 保持 API 函数纯净
 
 ✅ 好的做法：
+
 ```typescript
 export const getMemos = async () => {
-  const response = await apiGet('/memos');
-  if (response.code !== 0) throw new Error(response.message);
+  const response = await apiGet("/memos");
+  if (response.code !== 0) throw new Error(response.msg);
   return response.data;
 };
 ```
 
 ❌ 避免：
+
 ```typescript
 // 不要在 API 层管理状态
 let loading = false;
@@ -330,6 +343,7 @@ export const getMemos = async () => {
 ### 2. Service 中处理状态
 
 ✅ 好的做法：
+
 ```typescript
 class MemoService extends Service {
   memos = [];
@@ -347,6 +361,7 @@ class MemoService extends Service {
 ```
 
 ❌ 避免：
+
 ```typescript
 // 不要在组件中处理所有状态
 const [memos, setMemos] = useState([]);
@@ -386,11 +401,12 @@ export function useMemos() {
 所有 API 配置都在 `api/common.ts` 中：
 
 ```typescript
-export const BASE_URL = 'https://memo.aisoil.fun/api/v1';
-export const TOKEN_KEY = 'aimo_token';
+export const BASE_URL = "https://memo.aisoil.fun/api/v1";
+export const TOKEN_KEY = "aimo_token";
 ```
 
 如需修改：
+
 1. 编辑 `api/common.ts`
 2. 其他文件会自动使用新配置
 
@@ -399,6 +415,7 @@ export const TOKEN_KEY = 'aimo_token';
 当需要添加新的 API 时，按以下步骤：
 
 1. **创建类型文件** (`types/newApi.ts`):
+
 ```typescript
 export interface NewItem {
   id: string;
@@ -412,21 +429,24 @@ export interface ListNewItemsResponse {
 ```
 
 2. **创建 API 文件** (`api/newApi.ts`):
+
 ```typescript
 export const getNewItems = async (): Promise<NewItem[]> => {
-  const response = await apiGet<ListNewItemsResponse>('/newItems');
-  if (response.code !== 0) throw new Error(response.message);
+  const response = await apiGet<ListNewItemsResponse>("/newItems");
+  if (response.code !== 0) throw new Error(response.msg);
   return response.data.items;
 };
 ```
 
 3. **导出到 API 入口** (`api/index.ts`):
+
 ```typescript
-export * from './newApi';
-export type * from '@/types/newApi';
+export * from "./newApi";
+export type * from "@/types/newApi";
 ```
 
 4. **创建 Service**（如需要）:
+
 ```typescript
 class NewItemService extends Service {
   items: NewItem[] = [];
@@ -481,7 +501,7 @@ class MemoService extends Service {
 ```typescript
 const [count] = useObserverService(
   MemoService,
-  (service) => service.memos.length
+  (service) => service.memos.length,
 );
 ```
 
@@ -495,10 +515,10 @@ global.fetch = jest.fn(() =>
   Promise.resolve({
     ok: true,
     json: () => Promise.resolve({ code: 0, data: { items: [] } }),
-  })
+  }),
 );
 
-test('getMemos should return memos', async () => {
+test("getMemos should return memos", async () => {
   const result = await getMemos();
   expect(result.items).toBeDefined();
 });
@@ -507,7 +527,7 @@ test('getMemos should return memos', async () => {
 ### 测试 Service
 
 ```typescript
-test('MemoService should fetch memos', async () => {
+test("MemoService should fetch memos", async () => {
   const service = new MemoService();
   await service.fetchMemos();
   expect(service.memos.length).toBeGreaterThan(0);

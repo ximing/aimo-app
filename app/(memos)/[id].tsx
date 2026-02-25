@@ -537,87 +537,9 @@ const MemoDetailContent = view(() => {
             },
           ]}
         >
-          {/* 分类和公开状态 */}
-          {(memo.categoryId || memo.isPublic !== undefined) && (
-            <View
-              style={[
-                styles.metaSection,
-                { borderBottomColor: theme.colors.border },
-              ]}
-            >
-              {memo.categoryId && (
-                <View
-                  style={[
-                    styles.metaItem,
-                    {
-                      backgroundColor: theme.colorScheme === "dark"
-                        ? "rgba(59, 130, 246, 0.2)"
-                        : "rgba(59, 130, 246, 0.15)",
-                      paddingHorizontal: 8,
-                      paddingVertical: 4,
-                      borderRadius: 6,
-                    },
-                  ]}
-                >
-                  <MaterialIcons
-                    name="folder-open"
-                    size={14}
-                    color={
-                      theme.colorScheme === "dark"
-                        ? "rgb(147, 197, 253)"
-                        : "rgb(59, 130, 246)"
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.metaText,
-                      {
-                        color:
-                          theme.colorScheme === "dark"
-                            ? "rgb(147, 197, 253)"
-                            : "rgb(59, 130, 246)",
-                      },
-                    ]}
-                  >
-                    {categoryService.categories.find(c => c.categoryId === memo.categoryId)?.name || memo.categoryId}
-                  </Text>
-                </View>
-              )}
-              <View style={styles.metaItem}>
-                <MaterialIcons
-                  name={memo.isPublic ? "public" : "lock"}
-                  size={14}
-                  color={memo.isPublic ? theme.colors.success : theme.colors.foregroundTertiary}
-                />
-                <Text
-                  style={[
-                    styles.metaText,
-                    { color: memo.isPublic ? theme.colors.success : theme.colors.foregroundTertiary },
-                  ]}
-                >
-                  {memo.isPublic ? "已公开" : "私有"}
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {/* 内容 */}
-          <View style={styles.contentSection}>
-            <Text
-              style={[styles.contentText, { color: theme.colors.foreground }]}
-            >
-              {memo.content}
-            </Text>
-          </View>
-
-          {/* 标签展示 */}
+          {/* 标签展示 - 在内容上面 */}
           {memo.tags && memo.tags.length > 0 && (
-            <View
-              style={[
-                styles.tagsSection,
-                { borderTopColor: theme.colors.border },
-              ]}
-            >
+            <View style={styles.tagsSection}>
               <View style={styles.tagsContainer}>
                 {memo.tags.map((tag: TagDto) => (
                   <View
@@ -639,6 +561,66 @@ const MemoDetailContent = view(() => {
                   </View>
                 ))}
               </View>
+            </View>
+          )}
+
+          {/* 内容 */}
+          <View style={styles.contentSection}>
+            <Text
+              style={[styles.contentText, { color: theme.colors.foreground }]}
+            >
+              {memo.content}
+            </Text>
+          </View>
+
+          {/* 公开/私有 + 分类 - 在内容下面 */}
+          {(memo.isPublic !== undefined || memo.categoryId) && (
+            <View style={styles.footerSection}>
+              {/* 公开/私有状态 */}
+              {memo.isPublic !== undefined && (
+                <View style={styles.footerItem}>
+                  <MaterialIcons
+                    name={memo.isPublic ? "public" : "lock"}
+                    size={14}
+                    color={memo.isPublic ? theme.colors.success : theme.colors.foregroundTertiary}
+                  />
+                  <Text
+                    style={[
+                      styles.footerText,
+                      { color: memo.isPublic ? theme.colors.success : theme.colors.foregroundTertiary },
+                    ]}
+                  >
+                    {memo.isPublic ? "已公开" : "私有"}
+                  </Text>
+                </View>
+              )}
+              {/* 分类 */}
+              {memo.categoryId && (
+                <View style={styles.footerItem}>
+                  <MaterialIcons
+                    name="folder-open"
+                    size={14}
+                    color={
+                      theme.colorScheme === "dark"
+                        ? "rgb(147, 197, 253)"
+                        : "rgb(59, 130, 246)"
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.footerText,
+                      {
+                        color:
+                          theme.colorScheme === "dark"
+                            ? "rgb(147, 197, 253)"
+                            : "rgb(59, 130, 246)",
+                      },
+                    ]}
+                  >
+                    {categoryService.categories.find(c => c.categoryId === memo.categoryId)?.name || memo.categoryId}
+                  </Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -928,7 +910,37 @@ const styles = StyleSheet.create({
   },
   contentSection: {
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 12,
+  },
+  publicSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  categorySection: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  footerSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  footerItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  footerText: {
+    fontSize: 12,
   },
   metaSection: {
     flexDirection: "row",
@@ -953,8 +965,7 @@ const styles = StyleSheet.create({
   },
   tagsSection: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 8,
   },
   tagsContainer: {
     flexDirection: "row",
@@ -974,7 +985,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
     gap: 16,
   },

@@ -21,7 +21,7 @@ export const getActivityStats = async (
   const response = await apiGet<MemoActivityStatsDto>(url);
 
   if (response.code !== 0) {
-    throw new Error(response.message || "获取活动统计失败");
+    throw new Error(response.msg || "获取活动统计失败");
   }
 
   return response.data;
@@ -35,7 +35,7 @@ export const getOnThisDayMemos = async (): Promise<OnThisDayResponseDto> => {
   const response = await apiGet<OnThisDayResponseDto>("/insights/on-this-day");
 
   if (response.code !== 0) {
-    throw new Error(response.message || "获取历史上的今天失败");
+    throw new Error(response.msg || "获取历史上的今天失败");
   }
 
   return response.data;
@@ -52,7 +52,7 @@ export const getDailyRecommendations =
     );
 
     if (response.code !== 0) {
-      throw new Error(response.message || "获取每日推荐失败");
+      throw new Error(response.msg || "获取每日推荐失败");
     }
 
     return response.data;

@@ -133,7 +133,7 @@ Pattern:
 ```typescript
 export const getMemos = async (): Promise<Memo[]> => {
   const response = await apiGet<MemoListResponse>("/memos");
-  if (response.code !== 0) throw new Error(response.message);
+  if (response.code !== 0) throw new Error(response.msg);
   return response.data.items;
 };
 ```

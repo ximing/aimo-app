@@ -4,10 +4,10 @@
  */
 
 import type {
-  SubmitTranscriptionRequest,
-  SubmitTranscriptionResponse,
-  TranscriptionResultResponse,
-  TranscriptionTaskStatusResponse,
+    SubmitTranscriptionRequest,
+    SubmitTranscriptionResponse,
+    TranscriptionResultResponse,
+    TranscriptionTaskStatusResponse,
 } from "@/types/asr";
 import { apiGet, apiPost } from "./common";
 
@@ -34,7 +34,7 @@ export const submitTranscriptionTask = async (
   );
 
   if (response.code !== 0) {
-    throw new Error(response.message || "提交转写任务失败");
+    throw new Error(response.msg || "提交转写任务失败");
   }
 
   return response.data;
@@ -55,7 +55,7 @@ export const getTaskStatus = async (
   );
 
   if (response.code !== 0) {
-    throw new Error(response.message || "获取任务状态失败");
+    throw new Error(response.msg || "获取任务状态失败");
   }
 
   return response.data;
@@ -76,7 +76,7 @@ export const getTranscriptionResult = async (
   );
 
   if (response.code !== 0) {
-    throw new Error(response.message || "获取转写结果失败");
+    throw new Error(response.msg || "获取转写结果失败");
   }
 
   return response.data;

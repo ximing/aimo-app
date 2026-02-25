@@ -355,23 +355,23 @@ export const apiRequest = async <T = any>(
       // 对于非 JSON 响应，构建错误响应对象
       data = {
         code: response.status,
-        message: errorMsg,
+        msg: errorMsg,
         data: null,
       } as ApiResponse<T>;
     }
 
     // 如果返回非 OK 状态码
     if (!response.ok) {
-      console.error(`HTTP Error ${response.status}:`, data.message);
+      console.error(`HTTP Error ${response.status}:`, data.msg);
 
       // 处理 401 未授权错误
       if (response.status === 401) {
         await handleUnauthorized();
         // 直接抛出认证错误
-        throw new Error(data.message || "Authentication failed");
+        throw new Error(data.msg || "Authentication failed");
       }
 
-      throw new Error(data.message || `HTTP Error: ${response.status}`);
+      throw new Error(data.msg || `HTTP Error: ${response.status}`);
     }
 
     return data as ApiResponse<T>;

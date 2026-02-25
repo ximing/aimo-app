@@ -6,8 +6,8 @@
 import { deleteLocalFile, uploadAttachment } from "@/api/attachment";
 import { createMemo, updateMemo, updateMemoTags } from "@/api/memo";
 import { parseImage } from "@/api/ocr";
-import * as ImagePicker from "expo-image-picker";
 import { MediaPreview } from "@/components/memos/media-preview";
+import { OcrSourcePicker, OcrSourceType, handleOcrSourceSelect as processOcrSource } from "@/components/memos/ocr-source-picker";
 import { VoiceRecorderModal } from "@/components/memos/voice-recorder-modal";
 import { TagSelector } from "@/components/ui/tag-selector";
 import { useMediaPicker } from "@/hooks/use-media-picker";
@@ -47,12 +47,14 @@ const CreateMemoContent = view(() => {
     imageType: queryImageType,
     audioUri: queryAudioUri,
     ocr: queryOcr,
+    ocrContent: queryOcrContent,
   } = useLocalSearchParams<{
     memoId?: string;
     imageUri?: string;
     imageType?: string;
     audioUri?: string;
     ocr?: string;
+    ocrContent?: string;
   }>();
   const {
     selectedMedia,
@@ -76,6 +78,7 @@ const CreateMemoContent = view(() => {
   const [audioUri, setAudioUri] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<TagDto[]>([]);
   const [voiceRecorderVisible, setVoiceRecorderVisible] = useState(false);
+  const [ocrPickerVisible, setOcrPickerVisible] = useState(false);
 
   // 初始化加载编辑数据
   useEffect(() => {
@@ -178,6 +181,14 @@ const CreateMemoContent = view(() => {
     handleOcr();
   }, [queryOcr, queryImageUri]);
 
+  // 处理 OCR 识别结果（当从首页传入 ocrContent 时）
+  useEffect(() => {
+    if (queryOcrContent) {
+      const decodedContent = decodeURIComponent(queryOcrContent);
+      setContent((prev) => (prev ? `${prev}\n${decodedContent}` : decodedContent));
+    }
+  }, [queryOcrContent]);
+
   // 处理从外部传入的录音（录音完成后）
   useEffect(() => {
     const initAudioFromQuery = async () => {
@@ -257,51 +268,50 @@ const CreateMemoContent = view(() => {
 
   // OCR 识别处理
   const [ocrLoading, setOcrLoading] = useState(false);
-  const handleOcrPress = useCallback(async () => {
+  const handleOcrPress = useCallback(() => {
     if (ocrLoading) return;
+    setOcrPickerVisible(true);
+  }, [ocrLoading]);
 
-    setOcrLoading(true);
-    try {
-      // 打开图片选择器
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false,
-        quality: 0.8,
-      });
+  // 处理 OCR 来源选择
+  const handleOcrSourceSelect = useCallback(
+    async (source: OcrSourceType) => {
+      setOcrLoading(true);
+      try {
+        const file = await processOcrSource(source);
+        if (!file) {
+          setOcrLoading(false);
+          return;
+        }
 
-      if (result.canceled || !result.assets || result.assets.length === 0) {
+        // 上传文件获取 URL
+        const attachment = await uploadAttachment({
+          file: { uri: file.uri, type: file.mimeType },
+          fileName: file.name,
+          createdAt: Date.now(),
+        });
+
+        // 调用 OCR 识别
+        const results = await parseImage([attachment.url]);
+
+        if (results && results.length > 0 && results[0].success) {
+          // 追加识别结果到内容
+          const ocrText = results[0].texts.join("\n");
+          setContent((prev) => (prev ? `${prev}\n${ocrText}` : ocrText));
+          showSuccess("OCR 识别完成");
+        } else {
+          const errorMsg = results?.[0]?.errorMessage || "OCR 识别失败";
+          showError(errorMsg);
+        }
+      } catch (err) {
+        console.error("Failed to process OCR:", err);
+        showError("OCR 识别失败，请稍后重试");
+      } finally {
         setOcrLoading(false);
-        return;
       }
-
-      const asset = result.assets[0];
-
-      // 上传图片获取 URL
-      const attachment = await uploadAttachment({
-        file: { uri: asset.uri, type: asset.type || "image/jpeg" },
-        fileName: `ocr-${Date.now()}.jpg`,
-        createdAt: Date.now(),
-      });
-
-      // 调用 OCR 识别
-      const ocrResults = await parseImage([attachment.url]);
-
-      if (ocrResults && ocrResults.length > 0 && ocrResults[0].success) {
-        // 追加识别结果到内容
-        const ocrText = ocrResults[0].texts.join("\n");
-        setContent((prev) => (prev ? `${prev}\n${ocrText}` : ocrText));
-        showSuccess("OCR 识别完成");
-      } else {
-        const errorMsg = ocrResults?.[0]?.errorMessage || "OCR 识别失败";
-        showError(errorMsg);
-      }
-    } catch (err) {
-      console.error("Failed to process OCR:", err);
-      showError("OCR 识别失败，请稍后重试");
-    } finally {
-      setOcrLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   // 处理返回
   const handleGoBack = useCallback(() => {
@@ -697,6 +707,13 @@ const CreateMemoContent = view(() => {
         visible={voiceRecorderVisible}
         onClose={() => setVoiceRecorderVisible(false)}
         onRecordingComplete={handleRecordingComplete}
+      />
+
+      {/* OCR 来源选择弹窗 */}
+      <OcrSourcePicker
+        visible={ocrPickerVisible}
+        onClose={() => setOcrPickerVisible(false)}
+        onSelectSource={handleOcrSourceSelect}
       />
     </KeyboardAvoidingView>
   );

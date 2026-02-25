@@ -3,18 +3,22 @@
  * 文档: /docs/api/backup.md
  */
 
-import { apiGet, apiPost } from './common';
-import type { BackupStatus, BackupStatusResponse, BackupMessageResponse } from '@/types/backup';
+import type {
+    BackupMessageResponse,
+    BackupStatus,
+    BackupStatusResponse,
+} from "@/types/backup";
+import { apiGet, apiPost } from "./common";
 
 /**
  * 获取备份状态
  * GET /api/v1/backup/status
  */
 export const getBackupStatus = async (): Promise<BackupStatus> => {
-  const response = await apiGet<BackupStatusResponse>('/backup/status');
+  const response = await apiGet<BackupStatusResponse>("/backup/status");
 
   if (response.code !== 0) {
-    throw new Error(response.message || '获取备份状态失败');
+    throw new Error(response.msg || "获取备份状态失败");
   }
 
   return response.data.backup;
@@ -25,10 +29,10 @@ export const getBackupStatus = async (): Promise<BackupStatus> => {
  * POST /api/v1/backup/force
  */
 export const forceBackup = async (): Promise<void> => {
-  const response = await apiPost<BackupMessageResponse>('/backup/force', {});
+  const response = await apiPost<BackupMessageResponse>("/backup/force", {});
 
   if (response.code !== 0) {
-    throw new Error(response.message || '备份启动失败');
+    throw new Error(response.msg || "备份启动失败");
   }
 };
 
@@ -37,9 +41,9 @@ export const forceBackup = async (): Promise<void> => {
  * POST /api/v1/backup/cleanup
  */
 export const cleanupBackups = async (): Promise<void> => {
-  const response = await apiPost<BackupMessageResponse>('/backup/cleanup', {});
+  const response = await apiPost<BackupMessageResponse>("/backup/cleanup", {});
 
   if (response.code !== 0) {
-    throw new Error(response.message || '清理备份失败');
+    throw new Error(response.msg || "清理备份失败");
   }
 };

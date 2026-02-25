@@ -5,14 +5,22 @@
  * 页面特定组件：仅在 (memos) 页面使用
  */
 
-import * as ImagePicker from "expo-image-picker";
+import { uploadAttachment } from "@/api/attachment";
+import { parseImage } from "@/api/ocr";
 import { useTheme } from "@/hooks/use-theme";
+import { showError, showSuccess } from "@/utils/toast";
 import { view } from "@rabjs/react";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { FileText, Mic, MoreHorizontal } from "lucide-react-native";
 import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { MediaActionDrawer } from "./media-action-drawer";
+import {
+  OcrSourcePicker,
+  OcrSourceType,
+  handleOcrSourceSelect as processOcrSource,
+} from "./ocr-source-picker";
 import { VoiceRecorderModal } from "./voice-recorder-modal";
 
 interface FloatingActionBarProps {
@@ -26,6 +34,8 @@ export const FloatingActionBar = view(
     const router = useRouter();
     const [drawerVisible, setDrawerVisible] = useState(false);
     const [voiceRecorderVisible, setVoiceRecorderVisible] = useState(false);
+    const [ocrPickerVisible, setOcrPickerVisible] = useState(false);
+    const [ocrLoading, setOcrLoading] = useState(false);
 
     const handleAddPress = React.useCallback(() => {
       if (onAddPress) {
@@ -68,7 +78,8 @@ export const FloatingActionBar = view(
     // 从相册选择图片
     const handleGalleryPress = React.useCallback(async () => {
       try {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        const { status } =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== "granted") {
           return;
         }
@@ -89,32 +100,51 @@ export const FloatingActionBar = view(
       }
     }, [router]);
 
-    // OCR 识图 - 从相册选择图片并跳转到创建页面进行 OCR
-    const handleOcrPress = React.useCallback(async () => {
-      try {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== "granted") {
-          return;
-        }
+    // 显示 OCR 来源选择弹窗
+    const handleOcrPress = React.useCallback(() => {
+      setOcrPickerVisible(true);
+    }, []);
 
-        const result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          allowsEditing: false,
-          quality: 0.8,
-        });
+    // 处理 OCR 来源选择
+    const handleOcrSourceSelect = React.useCallback(
+      async (source: OcrSourceType) => {
+        setOcrLoading(true);
+        try {
+          const file = await processOcrSource(source);
+          if (!file) {
+            setOcrLoading(false);
+            return;
+          }
 
-        if (!result.canceled && result.assets && result.assets.length > 0) {
-          const asset = result.assets[0];
-          const imageUri = encodeURIComponent(asset.uri);
-          // 传递 ocr=true 参数，create 页面会自动进行 OCR 识别
-          router.push(
-            `/(memos)/create?imageUri=${imageUri}&imageType=image&ocr=true`
-          );
+          // 上传文件获取 URL
+          const attachment = await uploadAttachment({
+            file: { uri: file.uri, type: file.mimeType },
+            fileName: file.name,
+            createdAt: Date.now(),
+          });
+
+          // 调用 OCR 识别
+          const results = await parseImage([attachment.url]);
+
+          if (results && results.length > 0 && results[0].success) {
+            // 识别成功，跳转到创建页面并填入 OCR 结果
+            const ocrText = results[0].texts.join("\n");
+            const encodedContent = encodeURIComponent(ocrText);
+            router.push(`/(memos)/create?ocrContent=${encodedContent}`);
+            showSuccess("OCR 识别完成");
+          } else {
+            const errorMsg = results?.[0]?.errorMessage || "OCR 识别失败";
+            showError(errorMsg);
+          }
+        } catch (error) {
+          console.error("OCR processing error:", error);
+          showError("OCR 识别失败，请稍后重试");
+        } finally {
+          setOcrLoading(false);
         }
-      } catch (error) {
-        console.error("OCR image selection error:", error);
-      }
-    }, [router]);
+      },
+      [router],
+    );
 
     // 关闭抽屉
     const handleDrawerClose = React.useCallback(() => {
@@ -142,7 +172,7 @@ export const FloatingActionBar = view(
         const encodedUri = encodeURIComponent(audioUri);
         router.push(`/(memos)/create?audioUri=${encodedUri}`);
       },
-      [router]
+      [router],
     );
 
     return (
@@ -158,7 +188,10 @@ export const FloatingActionBar = view(
             },
           ]}
         >
-          <TouchableOpacity style={styles.actionButton} onPress={handleMicPress}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleMicPress}
+          >
             <Mic size={18} color={theme.colors.foreground} />
             <Text
               style={[styles.actionLabel, { color: theme.colors.foreground }]}
@@ -179,7 +212,10 @@ export const FloatingActionBar = view(
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionButton} onPress={handleMorePress}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleMorePress}
+          >
             <MoreHorizontal size={18} color={theme.colors.foreground} />
             <Text
               style={[styles.actionLabel, { color: theme.colors.foreground }]}
@@ -196,6 +232,13 @@ export const FloatingActionBar = view(
           onCameraPress={handleCameraPress}
           onGalleryPress={handleGalleryPress}
           onOcrPress={handleOcrPress}
+        />
+
+        {/* OCR 来源选择弹窗 */}
+        <OcrSourcePicker
+          visible={ocrPickerVisible}
+          onClose={() => setOcrPickerVisible(false)}
+          onSelectSource={handleOcrSourceSelect}
         />
 
         {/* 录音浮层 */}
