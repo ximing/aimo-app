@@ -4,10 +4,10 @@
  */
 
 import type {
-  AuthResponse,
-  LoginRequest,
-  RegisterRequest,
-  RegisterResponse,
+    AuthResponse,
+    LoginRequest,
+    RegisterRequest,
+    RegisterResponse,
 } from "@/types/auth";
 import { apiPost, saveToken, saveTokenAsync } from "./common";
 
@@ -21,7 +21,7 @@ export const register = async (
   const response = await apiPost<RegisterResponse>("/auth/register", params);
 
   if (response.code !== 0) {
-    throw new Error(response.message || "注册失败");
+    throw new Error(response.msg || "注册失败");
   }
 
   return response.data;
@@ -35,7 +35,7 @@ export const login = async (params: LoginRequest): Promise<AuthResponse> => {
   const response = await apiPost<AuthResponse>("/auth/login", params);
 
   if (response.code !== 0) {
-    throw new Error(response.message || "登录失败");
+    throw new Error(response.msg || "登录失败");
   }
 
   const { token, user } = response.data;

@@ -1,12 +1,13 @@
 /**
- * Media Action Drawer Component - 媒体操作底部抽屉
- * 从底部弹出，提供拍照和从相册选择图片功能
- * 页面特定组件：仅在 (memos) 页面使用
+ * OCR Source Picker Component - OCR 来源选择弹窗
+ * 从底部弹出，提供拍照、从相册选择、从文件选择功能
  */
 
+import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from "expo-image-picker";
 import { useTheme } from "@/hooks/use-theme";
 import { view } from "@rabjs/react";
-import { Camera, Image, ScanText, X } from "lucide-react-native";
+import { Camera, FileText, Image, X } from "lucide-react-native";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
@@ -20,24 +21,18 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-interface MediaActionDrawerProps {
+export type OcrSourceType = "camera" | "gallery" | "file";
+
+interface OcrSourcePickerProps {
   visible: boolean;
   onClose: () => void;
-  onCameraPress: () => void;
-  onGalleryPress: () => void;
-  onOcrPress: () => void;
+  onSelectSource: (source: OcrSourceType) => void;
 }
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-export const MediaActionDrawer = view(
-  ({
-    visible,
-    onClose,
-    onCameraPress,
-    onGalleryPress,
-    onOcrPress,
-  }: MediaActionDrawerProps) => {
+export const OcrSourcePicker = view(
+  ({ visible, onClose, onSelectSource }: OcrSourcePickerProps) => {
     const theme = useTheme();
     const insets = useSafeAreaInsets();
     const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
@@ -76,21 +71,21 @@ export const MediaActionDrawer = view(
     const handleCameraPress = () => {
       onClose();
       setTimeout(() => {
-        onCameraPress();
+        onSelectSource("camera");
       }, 300);
     };
 
     const handleGalleryPress = () => {
       onClose();
       setTimeout(() => {
-        onGalleryPress();
+        onSelectSource("gallery");
       }, 300);
     };
 
-    const handleOcrPress = () => {
+    const handleFilePress = () => {
       onClose();
       setTimeout(() => {
-        onOcrPress();
+        onSelectSource("file");
       }, 300);
     };
 
@@ -136,7 +131,7 @@ export const MediaActionDrawer = view(
             {/* 标题和关闭按钮 */}
             <View style={styles.header}>
               <Text style={[styles.title, { color: theme.colors.foreground }]}>
-                添加媒体
+                OCR 识别
               </Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                 <X size={24} color={theme.colors.foreground} />
@@ -191,7 +186,7 @@ export const MediaActionDrawer = view(
                     { color: theme.colors.foreground },
                   ]}
                 >
-                  图片
+                  相册
                 </Text>
               </TouchableOpacity>
 
@@ -200,7 +195,7 @@ export const MediaActionDrawer = view(
                   styles.actionButton,
                   { backgroundColor: theme.colors.background },
                 ]}
-                onPress={handleOcrPress}
+                onPress={handleFilePress}
               >
                 <View
                   style={[
@@ -208,7 +203,7 @@ export const MediaActionDrawer = view(
                     { backgroundColor: theme.colors.primary },
                   ]}
                 >
-                  <ScanText size={24} color="#FFFFFF" />
+                  <FileText size={24} color="#FFFFFF" />
                 </View>
                 <Text
                   style={[
@@ -216,7 +211,7 @@ export const MediaActionDrawer = view(
                     { color: theme.colors.foreground },
                   ]}
                 >
-                  识图
+                  文件
                 </Text>
               </TouchableOpacity>
             </View>
@@ -226,6 +221,106 @@ export const MediaActionDrawer = view(
     );
   },
 );
+
+/**
+ * 处理 OCR 来源选择的具体逻辑
+ * 返回处理后的文件 URI 和类型
+ */
+export interface OcrFileResult {
+  uri: string;
+  type: "image" | "pdf";
+  name: string;
+  mimeType: string;
+}
+
+/**
+ * 根据来源类型执行 OCR 文件选择
+ */
+export const handleOcrSourceSelect = async (
+  source: OcrSourceType
+): Promise<OcrFileResult | null> => {
+  try {
+    switch (source) {
+      case "camera": {
+        // 拍照
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== "granted") {
+          return null;
+        }
+
+        const cameraResult = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: false,
+          quality: 0.8,
+        });
+
+        if (cameraResult.canceled || !cameraResult.assets?.length) {
+          return null;
+        }
+
+        const asset = cameraResult.assets[0];
+        return {
+          uri: asset.uri,
+          type: "image",
+          name: `ocr-${Date.now()}.jpg`,
+          mimeType: "image/jpeg",
+        };
+      }
+
+      case "gallery": {
+        // 从相册选择
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+          return null;
+        }
+
+        const galleryResult = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: false,
+          quality: 0.8,
+        });
+
+        if (galleryResult.canceled || !galleryResult.assets?.length) {
+          return null;
+        }
+
+        const asset = galleryResult.assets[0];
+        return {
+          uri: asset.uri,
+          type: "image",
+          name: `ocr-${Date.now()}.jpg`,
+          mimeType: "image/jpeg",
+        };
+      }
+
+      case "file": {
+        // 选择 PDF 文件
+        const fileResult = await DocumentPicker.getDocumentAsync({
+          type: "application/pdf",
+          copyToCacheDirectory: true,
+        });
+
+        if (fileResult.canceled || !fileResult.assets?.length) {
+          return null;
+        }
+
+        const doc = fileResult.assets[0];
+        return {
+          uri: doc.uri,
+          type: "pdf",
+          name: doc.name || `ocr-${Date.now()}.pdf`,
+          mimeType: "application/pdf",
+        };
+      }
+
+      default:
+        return null;
+    }
+  } catch (error) {
+    console.error("OCR source select error:", error);
+    return null;
+  }
+};
 
 const styles = StyleSheet.create({
   modalContainer: {

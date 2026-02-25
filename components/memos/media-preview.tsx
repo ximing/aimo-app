@@ -60,6 +60,13 @@ export const MediaPreview = view(({
                   {item.name}
                 </Text>
               </View>
+            ) : item.type === 'pdf' ? (
+              <View style={[styles.media, { backgroundColor: theme.colors.card }]}>
+                <MaterialIcons name="picture-as-pdf" size={32} color={theme.colors.destructive} />
+                <Text style={[styles.audioLabel, { color: theme.colors.foregroundSecondary }]}>
+                  {item.name}
+                </Text>
+              </View>
             ) : (
               <View style={[styles.media, { backgroundColor: theme.colors.card }]}>
                 <MaterialIcons name="videocam" size={32} color={theme.colors.warning} />

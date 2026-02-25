@@ -1,14 +1,15 @@
 /**
  * 媒体选择 Hook
- * 处理图片和视频的选择、拍照等功能
- * 需要: expo-image-picker
+ * 处理图片、视频、PDF的选择、拍照等功能
+ * 需要: expo-image-picker, expo-document-picker
  */
 
 import { useState, useCallback } from 'react';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 
 export interface SelectedMedia {
-  type: 'image' | 'video' | 'audio';
+  type: 'image' | 'video' | 'audio' | 'pdf';
   uri: string;
   name: string;
   mimeType: string;
@@ -144,6 +145,35 @@ export function useMediaPicker() {
     }
   }, [requestPermissions]);
 
+  // 选择 PDF 文件
+  const pickPdf = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const newMedia = result.assets.map((doc, index) => ({
+          type: 'pdf' as const,
+          uri: doc.uri,
+          name: doc.name || `document-${Date.now()}-${index}.pdf`,
+          mimeType: 'application/pdf',
+          size: doc.size,
+        }));
+        setSelectedMedia(prev => [...prev, ...newMedia]);
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : '选择 PDF 失败';
+      setError(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // 移除某个媒体
   const removeMedia = useCallback((index: number) => {
     setSelectedMedia(prev => prev.filter((_, i) => i !== index));
@@ -171,6 +201,7 @@ export function useMediaPicker() {
     takePicture,
     pickImage,
     pickVideo,
+    pickPdf,
     removeMedia,
     clearMedia,
     clearError,

@@ -2,23 +2,17 @@
  * Toast Component - 简单的 Toast 提示组件
  */
 
-import React, { useEffect, useRef, useState } from "react";
-import {
-  Animated,
-  StyleSheet,
-  Text,
-  View,
-  SafeAreaView,
-} from "react-native";
 import { useTheme } from "@/hooks/use-theme";
 import { registerToastCallback } from "@/utils/toast";
+import React, { useEffect, useRef, useState } from "react";
+import { Animated, SafeAreaView, StyleSheet, Text } from "react-native";
 
 export const Toast = () => {
   const theme = useTheme();
   const [visible, setVisible] = useState(false);
   const [message, setMessage] = useState("");
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<number>(null);
 
   // 注册全局 Toast 回调
   useEffect(() => {
@@ -76,10 +70,7 @@ export const Toast = () => {
         ]}
       >
         <Text
-          style={[
-            styles.toastText,
-            { color: theme.colors.background },
-          ]}
+          style={[styles.toastText, { color: theme.colors.background }]}
           numberOfLines={2}
         >
           {message}

@@ -117,7 +117,7 @@ export class RNAttachmentService {
         return response.data.data.attachment;
       }
 
-      throw new Error(response.data.message || "Upload failed");
+      throw new Error(response.data.msg || "Upload failed");
     } catch (error) {
       console.error("Upload file error:", error);
       throw error;
@@ -391,7 +391,7 @@ export class RNAttachmentService {
       }>(`${API_BASE}/${attachmentId}`);
 
       if (response.data.code !== 0) {
-        throw new Error(response.data.message || "Delete failed");
+        throw new Error(response.data.msg || "Delete failed");
       }
     } catch (error) {
       console.error("Delete attachment error:", error);

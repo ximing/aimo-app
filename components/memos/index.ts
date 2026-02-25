@@ -16,6 +16,8 @@ export { ActivityHeatmap } from "./activity-heatmap";
 export { RelatedMemoList } from "./related-memo-list";
 export { RelevanceScore } from "./relevance-score";
 export { VoiceRecorderModal } from "./voice-recorder-modal";
+export { OcrSourcePicker, handleOcrSourceSelect } from "./ocr-source-picker";
+export type { OcrSourceType, OcrFileResult } from "./ocr-source-picker";
 export { FilterDrawer } from "./filter-drawer";
 export { CreateCategoryModal } from "./create-category-modal";
 export { DateFilterDropdown } from "./date-filter-dropdown";

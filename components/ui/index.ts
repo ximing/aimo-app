@@ -2,21 +2,24 @@
  * UI 组件库统一导出
  */
 
-export { Button } from './button';
-export type { ButtonProps, ButtonVariant, ButtonSize } from './button';
+export { Button } from "./button";
+export type { ButtonProps, ButtonSize, ButtonVariant } from "./button";
 
-export { Card, CardHeader, CardContent, CardFooter } from './card';
-export type { CardProps, CardHeaderProps, CardContentProps, CardFooterProps } from './card';
+export { Card, CardContent, CardFooter, CardHeader } from "./card";
+export type {
+    CardContentProps,
+    CardFooterProps,
+    CardHeaderProps,
+    CardProps
+} from "./card";
 
-export { Input } from './input';
-export type { InputProps } from './input';
+export { Input } from "./input";
+export type { InputProps } from "./input";
 
-export { Collapsible, CollapsibleTrigger, CollapsibleContent } from './collapsible';
-export type { CollapsibleProps, CollapsibleTriggerProps, CollapsibleContentProps } from './collapsible';
+export { Toast } from "./toast";
 
-export { Toast } from './toast';
+export { UpdateDialog } from "./update-dialog";
 
-export { UpdateDialog } from './update-dialog';
+export { TagSelector } from "./tag-selector";
+export type { TagSelectorProps } from "./tag-selector";
 
-export { TagSelector } from './tag-selector';
-export type { TagSelectorProps } from './tag-selector';

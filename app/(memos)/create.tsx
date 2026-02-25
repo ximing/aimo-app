@@ -5,7 +5,9 @@
 
 import { deleteLocalFile, uploadAttachment } from "@/api/attachment";
 import { createMemo, updateMemo, updateMemoTags } from "@/api/memo";
+import { parseImage } from "@/api/ocr";
 import { MediaPreview } from "@/components/memos/media-preview";
+import { OcrSourcePicker, OcrSourceType, handleOcrSourceSelect as processOcrSource } from "@/components/memos/ocr-source-picker";
 import { VoiceRecorderModal } from "@/components/memos/voice-recorder-modal";
 import { TagSelector } from "@/components/ui/tag-selector";
 import { useMediaPicker } from "@/hooks/use-media-picker";
@@ -18,7 +20,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { bindServices, useService, view } from "@rabjs/react";
 import type { TagDto } from "@/types/tag";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Camera, Check, Image, Mic, Video, X } from "lucide-react-native";
+import { Camera, Check, FileText, Image, Mic, ScanText, Video, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -44,11 +46,15 @@ const CreateMemoContent = view(() => {
     imageUri: queryImageUri,
     imageType: queryImageType,
     audioUri: queryAudioUri,
+    ocr: queryOcr,
+    ocrContent: queryOcrContent,
   } = useLocalSearchParams<{
     memoId?: string;
     imageUri?: string;
     imageType?: string;
     audioUri?: string;
+    ocr?: string;
+    ocrContent?: string;
   }>();
   const {
     selectedMedia,
@@ -57,6 +63,7 @@ const CreateMemoContent = view(() => {
     takePicture,
     pickImage,
     pickVideo,
+    pickPdf,
     removeMedia,
     clearMedia,
     clearError: clearMediaError,
@@ -71,6 +78,7 @@ const CreateMemoContent = view(() => {
   const [audioUri, setAudioUri] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<TagDto[]>([]);
   const [voiceRecorderVisible, setVoiceRecorderVisible] = useState(false);
+  const [ocrPickerVisible, setOcrPickerVisible] = useState(false);
 
   // 初始化加载编辑数据
   useEffect(() => {
@@ -131,6 +139,55 @@ const CreateMemoContent = view(() => {
 
     initMediaFromQuery();
   }, [queryImageUri, queryImageType]);
+
+  // 处理 OCR 识别（当 ocr=true 时）
+  useEffect(() => {
+    const handleOcr = async () => {
+      // 只有当 ocr=true 且有图片时才执行
+      if (queryOcr !== "true" || !queryImageUri) {
+        return;
+      }
+
+      try {
+        // 解码图片 URI
+        const decodedUri = decodeURIComponent(queryImageUri);
+
+        // 上传图片以获取可访问的 URL
+        const attachment = await uploadAttachment({
+          file: { uri: decodedUri, type: "image/jpeg" },
+          fileName: `ocr-${Date.now()}.jpg`,
+          createdAt: Date.now(),
+        });
+
+        // 调用 OCR 识别
+        const results = await parseImage([attachment.url]);
+
+        if (results && results.length > 0 && results[0].success) {
+          // 将识别结果填入内容
+          const ocrText = results[0].texts.join("\n");
+          setContent((prev) => (prev ? `${prev}\n${ocrText}` : ocrText));
+          showSuccess("OCR 识别完成");
+        } else {
+          const errorMsg = results?.[0]?.errorMessage || "OCR 识别失败";
+          console.error("OCR error:", errorMsg);
+          showError(errorMsg);
+        }
+      } catch (err) {
+        console.error("Failed to process OCR:", err);
+        showError("OCR 识别失败，请稍后重试");
+      }
+    };
+
+    handleOcr();
+  }, [queryOcr, queryImageUri]);
+
+  // 处理 OCR 识别结果（当从首页传入 ocrContent 时）
+  useEffect(() => {
+    if (queryOcrContent) {
+      const decodedContent = decodeURIComponent(queryOcrContent);
+      setContent((prev) => (prev ? `${prev}\n${decodedContent}` : decodedContent));
+    }
+  }, [queryOcrContent]);
 
   // 处理从外部传入的录音（录音完成后）
   useEffect(() => {
@@ -207,6 +264,53 @@ const CreateMemoContent = view(() => {
       }
     },
     [addMedia, voiceMemoService]
+  );
+
+  // OCR 识别处理
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const handleOcrPress = useCallback(() => {
+    if (ocrLoading) return;
+    setOcrPickerVisible(true);
+  }, [ocrLoading]);
+
+  // 处理 OCR 来源选择
+  const handleOcrSourceSelect = useCallback(
+    async (source: OcrSourceType) => {
+      setOcrLoading(true);
+      try {
+        const file = await processOcrSource(source);
+        if (!file) {
+          setOcrLoading(false);
+          return;
+        }
+
+        // 上传文件获取 URL
+        const attachment = await uploadAttachment({
+          file: { uri: file.uri, type: file.mimeType },
+          fileName: file.name,
+          createdAt: Date.now(),
+        });
+
+        // 调用 OCR 识别
+        const results = await parseImage([attachment.url]);
+
+        if (results && results.length > 0 && results[0].success) {
+          // 追加识别结果到内容
+          const ocrText = results[0].texts.join("\n");
+          setContent((prev) => (prev ? `${prev}\n${ocrText}` : ocrText));
+          showSuccess("OCR 识别完成");
+        } else {
+          const errorMsg = results?.[0]?.errorMessage || "OCR 识别失败";
+          showError(errorMsg);
+        }
+      } catch (err) {
+        console.error("Failed to process OCR:", err);
+        showError("OCR 识别失败，请稍后重试");
+      } finally {
+        setOcrLoading(false);
+      }
+    },
+    []
   );
 
   // 处理返回
@@ -543,6 +647,19 @@ const CreateMemoContent = view(() => {
           <Image size={20} color={theme.colors.foregroundSecondary} />
         </TouchableOpacity>
 
+        {/* OCR 按钮 */}
+        <TouchableOpacity
+          style={[styles.actionButton, { opacity: ocrLoading ? 0.5 : 1 }]}
+          onPress={handleOcrPress}
+          disabled={ocrLoading}
+        >
+          {ocrLoading ? (
+            <ActivityIndicator size="small" color={theme.colors.foregroundSecondary} />
+          ) : (
+            <ScanText size={20} color={theme.colors.foregroundSecondary} />
+          )}
+        </TouchableOpacity>
+
         {/* 视频按钮 */}
         <TouchableOpacity
           style={[styles.actionButton, { opacity: mediaLoading ? 0.5 : 1 }]}
@@ -550,6 +667,15 @@ const CreateMemoContent = view(() => {
           disabled={mediaLoading}
         >
           <Video size={20} color={theme.colors.foregroundSecondary} />
+        </TouchableOpacity>
+
+        {/* PDF 按钮 */}
+        <TouchableOpacity
+          style={[styles.actionButton, { opacity: mediaLoading ? 0.5 : 1 }]}
+          onPress={pickPdf}
+          disabled={mediaLoading}
+        >
+          <FileText size={20} color={theme.colors.foregroundSecondary} />
         </TouchableOpacity>
 
         {/* 录音按钮 */}
@@ -581,6 +707,13 @@ const CreateMemoContent = view(() => {
         visible={voiceRecorderVisible}
         onClose={() => setVoiceRecorderVisible(false)}
         onRecordingComplete={handleRecordingComplete}
+      />
+
+      {/* OCR 来源选择弹窗 */}
+      <OcrSourcePicker
+        visible={ocrPickerVisible}
+        onClose={() => setOcrPickerVisible(false)}
+        onSelectSource={handleOcrSourceSelect}
       />
     </KeyboardAvoidingView>
   );
