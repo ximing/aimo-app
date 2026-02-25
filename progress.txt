@@ -382,6 +382,51 @@
 
 ---
 
+## 2026-02-25 - US-001 - 创建 OCR API 函数
+- What was implemented:
+  - Created types/ocr.ts with OCR API type definitions (ParseImageRequest, ParseImageResponse, OcrResult)
+  - Created api/ocr.ts with parseImage function
+  - Implements POST /api/v1/ocr/parse
+  - Returns OcrResult[] array with recognized texts
+  - Properly handles API errors with Chinese error messages ("OCR 识别失败")
+  - Typecheck passes (0 new errors)
+  - Lint passes (0 errors, 20 pre-existing warnings)
+
+- Files changed:
+  - types/ocr.ts (new)
+  - api/ocr.ts (new)
+  - .ralph/prd.json (updated passes: true for US-001)
+
+- **Learnings for future iterations:**
+  - OCR API follows same pattern as ASR API - uses apiPost with data type directly
+  - API response uses code/message/data structure, throw errors for non-zero codes
+  - OcrResult contains fileUrl, texts array, success flag, and optional errorMessage
+
+---
+
+## 2026-02-25 - US-002 - MediaActionDrawer 增加识图入口
+- What was implemented:
+  - Added ScanText icon import from lucide-react-native
+  - Added onOcrPress prop to MediaActionDrawer component
+  - Added OCR button with ScanText icon in drawer actions (labeled "识图")
+  - Added handleOcrPress in floating-action-bar.tsx
+  - Opens gallery picker and navigates to create page with ocr=true flag
+  - Typecheck passes (pre-existing errors in theme.colors.secondary)
+  - Lint passes (0 errors)
+
+- Files changed:
+  - components/memos/media-action-drawer.tsx (added OCR button)
+  - components/memos/floating-action-bar.tsx (added handleOcrPress)
+  - .ralph/prd.json (updated passes: true for US-002)
+
+- **Learnings for future iterations:**
+  - ScanText icon is available in lucide-react-native
+  - OCR flag is passed as query parameter (ocr=true) to create page
+  - The create page will handle the actual OCR processing (US-003)
+  - Theme colors might not have 'secondary' - need to check before using
+
+---
+
 ## 2026-02-25 - US-006 - 创建笔记页面添加标签选择
 - What was implemented:
   - Added tags and tagIds to CreateMemoRequest type (types/memo.ts)
@@ -407,5 +452,30 @@
   - Memo type already has tags field from MemoListItemDto
   - TagService needs to be bound to the page for TagSelector to work (autoFetch option)
   - UI section title uses sectionTitle style with marginBottom for spacing
+
+---
+
+## 2026-02-25 - US-003 - 新建 memo 页面自动 OCR
+- What was implemented:
+  - Added ocr parameter to useLocalSearchParams type in create.tsx
+  - Added handleOcr useEffect that:
+    - Checks if queryOcr === 'true' and queryImageUri exists
+    - Uploads the image via uploadAttachment to get a public URL
+    - Calls parseImage API with the URL to get OCR results
+    - Appends recognized text to the content input
+    - Shows success/error toast notifications
+  - Typecheck passes (pre-existing errors in other files unrelated to changes)
+  - Lint passes (no new warnings introduced by changes)
+
+- Files changed:
+  - app/(memos)/create.tsx (added queryOcr param, added OCR handling useEffect)
+  - .ralph/prd.json (updated passes: true for US-003)
+
+- **Learnings for future iterations:**
+  - Use queryOcr === 'true' (string comparison) since URL params are strings
+  - Attachment type has url field for the public access URL
+  - parseImage returns OcrResult[] with texts array for recognized content
+  - Combine OCR text with existing content using template literal: \`${prev}\\n${ocrText}\`
+  - showSuccess/showError from @/utils/toast for user feedback
 
 ---

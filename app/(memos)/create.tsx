@@ -5,6 +5,7 @@
 
 import { deleteLocalFile, uploadAttachment } from "@/api/attachment";
 import { createMemo, updateMemo, updateMemoTags } from "@/api/memo";
+import { parseImage } from "@/api/ocr";
 import { MediaPreview } from "@/components/memos/media-preview";
 import { VoiceRecorderModal } from "@/components/memos/voice-recorder-modal";
 import { TagSelector } from "@/components/ui/tag-selector";
@@ -44,11 +45,13 @@ const CreateMemoContent = view(() => {
     imageUri: queryImageUri,
     imageType: queryImageType,
     audioUri: queryAudioUri,
+    ocr: queryOcr,
   } = useLocalSearchParams<{
     memoId?: string;
     imageUri?: string;
     imageType?: string;
     audioUri?: string;
+    ocr?: string;
   }>();
   const {
     selectedMedia,
@@ -131,6 +134,47 @@ const CreateMemoContent = view(() => {
 
     initMediaFromQuery();
   }, [queryImageUri, queryImageType]);
+
+  // 处理 OCR 识别（当 ocr=true 时）
+  useEffect(() => {
+    const handleOcr = async () => {
+      // 只有当 ocr=true 且有图片时才执行
+      if (queryOcr !== "true" || !queryImageUri) {
+        return;
+      }
+
+      try {
+        // 解码图片 URI
+        const decodedUri = decodeURIComponent(queryImageUri);
+
+        // 上传图片以获取可访问的 URL
+        const attachment = await uploadAttachment({
+          file: { uri: decodedUri, type: "image/jpeg" },
+          fileName: `ocr-${Date.now()}.jpg`,
+          createdAt: Date.now(),
+        });
+
+        // 调用 OCR 识别
+        const results = await parseImage([attachment.url]);
+
+        if (results && results.length > 0 && results[0].success) {
+          // 将识别结果填入内容
+          const ocrText = results[0].texts.join("\n");
+          setContent((prev) => (prev ? `${prev}\n${ocrText}` : ocrText));
+          showSuccess("OCR 识别完成");
+        } else {
+          const errorMsg = results?.[0]?.errorMessage || "OCR 识别失败";
+          console.error("OCR error:", errorMsg);
+          showError(errorMsg);
+        }
+      } catch (err) {
+        console.error("Failed to process OCR:", err);
+        showError("OCR 识别失败，请稍后重试");
+      }
+    };
+
+    handleOcr();
+  }, [queryOcr, queryImageUri]);
 
   // 处理从外部传入的录音（录音完成后）
   useEffect(() => {
