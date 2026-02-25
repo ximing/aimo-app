@@ -19,7 +19,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { bindServices, useService, view } from "@rabjs/react";
 import type { TagDto } from "@/types/tag";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Camera, Check, Image, Mic, Video, X } from "lucide-react-native";
+import { Camera, Check, FileText, Image, Mic, Video, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -60,6 +60,7 @@ const CreateMemoContent = view(() => {
     takePicture,
     pickImage,
     pickVideo,
+    pickPdf,
     removeMedia,
     clearMedia,
     clearError: clearMediaError,
@@ -594,6 +595,15 @@ const CreateMemoContent = view(() => {
           disabled={mediaLoading}
         >
           <Video size={20} color={theme.colors.foregroundSecondary} />
+        </TouchableOpacity>
+
+        {/* PDF 按钮 */}
+        <TouchableOpacity
+          style={[styles.actionButton, { opacity: mediaLoading ? 0.5 : 1 }]}
+          onPress={pickPdf}
+          disabled={mediaLoading}
+        >
+          <FileText size={20} color={theme.colors.foregroundSecondary} />
         </TouchableOpacity>
 
         {/* 录音按钮 */}

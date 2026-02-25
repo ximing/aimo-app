@@ -479,3 +479,27 @@
   - showSuccess/showError from @/utils/toast for user feedback
 
 ---
+
+## 2026-02-25 - US-004 - 实现文件选择器支持图片和 PDF
+- What was implemented:
+  - Installed expo-document-picker package
+  - Added 'pdf' type to SelectedMedia interface
+  - Added pickPdf function using DocumentPicker.getDocumentAsync
+  - Added PDF button with FileText icon in create.tsx footer toolbar
+  - Updated MediaPreview to display PDF files with picture-as-pdf icon
+  - Typecheck passes (pre-existing errors in other files)
+  - Lint passes (no new warnings)
+
+- Files changed:
+  - hooks/use-media-picker.ts (added pickPdf function, pdf type)
+  - app/(memos)/create.tsx (added pickPdf button)
+  - components/memos/media-preview.tsx (added PDF display)
+  - .ralph/prd.json (updated passes: true for US-004)
+
+- **Learnings for future iterations:**
+  - expo-document-picker returns result.assets (not result.documents)
+  - DocumentPickerAsset has uri, name, size properties
+  - Use MaterialIcons 'picture-as-pdf' for PDF icon
+  - SelectedMedia type supports 'image' | 'video' | 'audio' | 'pdf'
+
+---
