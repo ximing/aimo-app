@@ -1,0 +1,115 @@
+## Codebase Patterns
+
+- Service pattern: Use `@rabjs/react` Service class with observable properties
+- AsyncStorage: Use `@react-native-async-storage/async-storage` for persistence
+- Service initialization: Use `initialize()` method called from app startup
+- State persistence: Save on every state change, load during initialization
+- Default values: Always provide sensible defaults for all state properties
+
+---
+
+## 2026-02-21T14:00:00Z - US-001
+- Implemented FilterService at services/filter-service.ts
+- Service manages: selectedCategoryId, sortField, sortOrder
+- Persistence: Uses AsyncStorage with key 'memoFilterPrefs'
+- Methods: loadFilterPrefs(), saveFilterPrefs(), setSelectedCategory(), setSortField(), setSortOrder(), resetToDefaults()
+- Defaults: all categories, createdAt, desc (newest first)
+- Exports: FilterService class, SortField type, SortOrder type, FilterPrefs interface
+- Files changed: services/filter-service.ts (created)
+- Commit: 5ad7acd feat: [US-001] - 创建 FilterService 管理筛选状态和持久化
+- **Learnings for future iterations:**
+  - FilterService follows the same pattern as ThemeService for AsyncStorage persistence
+  - Service properties are automatically reactive in @rabjs/react, no decorators needed
+  - Use undefined for "all categories", '__uncategorized__' string for uncategorized filter
+  - Always validate loaded values from storage before applying them
+  - Pre-existing type/lint errors in codebase should not block new feature commits
+---
+
+## 2026-02-21T15:00:00Z - US-002
+- Implemented FilterDrawer component at components/memos/filter-drawer.tsx
+- Component uses Modal + Animated for right-sliding drawer (width: 75-80% of screen, max 320px)
+- Props: visible, onClose, categories, selectedCategoryId, onSelectCategory, sortField, sortOrder, onChangeSort
+- Category section: 全部分类 (undefined), 无分类 ('__uncategorized__'), user categories list
+- Sort section: sort field (createdAt/updatedAt) and sort order (asc/desc) with pill-style buttons
+- Uses check icon for selected category, filled background for selected sort option
+- Backdrop press closes drawer, category selection applies immediately and closes drawer
+- Component follows existing drawer pattern from media-action-drawer.tsx (Modal + Animated)
+- Uses view() from @rabjs/react for reactivity
+- Files changed: components/memos/filter-drawer.tsx (created), components/memos/index.ts (updated)
+- Commit: 120535f feat: [US-002] - 创建分类筛选抽屉 FilterDrawer 组件
+- **Learnings for future iterations:**
+  - Drawer pattern: Use Modal + Animated with transform translateX for right-side drawers
+  - For right-side drawers, use flex-end justification on modal container
+  - Use theme.colors.primary + "15" for semi-transparent selected background (15 = ~8% opacity hex)
+  - Use category.color for category dot or fallback to foregroundSecondary
+  - Sort options use pill buttons with border/background color changes for selected state
+  - Category option items use MaterialIcons for icons, check mark for selected
+  - Drawers should close on backdrop press and on category select (for filter drawers)
+  - Import types from existing services: `import type { SortField, SortOrder } from "@/services/filter-service"`
+---
+
+# Ralph Progress: voice-to-text (completed)
+
+## Current Status
+
+In progress. Completed US-001.
+
+## Codebase Patterns
+
+- Timer refs: Use `ReturnType<typeof setInterval>` instead of `NodeJS.Timeout` for React Native compatibility
+- Hooks pattern: Use React's useState/useCallback with JSDoc comments for documentation
+- Error handling: Use try/catch with `err instanceof Error` pattern
+- File naming: kebab-case with `use-` prefix for hooks
+
+## Stories
+
+- [x] US-001: 安装 expo-av 并创建 useAudioRecorder hook
+- [ ] US-002: 实现 ASR API 接口
+- [ ] US-003: 实现录音浮层组件 VoiceRecorderModal
+- [ ] US-004: 修改 floating-action-bar 绑定录音按钮
+- [ ] US-005: MediaPreview 组件支持音频类型
+- [ ] US-006: 修改 create 页面接收 audioUri 并显示音频附件
+- [ ] US-007: 创建 VoiceMemoService 管理转写流程
+- [ ] US-008: create 页面集成 ASR 转写流程
+
+## Notes
+
+
+
+## 2026-02-20T14:07:00Z - US-001
+- Implemented useAudioRecorder hook at hooks/use-audio-recorder.ts
+- Hook provides: recording state, uri, duration, startRecording, stopRecording, reset, clearError
+- Uses expo-av Audio.Recording with HIGH_QUALITY preset (m4a/AAC format)
+- Handles microphone permission requests
+- Timer ref type: `ReturnType<typeof setInterval>` for React Native compatibility
+- Files changed: hooks/use-audio-recorder.ts (created)
+- Commit: 5641562 feat: [us-001] install expo-av and create useAudioRecorder hook
+- **Learnings for future iterations:**
+  - Use `ReturnType<typeof setInterval>` for timer refs in React Native
+  - expo-av was already installed in the project
+  - Hook pattern follows use-media-picker.ts structure
+  - Commit message subject must be lowercase (commitlint rule)
+---
+
+## 2026-02-21T16:00:00Z - US-003
+- Integrated FilterDrawer into SearchHeader component
+- Created CategoryService at services/category-service.ts for managing category state
+- Modified SearchHeader to add filter button (tune icon) next to menu button
+- Updated app/(memos)/index.tsx to:
+  - Import and use CategoryService and FilterService
+  - Add FilterDrawer component with proper props
+  - Add filterDrawerVisible state
+  - Initialize CategoryService and FilterService on mount
+  - Add useEffect to listen for filter changes and refresh memo list
+  - Add handlers for category selection and sort changes
+  - Bind CategoryService and FilterService via bindServices
+- Added initialized flag to FilterService to track initialization state
+- Files changed: components/memos/search-header.tsx, app/(memos)/index.tsx, services/category-service.ts (created), services/filter-service.ts
+- Commit: 3a60aa5 feat: [US-003] - 集成筛选按钮和 FilterDrawer 到 SearchHeader
+- **Learnings for future iterations:**
+  - Use bindServices to register services that need to be available via useService
+  - Service initialization should be called from useEffect in the component
+  - Use useEffect with specific dependencies to watch for state changes and trigger actions
+  - The filter drawer pattern works well with controlled visible state and onClose callback
+  - When services need to react to each other, use useEffect in the component to bridge them
+---

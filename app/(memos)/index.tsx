@@ -38,6 +38,14 @@ const MemosListContent = () => {
   const tagService = useService(TagService);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [filterDrawerVisible, setFilterDrawerVisible] = useState(false);
+
+  // 打开筛选侧边栏时刷新分类和标签数据
+  const handleOpenFilterDrawer = useCallback(() => {
+    setFilterDrawerVisible(true);
+    // 刷新分类和标签数据
+    categoryService.fetchCategories();
+    tagService.fetchTags();
+  }, [categoryService, tagService]);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const flatListRef = React.useRef<FlatList>(null);
 
@@ -136,7 +144,7 @@ const MemosListContent = () => {
       {/* 搜索头部 */}
       <SearchHeader
         onDrawerToggle={() => setDrawerVisible(!drawerVisible)}
-        onFilterPress={() => setFilterDrawerVisible(true)}
+        onFilterPress={handleOpenFilterDrawer}
       />
 
       {/* 侧边栏抽屉 */}

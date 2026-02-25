@@ -17,11 +17,17 @@ import FilterService, {
   type SortField,
   type SortOrder,
 } from "./filter-service";
+import TagService from "./tag-service";
 
 class MemoService extends Service {
   // FilterService 实例（通过依赖注入获取）
   private get filterService() {
     return resolve(FilterService);
+  }
+
+  // TagService 实例（通过依赖注入获取）
+  private get tagService() {
+    return resolve(TagService);
   }
 
   // 响应式属性
@@ -51,10 +57,22 @@ class MemoService extends Service {
 
   /**
    * 从 FilterService 同步筛选状态
+   * 注意：tags 参数需要标签名称（逗号分隔），而不是标签 ID
    */
   private syncFilterState(): void {
     this.categoryFilter = this.filterService.selectedCategoryId;
-    this.tagsFilter = this.filterService.tagsParam;
+
+    // 将选中的 tagId 转换为 tag name
+    const selectedTagIds = this.filterService.selectedTags;
+    const tagNames = selectedTagIds
+      .map((tagId) => {
+        const tag = this.tagService.tags.find((t) => t.tagId === tagId);
+        return tag?.name;
+      })
+      .filter((name): name is string => !!name)
+      .join(",");
+
+    this.tagsFilter = tagNames;
     this.sortField = this.filterService.sortField;
     this.sortOrder = this.filterService.sortOrder;
   }

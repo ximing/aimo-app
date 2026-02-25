@@ -6,14 +6,15 @@
 
 import { AttachmentGrid, ImageViewer, VideoPlayer } from "@/components/memos";
 import { useTheme } from "@/hooks/use-theme";
+import CategoryService from "@/services/category-service";
 import MemoService from "@/services/memo-service";
 import type { AttachmentDto, Memo } from "@/types/memo";
 import type { TagDto } from "@/types/tag";
 import { getFileTypeFromMime } from "@/utils/attachment";
-import { showSuccess, showError } from "@/utils/toast";
+import { showError, showSuccess } from "@/utils/toast";
 import { MaterialIcons } from "@expo/vector-icons";
-import { Audio } from "expo-av";
 import { useService, view } from "@rabjs/react";
+import { Audio } from "expo-av";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -49,21 +50,22 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
   const theme = useTheme();
   const router = useRouter();
   const memoService = useService(MemoService);
+  const categoryService = useService(CategoryService);
   const insets = useSafeAreaInsets();
   const [isExpanded, setIsExpanded] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
-const [imageViewerVisible, setImageViewerVisible] = useState(false);
-const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-const [videoPlayerVisible, setVideoPlayerVisible] = useState(false);
-const [selectedVideo, setSelectedVideo] = useState<AttachmentDto | null>(
-  null,
-);
-const [playingAttachmentId, setPlayingAttachmentId] = useState<string | null>(
-  null,
-);
-// 保存当前音频播放对象，用于停止播放
-const soundRef = useRef<Audio.Sound | null>(null);
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [videoPlayerVisible, setVideoPlayerVisible] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<AttachmentDto | null>(
+    null,
+  );
+  const [playingAttachmentId, setPlayingAttachmentId] = useState<string | null>(
+    null,
+  );
+  // 保存当前音频播放对象，用于停止播放
+  const soundRef = useRef<Audio.Sound | null>(null);
 
   // 动画值
   const slideAnim = useRef(new Animated.Value(300)).current;
@@ -242,7 +244,10 @@ const soundRef = useRef<Audio.Sound | null>(null);
       // 音频：直接播放或停止
       try {
         // 如果当前正在播放这个音频，点击停止
-        if (playingAttachmentId === attachment.attachmentId && soundRef.current) {
+        if (
+          playingAttachmentId === attachment.attachmentId &&
+          soundRef.current
+        ) {
           await soundRef.current.stopAsync();
           await soundRef.current.unloadAsync();
           soundRef.current = null;
@@ -315,16 +320,42 @@ const soundRef = useRef<Audio.Sound | null>(null);
           },
         ]}
       >
-        {/* 卡片头部 - 内容部分 */}
+        {/* 卡片头部 - 标签 + 内容部分 */}
         <View style={styles.cardHeader}>
+          {/* 标签展示 - 在内容上方 */}
+          {memo.tags && memo.tags.length > 0 && (
+            <View style={styles.tagsContainerHeader}>
+              {memo.tags.slice(0, 3).map((tag: TagDto) => (
+                <View
+                  key={tag.tagId}
+                  style={[
+                    styles.tagChip,
+                    { backgroundColor: theme.colors.primary + "20" },
+                  ]}
+                >
+                  <Text
+                    style={[styles.tagText, { color: theme.colors.primary }]}
+                    numberOfLines={1}
+                  >
+                    {tag.name}
+                  </Text>
+                </View>
+              ))}
+              {memo.tags.length > 3 && (
+                <Text
+                  style={[
+                    styles.tagMore,
+                    { color: theme.colors.foregroundTertiary },
+                  ]}
+                >
+                  +{memo.tags.length - 3}
+                </Text>
+              )}
+            </View>
+          )}
           <View style={styles.cardTitleContent}>
             <View style={styles.contentWrapper}>
-              <Text
-                style={[
-                  styles.text,
-                  { color: theme.colors.foreground },
-                ]}
-              >
+              <Text style={[styles.text, { color: theme.colors.foreground }]}>
                 {contentDisplay.text}
                 {!isExpanded && contentDisplay.shouldTruncate && (
                   <>
@@ -365,16 +396,16 @@ const soundRef = useRef<Audio.Sound | null>(null);
           </View>
         </View>
 
-{/* 附件展示 - 在内容和关联备忘录之间 */}
-{memo.attachments && memo.attachments.length > 0 && (
-<View style={styles.attachmentsContainer}>
-<AttachmentGrid
-  attachments={memo.attachments}
-  onAttachmentPress={handleAttachmentPress}
-  playingAttachmentId={playingAttachmentId}
-/>
-</View>
-)}
+        {/* 附件展示 - 在内容和关联备忘录之间 */}
+        {memo.attachments && memo.attachments.length > 0 && (
+          <View style={styles.attachmentsContainer}>
+            <AttachmentGrid
+              attachments={memo.attachments}
+              onAttachmentPress={handleAttachmentPress}
+              playingAttachmentId={playingAttachmentId}
+            />
+          </View>
+        )}
 
         {/* 关联Memo列表 - 在内容和页脚之间 */}
         {memo.relations && memo.relations.length > 0 && (
@@ -406,44 +437,10 @@ const soundRef = useRef<Audio.Sound | null>(null);
           </View>
         )}
 
-        {/* 卡片页脚 - 时间和更多按钮放在一排 */}
+        {/* 卡片页脚 - 时间、分类、公开状态和更多按钮 */}
         <View style={styles.cardFooter}>
           <View style={styles.metaInfo}>
             <View style={styles.leftMeta}>
-              {/* 标签展示 */}
-              {memo.tags && memo.tags.length > 0 && (
-                <View style={styles.tagsContainer}>
-                  {memo.tags.slice(0, 3).map((tag: TagDto) => (
-                    <View
-                      key={tag.tagId}
-                      style={[
-                        styles.tagChip,
-                        { backgroundColor: theme.colors.primary + "20" },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.tagText,
-                          { color: theme.colors.primary },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {tag.name}
-                      </Text>
-                    </View>
-                  ))}
-                  {memo.tags.length > 3 && (
-                    <Text
-                      style={[
-                        styles.tagMore,
-                        { color: theme.colors.foregroundTertiary },
-                      ]}
-                    >
-                      +{memo.tags.length - 3}
-                    </Text>
-                  )}
-                </View>
-              )}
               <Text
                 style={[
                   styles.date,
@@ -452,6 +449,55 @@ const soundRef = useRef<Audio.Sound | null>(null);
               >
                 {formatDate(memo.updatedAt)}
               </Text>
+              {/* 分类显示 */}
+              {memo.categoryId && (
+                <View
+                  style={[
+                    styles.categoryContainer,
+                    {
+                      backgroundColor:
+                        theme.colorScheme === "dark"
+                          ? "rgba(59, 130, 246, 0.2)"
+                          : "rgba(59, 130, 246, 0.15)",
+                    },
+                  ]}
+                >
+                  <MaterialIcons
+                    name="folder-open"
+                    size={12}
+                    color={
+                      theme.colorScheme === "dark"
+                        ? "rgb(147, 197, 253)"
+                        : "rgb(59, 130, 246)"
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.categoryText,
+                      {
+                        color:
+                          theme.colorScheme === "dark"
+                            ? "rgb(147, 197, 253)"
+                            : "rgb(59, 130, 246)",
+                      },
+                    ]}
+                  >
+                    {categoryService.categories.find(
+                      (c) => c.categoryId === memo.categoryId,
+                    )?.name || memo.categoryId}
+                  </Text>
+                </View>
+              )}
+              {/* 公开状态显示 */}
+              <MaterialIcons
+                name={memo.isPublic ? "public" : "lock"}
+                size={12}
+                color={
+                  memo.isPublic
+                    ? theme.colors.success
+                    : theme.colors.foregroundTertiary
+                }
+              />
             </View>
 
             {/* 右侧菜单按钮 */}
@@ -733,9 +779,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
+    flexDirection: "column",
     marginBottom: 2,
   },
   cardTitleContent: {
@@ -795,6 +839,24 @@ const styles = StyleSheet.create({
   },
   date: {
     fontSize: 12,
+  },
+  categoryContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  categoryText: {
+    fontSize: 11,
+  },
+  tagsContainerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 4,
+    marginBottom: 8,
   },
   attachmentBadge: {
     flexDirection: "row",

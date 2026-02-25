@@ -408,25 +408,19 @@ const CreateMemoContent = view(() => {
         />
       </View>
 
-      {/* 标签选择器 */}
+      {/* 标签选择器 - 轻量级，默认收起 */}
       <View
         style={[
           styles.tagSection,
           {
             backgroundColor: theme.colors.background,
+            borderTopColor: theme.colors.border,
             paddingHorizontal: 16,
-            paddingVertical: 12,
+            paddingVertical: 8,
+            minHeight: 44,
           },
         ]}
       >
-        <Text
-          style={[
-            styles.sectionTitle,
-            { color: theme.colors.foregroundSecondary },
-          ]}
-        >
-          标签
-        </Text>
         <TagSelector
           selectedTags={selectedTags}
           onChange={setSelectedTags}
@@ -519,6 +513,7 @@ const CreateMemoContent = view(() => {
           styles.footer,
           {
             backgroundColor: theme.colors.background,
+            borderTopColor: theme.colors.border,
             paddingBottom: Math.max(insets.bottom, theme.spacing.sm),
           },
         ]}
@@ -650,7 +645,7 @@ const styles = StyleSheet.create({
   },
   // 底部操作栏
   footer: {
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 12,
     paddingVertical: 8,
     flexDirection: "row",
@@ -680,12 +675,6 @@ const styles = StyleSheet.create({
   },
   // 标签选择器
   tagSection: {
-    borderTopWidth: 1,
-    borderTopColor: "rgba(128, 128, 128, 0.2)",
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: "500",
-    marginBottom: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
 });

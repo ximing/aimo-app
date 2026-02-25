@@ -10,6 +10,7 @@ import {
   VideoPlayer,
 } from "@/components/memos";
 import { useTheme } from "@/hooks/use-theme";
+import CategoryService from "@/services/category-service";
 import MemoService from "@/services/memo-service";
 import RelatedMemoService from "@/services/related-memo-service";
 import type { AttachmentDto } from "@/types/memo";
@@ -44,6 +45,7 @@ const MemoDetailContent = view(() => {
   const insets = useSafeAreaInsets();
   const memoService = useService(MemoService);
   const relatedMemoService = useService(RelatedMemoService);
+  const categoryService = useService(CategoryService);
 
   // 菜单相关状态 - 必须在最前面
   const [menuVisible, setMenuVisible] = useState(false);
@@ -61,7 +63,7 @@ const MemoDetailContent = view(() => {
   const slideAnim = useRef(new Animated.Value(300)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
-  // 初始加载详情
+  // 初始加载详情和分类
   useEffect(() => {
     if (id) {
       memoService.fetchMemoDetail(id).catch((err) => {
@@ -69,11 +71,14 @@ const MemoDetailContent = view(() => {
       });
     }
 
+    // 初始化分类数据（用于显示分类名称）
+    categoryService.initialize();
+
     // 页面卸载时清除详情数据
     return () => {
       memoService.clearDetail();
     };
-  }, [id, memoService]);
+  }, [id, memoService, categoryService]);
 
   // 菜单动画
   useEffect(() => {
@@ -532,6 +537,70 @@ const MemoDetailContent = view(() => {
             },
           ]}
         >
+          {/* 分类和公开状态 */}
+          {(memo.categoryId || memo.isPublic !== undefined) && (
+            <View
+              style={[
+                styles.metaSection,
+                { borderBottomColor: theme.colors.border },
+              ]}
+            >
+              {memo.categoryId && (
+                <View
+                  style={[
+                    styles.metaItem,
+                    {
+                      backgroundColor: theme.colorScheme === "dark"
+                        ? "rgba(59, 130, 246, 0.2)"
+                        : "rgba(59, 130, 246, 0.15)",
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderRadius: 6,
+                    },
+                  ]}
+                >
+                  <MaterialIcons
+                    name="folder-open"
+                    size={14}
+                    color={
+                      theme.colorScheme === "dark"
+                        ? "rgb(147, 197, 253)"
+                        : "rgb(59, 130, 246)"
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.metaText,
+                      {
+                        color:
+                          theme.colorScheme === "dark"
+                            ? "rgb(147, 197, 253)"
+                            : "rgb(59, 130, 246)",
+                      },
+                    ]}
+                  >
+                    {categoryService.categories.find(c => c.categoryId === memo.categoryId)?.name || memo.categoryId}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.metaItem}>
+                <MaterialIcons
+                  name={memo.isPublic ? "public" : "lock"}
+                  size={14}
+                  color={memo.isPublic ? theme.colors.success : theme.colors.foregroundTertiary}
+                />
+                <Text
+                  style={[
+                    styles.metaText,
+                    { color: memo.isPublic ? theme.colors.success : theme.colors.foregroundTertiary },
+                  ]}
+                >
+                  {memo.isPublic ? "已公开" : "私有"}
+                </Text>
+              </View>
+            </View>
+          )}
+
           {/* 内容 */}
           <View style={styles.contentSection}>
             <Text
@@ -706,6 +775,7 @@ MemoDetailContent.displayName = "MemoDetailContent";
 export default bindServices(MemoDetailContent, [
   MemoService,
   RelatedMemoService,
+  CategoryService,
 ]);
 
 const styles = StyleSheet.create({
@@ -859,6 +929,23 @@ const styles = StyleSheet.create({
   contentSection: {
     paddingHorizontal: 16,
     paddingVertical: 16,
+  },
+  metaSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  metaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  metaText: {
+    fontSize: 13,
   },
   contentText: {
     fontSize: 15,

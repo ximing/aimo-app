@@ -1,22 +1,23 @@
 /**
- * TagSelector Component - 标签选择器
+ * TagSelector Component - 轻量级标签选择器
  *
- * 提供标签选择功能：
- * - 显示已有标签列表供选择（多选）
- * - 支持输入新标签名称并创建
- * - 已选择标签显示选中状态
- * - 支持移除已选标签
+ * 设计原则：
+ * - 默认只显示已选标签 + 添加按钮
+ * - 点击添加后显示输入框，输入时智能匹配已有标签
+ * - 可直接创建新标签
+ * - 大部分笔记可以不需要标签，保持界面简洁
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
+  FlatList,
   ActivityIndicator,
+  Keyboard,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/use-theme";
@@ -43,9 +44,12 @@ export function TagSelector({
 }: TagSelectorProps) {
   const theme = useTheme();
   const tagService = useService(TagService);
+  const inputRef = useRef<TextInput>(null);
 
+  const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [matchedTags, setMatchedTags] = useState<TagDto[]>([]);
 
   // 自动获取标签列表
   useEffect(() => {
@@ -54,18 +58,40 @@ export function TagSelector({
     }
   }, [autoFetch, tagService]);
 
-  // 切换标签选中状态
-  const handleTagPress = (tag: TagDto) => {
-    if (disabled) return;
-
-    const isSelected = selectedTags.some((t) => t.tagId === tag.tagId);
-    if (isSelected) {
-      // 移除标签
-      onChange(selectedTags.filter((t) => t.tagId !== tag.tagId));
-    } else {
-      // 添加标签
-      onChange([...selectedTags, tag]);
+  // 输入时智能匹配已有标签
+  useEffect(() => {
+    if (!inputValue.trim()) {
+      setMatchedTags([]);
+      return;
     }
+
+    const query = inputValue.toLowerCase().trim();
+    const matched = tagService.tags
+      .filter(
+        (tag) =>
+          tag.name.toLowerCase().includes(query) &&
+          !selectedTags.some((t) => t.tagId === tag.tagId)
+      )
+      .slice(0, 5); // 最多显示 5 个匹配
+
+    setMatchedTags(matched);
+  }, [inputValue, tagService.tags, selectedTags]);
+
+  // 开始编辑
+  const handleStartEdit = () => {
+    if (disabled) return;
+    setIsEditing(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+  };
+
+  // 结束编辑
+  const handleEndEdit = () => {
+    setIsEditing(false);
+    setInputValue("");
+    setMatchedTags([]);
+    Keyboard.dismiss();
   };
 
   // 移除已选标签
@@ -74,17 +100,42 @@ export function TagSelector({
     onChange(selectedTags.filter((t) => t.tagId !== tag.tagId));
   };
 
+  // 选择已有标签
+  const handleSelectTag = (tag: TagDto) => {
+    if (disabled) return;
+    onChange([...selectedTags, tag]);
+    setInputValue("");
+    setMatchedTags([]);
+    inputRef.current?.focus();
+  };
+
   // 创建新标签
   const handleCreateTag = async () => {
     const name = inputValue.trim();
     if (!name || disabled) return;
 
+    // 检查是否已存在同名标签
+    const existingTag = tagService.tags.find(
+      (t) => t.name.toLowerCase() === name.toLowerCase()
+    );
+    if (existingTag) {
+      // 如果已存在且未选中，则选中它
+      if (!selectedTags.some((t) => t.tagId === existingTag.tagId)) {
+        onChange([...selectedTags, existingTag]);
+      }
+      setInputValue("");
+      setMatchedTags([]);
+      handleEndEdit();
+      return;
+    }
+
     setIsCreating(true);
     try {
       const newTag = await tagService.createTag(name);
-      // 添加新创建的标签到已选列表
       onChange([...selectedTags, newTag]);
       setInputValue("");
+      setMatchedTags([]);
+      // 保持编辑状态，可以继续添加
     } catch (error) {
       console.error("创建标签失败:", error);
     } finally {
@@ -92,283 +143,288 @@ export function TagSelector({
     }
   };
 
-  // 检查标签是否被选中
-  const isTagSelected = (tag: TagDto) => {
-    return selectedTags.some((t) => t.tagId === tag.tagId);
+  // 提交输入
+  const handleSubmit = () => {
+    if (!inputValue.trim()) {
+      handleEndEdit();
+      return;
+    }
+
+    // 如果有匹配的标签，直接选择第一个
+    if (matchedTags.length > 0) {
+      handleSelectTag(matchedTags[0]);
+      return;
+    }
+
+    // 否则创建新标签
+    handleCreateTag();
   };
 
-  // 排序标签：已选中的在前，其余按名称排序
-  const sortedTags = [...tagService.tags].sort((a, b) => {
-    const aSelected = isTagSelected(a);
-    const bSelected = isTagSelected(b);
-    if (aSelected && !bSelected) return -1;
-    if (!aSelected && bSelected) return 1;
-    return a.name.localeCompare(b.name);
-  });
+  // 渲染已选标签
+  const renderSelectedTags = () => {
+    if (selectedTags.length === 0 && !isEditing) return null;
 
-  return (
-    <View style={styles.container}>
-      {/* 已选标签展示 */}
-      {selectedTags.length > 0 && (
-        <View style={styles.selectedContainer}>
-          <Text
+    return (
+      <View style={styles.selectedContainer}>
+        {selectedTags.map((tag) => (
+          <TouchableOpacity
+            key={tag.tagId}
             style={[
-              styles.sectionLabel,
-              { color: theme.colors.foregroundSecondary },
+              styles.tagChip,
+              {
+                backgroundColor: theme.colors.primary + "15",
+                borderColor: theme.colors.primary,
+              },
+            ]}
+            onPress={() => handleRemoveTag(tag)}
+            disabled={disabled}
+          >
+            <Text
+              style={[styles.tagChipText, { color: theme.colors.primary }]}
+            >
+              {tag.name}
+            </Text>
+            <MaterialIcons
+              name="close"
+              size={14}
+              color={theme.colors.primary}
+            />
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  };
+
+  // 渲染输入区域
+  const renderInputArea = () => {
+    if (!isEditing) return null;
+
+    return (
+      <View style={styles.inputContainer}>
+        <View
+          style={[
+            styles.inputWrapper,
+            {
+              backgroundColor: theme.colors.input,
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
+          <TextInput
+            ref={inputRef}
+            style={[
+              styles.input,
+              { color: theme.colors.inputForeground },
+            ]}
+            placeholder="输入标签名..."
+            placeholderTextColor={theme.colors.inputPlaceholder}
+            value={inputValue}
+            onChangeText={setInputValue}
+            onSubmitEditing={handleSubmit}
+            onBlur={handleEndEdit}
+            editable={!disabled && !isCreating}
+            returnKeyType="done"
+            autoCapitalize="none"
+          />
+          {isCreating && (
+            <ActivityIndicator
+              size="small"
+              color={theme.colors.primary}
+              style={styles.loadingIndicator}
+            />
+          )}
+        </View>
+
+        {/* 匹配建议 */}
+        {matchedTags.length > 0 && (
+          <View
+            style={[
+              styles.suggestionsContainer,
+              {
+                backgroundColor: theme.colors.card,
+                borderColor: theme.colors.border,
+              },
             ]}
           >
-            已选择
-          </Text>
-          <View style={styles.selectedTags}>
-            {selectedTags.map((tag) => (
+            {matchedTags.map((tag) => (
               <TouchableOpacity
                 key={tag.tagId}
                 style={[
-                  styles.tag,
-                  styles.selectedTag,
-                  {
-                    backgroundColor: theme.colors.primary + "20",
-                    borderColor: theme.colors.primary,
-                  },
+                  styles.suggestionItem,
+                  { borderBottomColor: theme.colors.border },
                 ]}
-                onPress={() => handleRemoveTag(tag)}
-                disabled={disabled}
+                onPress={() => handleSelectTag(tag)}
               >
+                <MaterialIcons
+                  name="add"
+                  size={18}
+                  color={theme.colors.foregroundSecondary}
+                />
                 <Text
                   style={[
-                    styles.tagText,
-                    { color: theme.colors.primary },
+                    styles.suggestionText,
+                    { color: theme.colors.foreground },
                   ]}
                 >
                   {tag.name}
                 </Text>
-                <MaterialIcons
-                  name="close"
-                  size={16}
-                  color={theme.colors.primary}
-                />
               </TouchableOpacity>
             ))}
           </View>
-        </View>
-      )}
+        )}
 
-      {/* 可选标签列表 */}
-      <View style={styles.availableContainer}>
-        <Text
-          style={[
-            styles.sectionLabel,
-            { color: theme.colors.foregroundSecondary },
-          ]}
-        >
-          选择标签
-        </Text>
-
-        {tagService.loading && tagService.tags.length === 0 ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color={theme.colors.primary} />
+        {/* 输入时显示创建选项 */}
+        {inputValue.trim() && matchedTags.length === 0 && !isCreating && (
+          <TouchableOpacity
+            style={[
+              styles.createHint,
+              { backgroundColor: theme.colors.muted },
+            ]}
+            onPress={handleCreateTag}
+          >
+            <MaterialIcons
+              name="add"
+              size={16}
+              color={theme.colors.foregroundSecondary}
+            />
             <Text
               style={[
-                styles.loadingText,
-                { color: theme.colors.foregroundTertiary },
+                styles.createHintText,
+                { color: theme.colors.foregroundSecondary },
               ]}
             >
-              加载中...
+              创建 「{inputValue.trim()}」
             </Text>
-          </View>
-        ) : sortedTags.length === 0 ? (
-          <Text
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* 已选标签展示 + 添加按钮 */}
+      <View style={styles.header}>
+        {renderSelectedTags()}
+
+        {/* 添加标签按钮 - 只在非编辑状态且未选择任何标签时显示，或者始终显示在右侧 */}
+        {!isEditing && (
+          <TouchableOpacity
             style={[
-              styles.emptyText,
-              { color: theme.colors.foregroundTertiary },
+              styles.addButton,
+              { borderColor: theme.colors.border },
             ]}
+            onPress={handleStartEdit}
+            disabled={disabled}
           >
-            暂无标签，请创建新标签
-          </Text>
-        ) : (
-          <View style={styles.tagList}>
-            {sortedTags.map((tag) => {
-              const selected = isTagSelected(tag);
-              return (
-                <TouchableOpacity
-                  key={tag.tagId}
-                  style={[
-                    styles.tag,
-                    selected && [
-                      styles.selectedTag,
-                      {
-                        backgroundColor: theme.colors.primary + "20",
-                        borderColor: theme.colors.primary,
-                      },
-                    ],
-                    !selected && {
-                      backgroundColor: theme.colors.muted,
-                      borderColor: theme.colors.border,
-                    },
-                  ]}
-                  onPress={() => handleTagPress(tag)}
-                  disabled={disabled}
-                >
-                  <MaterialIcons
-                    name={selected ? "check-circle" : "radio-button-unchecked"}
-                    size={18}
-                    color={
-                      selected
-                        ? theme.colors.primary
-                        : theme.colors.foregroundTertiary
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.tagText,
-                      { color: selected ? theme.colors.primary : theme.colors.foreground },
-                    ]}
-                  >
-                    {tag.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+            <MaterialIcons
+              name="add"
+              size={16}
+              color={theme.colors.foregroundSecondary}
+            />
+            <Text
+              style={[
+                styles.addButtonText,
+                { color: theme.colors.foregroundSecondary },
+              ]}
+            >
+              添加标签
+            </Text>
+          </TouchableOpacity>
         )}
       </View>
 
-      {/* 新建标签输入框 */}
-      <View style={styles.createContainer}>
-        <Text
-          style={[
-            styles.sectionLabel,
-            { color: theme.colors.foregroundSecondary },
-          ]}
-        >
-          创建新标签
-        </Text>
-        <View style={styles.createRow}>
-          <TextInput
-            style={[
-              styles.input,
-              {
-                backgroundColor: theme.colors.input,
-                color: theme.colors.inputForeground,
-                borderColor: theme.colors.border,
-              },
-            ]}
-            placeholder="输入标签名称"
-            placeholderTextColor={theme.colors.inputPlaceholder}
-            value={inputValue}
-            onChangeText={setInputValue}
-            onSubmitEditing={handleCreateTag}
-            editable={!disabled}
-            returnKeyType="done"
-          />
-          <TouchableOpacity
-            style={[
-              styles.createButton,
-              {
-                backgroundColor: theme.colors.primary,
-              },
-              (!inputValue.trim() || disabled || isCreating) &&
-                styles.createButtonDisabled,
-            ]}
-            onPress={handleCreateTag}
-            disabled={!inputValue.trim() || disabled || isCreating}
-          >
-            {isCreating ? (
-              <ActivityIndicator size="small" color={theme.colors.primaryForeground} />
-            ) : (
-              <MaterialIcons
-                name="add"
-                size={20}
-                color={theme.colors.primaryForeground}
-              />
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* 输入区域 */}
+      {renderInputArea()}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: 16,
-  },
-  selectedContainer: {
     gap: 8,
   },
-  availableContainer: {
-    gap: 8,
-  },
-  createContainer: {
-    gap: 8,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: "500",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  selectedTags: {
+  header: {
     flexDirection: "row",
     flexWrap: "wrap",
+    alignItems: "center",
     gap: 8,
   },
-  tag: {
+  selectedContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  tagChip: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 14,
     borderWidth: 1,
     gap: 4,
   },
-  selectedTag: {
-    borderWidth: 1,
-  },
-  tagText: {
-    fontSize: 14,
+  tagChipText: {
+    fontSize: 13,
     fontWeight: "500",
   },
-  tagList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  loadingContainer: {
+  addButton: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    gap: 4,
+  },
+  addButtonText: {
+    fontSize: 13,
+  },
+  inputContainer: {
     gap: 8,
   },
-  loadingText: {
-    fontSize: 14,
-  },
-  emptyText: {
-    fontSize: 14,
-    textAlign: "center",
-    paddingVertical: 16,
-  },
-  createRow: {
+  inputWrapper: {
     flexDirection: "row",
-    gap: 8,
-  },
-  input: {
-    flex: 1,
-    height: 44,
+    alignItems: "center",
     borderRadius: 8,
     borderWidth: 1,
     paddingHorizontal: 12,
+    height: 36,
+  },
+  input: {
+    flex: 1,
+    fontSize: 14,
+    padding: 0,
+  },
+  loadingIndicator: {
+    marginLeft: 8,
+  },
+  suggestionsContainer: {
+    borderRadius: 8,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  suggestionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  suggestionText: {
     fontSize: 14,
   },
-  createButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
+  createHint: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    gap: 6,
   },
-  createButtonDisabled: {
-    opacity: 0.5,
+  createHintText: {
+    fontSize: 13,
   },
 });

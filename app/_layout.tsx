@@ -7,6 +7,7 @@ import {
 import { Stack, useRootNavigationState, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
+import { Platform } from "react-native";
 import "react-native-reanimated";
 
 import { getTokenAsync, onUnauthorized, saveToken } from "@/api/common";
@@ -62,10 +63,12 @@ const Layout = view(() => {
           });
         }
 
-        // 检查应用更新
-        const hasUpdate = await updateService.checkForUpdate();
-        if (hasUpdate) {
-          setShowUpdateDialog(true);
+        // 检查应用更新（仅 Android 平台）
+        if (Platform.OS === "android") {
+          const hasUpdate = await updateService.checkForUpdate();
+          if (hasUpdate) {
+            setShowUpdateDialog(true);
+          }
         }
       } catch (err) {
         console.error("Failed to initialize app:", err);

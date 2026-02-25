@@ -1,0 +1,226 @@
+{
+  "project": "Aimo",
+  "branchName": "ralph/memo-list-filter-search",
+  "description": "Memo 列表筛选与搜索功能优化 - 分类筛选抽屉、排序策略、搜索页面重构",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "创建 FilterService 管理筛选状态和持久化",
+      "description": "作为开发者，我需要 Service 来管理筛选状态并持久化到 AsyncStorage。",
+      "acceptanceCriteria": [
+        "创建 services/filter-service.ts",
+        "Service 包含状态：selectedCategoryId、sortField、sortOrder",
+        "使用 AsyncStorage 键名 memoFilterPrefs 持久化状态",
+        "提供 loadFilterPrefs() 方法从 AsyncStorage 恢复状态",
+        "提供 saveFilterPrefs() 方法保存状态到 AsyncStorage",
+        "默认值：全部分类、按创建时间从新到旧排序",
+        "Service 继承 @rabjs/react 的 Service 类",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "创建分类筛选抽屉 FilterDrawer 组件",
+      "description": "作为用户，我希望通过侧边栏旁的筛选按钮快速筛选笔记分类。",
+      "acceptanceCriteria": [
+        "创建 components/memos/filter-drawer.tsx",
+        "组件 props：visible、onClose、categories、selectedCategoryId、onSelectCategory、sortField、sortOrder、onChangeSort",
+        "抽屉从右侧滑入，宽度占屏幕 75%-80%",
+        "支持点击遮罩或滑动关闭",
+        "显示「分类」区域：全部分类、无分类、用户自定义分类列表",
+        "分类支持单选，选中后立即应用筛选并关闭抽屉",
+        "显示「排序方式」区域：按创建时间/编辑时间，从新到旧/从旧到新",
+        "使用 RadioButton 或勾选图标表示选中状态",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Implemented with Modal + Animated, right-sliding drawer, category filter and sort sections"
+    },
+    {
+      "id": "US-003",
+      "title": "集成筛选按钮和 FilterDrawer 到 SearchHeader",
+      "description": "作为用户，我可以通过搜索 header 的筛选按钮打开分类筛选抽屉。",
+      "acceptanceCriteria": [
+        "修改 components/memos/search-header.tsx",
+        "在现有侧边栏按钮右侧新增筛选按钮（Filter/Sliders 图标）",
+        "点击筛选按钮打开 FilterDrawer",
+        "从 CategoryService 获取用户自定义分类列表",
+        "使用 FilterService 管理筛选状态",
+        "筛选变更后触发 memo 列表重新获取",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Integrated FilterDrawer with SearchHeader, added CategoryService for category management, filter changes trigger memo list refresh"
+    },
+    {
+      "id": "US-004",
+      "title": "API 层支持筛选和排序参数",
+      "description": "作为开发者，我需要确保前端筛选和排序参数正确传递给后端 API。",
+      "acceptanceCriteria": [
+        "修改 api/memo.ts 中的 getMemos 函数",
+        "支持传递 categoryId: string | undefined（undefined 表示全部分类，__uncategorized__ 表示无分类）",
+        "支持传递 sortField: 'createdAt' | 'updatedAt'",
+        "支持传递 sortOrder: 'asc' | 'desc'",
+        "API 调用错误时显示友好的错误提示",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Already implemented - getMemos supports categoryId, sortBy, sortOrder via ListMemosParams"
+    },
+    {
+      "id": "US-005",
+      "title": "MemoService 集成筛选和排序功能",
+      "description": "作为开发者，我需要 MemoService 支持按筛选条件和排序获取笔记列表。",
+      "acceptanceCriteria": [
+        "修改 services/memo-service.ts",
+        "添加 filter 相关状态：categoryFilter、sortField、sortOrder",
+        "修改 fetchMemos 方法，传入筛选和排序参数",
+        "监听 FilterService 状态变化自动刷新列表",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Implemented filter state (categoryFilter, sortField, sortOrder), FilterService integration via ioc(), watchFilterChanges() for auto-refresh, getFilterParams() for API calls"
+    },
+    {
+      "id": "US-006",
+      "title": "搜索入口改造 - 点击跳转搜索页面",
+      "description": "作为用户，我点击搜索框后跳转到专门的搜索页面。",
+      "acceptanceCriteria": [
+        "修改 components/memos/search-header.tsx",
+        "搜索框设为只读/禁用输入状态（pointer-events: none 或 editable=false）",
+        "点击搜索框触发跳转到独立搜索页面 /search",
+        "搜索框显示占位符文字「搜索笔记...」",
+        "使用 router.push('/search') 跳转",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Implemented read-only search box with TouchableOpacity wrapper, router.push('/search') navigation, placeholder '搜索笔记...'"
+    },
+    {
+      "id": "US-007",
+      "title": "创建 SearchService 管理搜索状态和最近搜索历史",
+      "description": "作为开发者，我需要 Service 来管理搜索逻辑和最近搜索历史。",
+      "acceptanceCriteria": [
+        "创建 services/search-service.ts",
+        "状态包括：searchKeyword、searchResults、isSearching、recentSearches、searchFilters（categoryId、dateRange）",
+        "使用 AsyncStorage 键名 recentSearches 存储最近搜索词，最多 10 条",
+        "提供 addRecentSearch(keyword) 方法，新搜索词插入顶部，重复去重",
+        "提供 removeRecentSearch(keyword) 方法删除单条记录",
+        "提供 clearRecentSearches() 方法清空所有历史",
+        "提供 search(keyword, filters) 方法执行搜索",
+        "Service 继承 @rabjs/react 的 Service 类",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Created SearchService with searchKeyword, searchResults, isSearching, recentSearches, searchFilters state. AsyncStorage persistence with recentSearches key (max 10). Methods: addRecentSearch, removeRecentSearch, clearRecentSearches, search, loadRecentSearches"
+    },
+    {
+      "id": "US-008",
+      "title": "创建搜索页面 SearchPage 基础结构",
+      "description": "作为用户，我需要一个专门的搜索页面来执行高级搜索操作。",
+      "acceptanceCriteria": [
+        "创建 app/search.tsx",
+        "页面顶部有返回按钮，点击返回上一页（router.back()）",
+        "页面顶部有搜索输入框（真实可输入），自动聚焦",
+        "搜索框有清除按钮，点击清空输入",
+        "搜索框下方显示「最近搜索」区域（如果有历史记录）",
+        "搜索框下方显示筛选栏：日期按钮、分类按钮",
+        "页面底部/适当位置显示搜索结果列表区域（初始为空状态）",
+        "空状态显示「输入关键词开始搜索」提示",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Created search page with back button, auto-focusing search input, clear button, recent searches section with delete/clear all, filter bar (date/category), and empty state. Uses bindServices with SearchService and CategoryService."
+    },
+    {
+      "id": "US-009",
+      "title": "实现最近搜索词功能和展示",
+      "description": "作为用户，我希望看到最近的搜索历史以便快速重新搜索。",
+      "acceptanceCriteria": [
+        "在 app/search.tsx 中集成 SearchService",
+        "最近搜索词使用 AsyncStorage 持久化",
+        "每条记录显示搜索关键词和搜索图标",
+        "点击最近搜索词立即填入搜索框并执行搜索",
+        "每条记录右侧有删除按钮（X 图标）删除单条记录",
+        "提供「清除全部」按钮清空所有历史",
+        "最多显示 10 条最近搜索记录",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Integrated SearchService with search page, AsyncStorage persistence via recentSearches key, history icon for each entry, click to fill and execute search, X button to delete single entry, Clear All button to clear all, max 10 entries, reused MemoItem for search results display"
+    },
+    {
+      "id": "US-010",
+      "title": "实现搜索页面的日期和分类筛选",
+      "description": "作为用户，我希望在搜索时能通过日期范围和分类进一步精确筛选结果。",
+      "acceptanceCriteria": [
+        "在 app/search.tsx 中添加筛选栏",
+        「日期」按钮点击展开日期范围选择下拉/弹窗",
+        "日期选项：全部时间、最近7天、最近30天、自定义范围",
+        "自定义范围使用日期选择器选择起止日期",
+        「分类」按钮点击展开分类选择（复用 FilterDrawer 或新建简单下拉）",
+        "选中的筛选条件在按钮上显示标签（如「7天内」、「工作笔记」）",
+        "筛选条件改变时立即触发搜索（如果已有搜索关键词）",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "Created DateFilterDropdown with 'all', 'last7days', 'last30days', 'custom' options. Created CategoryFilterDropdown reusing FilterDrawer patterns. Both dropdowns show active state on buttons with selected label. Filter changes trigger search immediately if keyword exists."
+    },
+    {
+      "id": "US-011",
+      "title": "实现搜索结果展示功能",
+      "description": "作为用户，我希望在搜索页面直接看到搜索结果以便快速浏览和选择。",
+      "acceptanceCriteria": [
+        "在 app/search.tsx 中实现搜索结果列表",
+        "执行搜索后，搜索结果以列表形式显示",
+        "复用现有的 Memo 列表项组件或创建简化版 SearchResultItem",
+        "搜索结果项显示笔记标题、摘要、创建时间和分类标签",
+        "点击搜索结果项跳转到笔记详情页 /(memos)/[id]",
+        "无结果时显示空状态提示「未找到相关笔记」",
+        "搜索结果支持分页加载（触底加载更多）",
+        "搜索过程中显示加载状态",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "Connected SearchService to searchMemos API, added pagination with onEndReached and loadNextPage, added loading indicators for initial search (centered spinner) and pagination (footer loading), reused MemoItem component for search results"
+    },
+    {
+      "id": "US-012",
+      "title": "API 层支持搜索接口",
+      "description": "作为开发者，我需要确保搜索参数正确传递给后端 API。",
+      "acceptanceCriteria": [
+        "在 api/memo.ts 中创建 searchMemos 函数",
+        "支持传递 keyword: string（搜索关键词）",
+        "支持传递 categoryId: string | undefined",
+        "支持传递 dateRange: { start: Date, end: Date } | undefined",
+        "支持分页参数：page、pageSize",
+        "返回搜索结果列表和总数量",
+        "API 调用错误时显示友好的错误提示",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "Added SearchMemosParams, SearchResultItem, SearchMemosResponse types. Created searchMemos function with POST /memos/search endpoint, supporting keyword, categoryId, dateRange, and pagination."
+    }
+  ]
+}
