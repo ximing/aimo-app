@@ -503,3 +503,26 @@
   - SelectedMedia type supports 'image' | 'video' | 'audio' | 'pdf'
 
 ---
+
+## 2026-02-25 - US-005 - 创建 memo 页面工具栏增加 OCR 按钮
+- What was implemented:
+  - Added ScanText icon import from lucide-react-native
+  - Added ocrLoading state and handleOcrPress function
+  - Added OCR button in create.tsx footer toolbar (between image and video)
+  - Uses ImagePicker to select image, uploads, then calls parseImage
+  - Appends recognized text to content with newline separator
+  - Shows loading indicator while processing
+  - Shows success/error toast notifications
+  - Typecheck passes (pre-existing errors)
+  - Lint passes (no new warnings)
+
+- Files changed:
+  - app/(memos)/create.tsx (added OCR button and handler)
+  - .ralph/prd.json (updated passes: true for US-005)
+
+- **Learnings for future iterations:**
+  - Use ocrLoading state to disable button during processing
+  - handleOcrPress uses ImagePicker.launchImageLibraryAsync directly
+  - Append OCR result using: setContent(prev => prev ? \`${prev}\\n${ocrText}\` : ocrText)
+
+---

@@ -6,6 +6,7 @@
 import { deleteLocalFile, uploadAttachment } from "@/api/attachment";
 import { createMemo, updateMemo, updateMemoTags } from "@/api/memo";
 import { parseImage } from "@/api/ocr";
+import * as ImagePicker from "expo-image-picker";
 import { MediaPreview } from "@/components/memos/media-preview";
 import { VoiceRecorderModal } from "@/components/memos/voice-recorder-modal";
 import { TagSelector } from "@/components/ui/tag-selector";
@@ -19,7 +20,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { bindServices, useService, view } from "@rabjs/react";
 import type { TagDto } from "@/types/tag";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Camera, Check, FileText, Image, Mic, Video, X } from "lucide-react-native";
+import { Camera, Check, FileText, Image, Mic, ScanText, Video, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -253,6 +254,54 @@ const CreateMemoContent = view(() => {
     },
     [addMedia, voiceMemoService]
   );
+
+  // OCR 识别处理
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const handleOcrPress = useCallback(async () => {
+    if (ocrLoading) return;
+
+    setOcrLoading(true);
+    try {
+      // 打开图片选择器
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        setOcrLoading(false);
+        return;
+      }
+
+      const asset = result.assets[0];
+
+      // 上传图片获取 URL
+      const attachment = await uploadAttachment({
+        file: { uri: asset.uri, type: asset.type || "image/jpeg" },
+        fileName: `ocr-${Date.now()}.jpg`,
+        createdAt: Date.now(),
+      });
+
+      // 调用 OCR 识别
+      const ocrResults = await parseImage([attachment.url]);
+
+      if (ocrResults && ocrResults.length > 0 && ocrResults[0].success) {
+        // 追加识别结果到内容
+        const ocrText = ocrResults[0].texts.join("\n");
+        setContent((prev) => (prev ? `${prev}\n${ocrText}` : ocrText));
+        showSuccess("OCR 识别完成");
+      } else {
+        const errorMsg = ocrResults?.[0]?.errorMessage || "OCR 识别失败";
+        showError(errorMsg);
+      }
+    } catch (err) {
+      console.error("Failed to process OCR:", err);
+      showError("OCR 识别失败，请稍后重试");
+    } finally {
+      setOcrLoading(false);
+    }
+  }, []);
 
   // 处理返回
   const handleGoBack = useCallback(() => {
@@ -586,6 +635,19 @@ const CreateMemoContent = view(() => {
           disabled={mediaLoading}
         >
           <Image size={20} color={theme.colors.foregroundSecondary} />
+        </TouchableOpacity>
+
+        {/* OCR 按钮 */}
+        <TouchableOpacity
+          style={[styles.actionButton, { opacity: ocrLoading ? 0.5 : 1 }]}
+          onPress={handleOcrPress}
+          disabled={ocrLoading}
+        >
+          {ocrLoading ? (
+            <ActivityIndicator size="small" color={theme.colors.foregroundSecondary} />
+          ) : (
+            <ScanText size={20} color={theme.colors.foregroundSecondary} />
+          )}
         </TouchableOpacity>
 
         {/* 视频按钮 */}
