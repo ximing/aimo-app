@@ -6,7 +6,7 @@
 
 import { useTheme } from "@/hooks/use-theme";
 import { view } from "@rabjs/react";
-import { Camera, Image, X } from "lucide-react-native";
+import { Camera, Image, ScanText, X } from "lucide-react-native";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
@@ -25,12 +25,13 @@ interface MediaActionDrawerProps {
   onClose: () => void;
   onCameraPress: () => void;
   onGalleryPress: () => void;
+  onOcrPress: () => void;
 }
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export const MediaActionDrawer = view(
-  ({ visible, onClose, onCameraPress, onGalleryPress }: MediaActionDrawerProps) => {
+  ({ visible, onClose, onCameraPress, onGalleryPress, onOcrPress }: MediaActionDrawerProps) => {
     const theme = useTheme();
     const insets = useSafeAreaInsets();
     const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
@@ -77,6 +78,13 @@ export const MediaActionDrawer = view(
       onClose();
       setTimeout(() => {
         onGalleryPress();
+      }, 300);
+    };
+
+    const handleOcrPress = () => {
+      onClose();
+      setTimeout(() => {
+        onOcrPress();
       }, 300);
     };
 
@@ -162,6 +170,23 @@ export const MediaActionDrawer = view(
                 </View>
                 <Text style={[styles.actionLabel, { color: theme.colors.foreground }]}>
                   图片
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: theme.colors.background }]}
+                onPress={handleOcrPress}
+              >
+                <View
+                  style={[
+                    styles.iconContainer,
+                    { backgroundColor: theme.colors.primary },
+                  ]}
+                >
+                  <ScanText size={24} color="#FFFFFF" />
+                </View>
+                <Text style={[styles.actionLabel, { color: theme.colors.foreground }]}>
+                  识图
                 </Text>
               </TouchableOpacity>
             </View>

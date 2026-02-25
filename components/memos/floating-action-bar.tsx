@@ -89,6 +89,33 @@ export const FloatingActionBar = view(
       }
     }, [router]);
 
+    // OCR 识图 - 从相册选择图片并跳转到创建页面进行 OCR
+    const handleOcrPress = React.useCallback(async () => {
+      try {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+          return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: false,
+          quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          const asset = result.assets[0];
+          const imageUri = encodeURIComponent(asset.uri);
+          // 传递 ocr=true 参数，create 页面会自动进行 OCR 识别
+          router.push(
+            `/(memos)/create?imageUri=${imageUri}&imageType=image&ocr=true`
+          );
+        }
+      } catch (error) {
+        console.error("OCR image selection error:", error);
+      }
+    }, [router]);
+
     // 关闭抽屉
     const handleDrawerClose = React.useCallback(() => {
       setDrawerVisible(false);
@@ -168,6 +195,7 @@ export const FloatingActionBar = view(
           onClose={handleDrawerClose}
           onCameraPress={handleCameraPress}
           onGalleryPress={handleGalleryPress}
+          onOcrPress={handleOcrPress}
         />
 
         {/* 录音浮层 */}
