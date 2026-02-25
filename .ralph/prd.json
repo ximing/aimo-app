@@ -1,124 +1,103 @@
 {
   "project": "Aimo",
-  "branchName": "ralph/memo-tag",
-  "description": "Memo 标签功能 - 列表展示、创建编辑支持、过滤抽屉筛选",
+  "branchName": "ralph/ocr",
+  "description": "OCR 识别功能 - 从图片/PDF提取文字，支持浮动操作栏和创建/编辑页面入口",
   "userStories": [
     {
       "id": "US-001",
-      "title": "创建 TagService 管理标签状态",
-      "description": "作为开发者，我需要在前端实现标签的 Service 来管理标签状态。",
+      "title": "创建 OCR API 函数",
+      "description": "作为开发者，我需要在前端实现 OCR API 调用函数。",
       "acceptanceCriteria": [
-        "创建 services/tag-service.ts",
-        "Service 包含状态：tags (TagDto[])、loading (boolean)",
-        "实现 fetchTags() 方法调用 GET /api/v1/tags",
-        "实现 createTag(name: string) 方法调用 POST /api/v1/tags",
-        "Service 使用 @rabjs/react 的 Service 模式",
+        "创建 api/ocr.ts 文件",
+        "实现 parseImage(files: string[]) 函数调用 POST /api/v1/ocr/parse",
+        "函数返回识别文本数组",
+        "正确处理 API 错误响应",
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": "Implemented with types/tag.ts, api/tag.ts, services/tag-service.ts"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-002",
-      "title": "创建可复用 TagSelector 组件",
-      "description": "作为用户，我想使用一个统一的标签选择组件来选择标签。",
+      "title": "MediaActionDrawer 增加识图入口",
+      "description": "作为用户，我想从浮动操作栏的更多菜单中使用 OCR 功能。",
       "acceptanceCriteria": [
-        "创建 components/ui/tag-selector.tsx",
-        "组件 props：selectedTags (TagDto[])、onChange (tags: TagDto[]) => void",
-        "显示已有标签列表供选择（多选）",
-        "支持输入新标签名称并创建",
-        "已选择标签显示选中状态",
-        "支持移除已选标签",
-        "组件样式与现有 UI 一致",
+        "在 MediaActionDrawer 组件中增加识图按钮",
+        "使用 ImageText 或 ScanText 图标",
+        "点击后弹出图片来源选择（相机/相册/文件）",
+        "选择文件后导航到新建 memo 页面并传递文件信息",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "Implemented with components/ui/tag-selector.tsx"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-003",
-      "title": "笔记列表显示标签",
-      "description": "作为用户，我想在笔记列表中看到每个笔记的标签。",
+      "title": "新建 memo 页面自动 OCR",
+      "description": "作为用户，我想在创建 memo 时自动对上传的图片/PDF 进行 OCR。",
       "acceptanceCriteria": [
-        "修改 MemoItem 或笔记卡片组件显示标签",
-        "标签使用 Badge 或 Chip 组件展示",
-        "多个标签时正确换行显示",
-        "后端返回的 tags 字段已包含在数据中",
+        "create.tsx 接收传递的文件信息",
+        "自动调用 uploadAttachment 上传文件",
+        "上传完成后获取 HTTPS URL",
+        "调用 OCR parse 接口获取识别文本",
+        "OCR 完成后将文本填入输入框",
+        "显示 OCR 处理中的加载状态",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "Implemented with tags field in MemoListItemDto and tag display in MemoItem component"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-004",
-      "title": "过滤抽屉添加标签筛选功能",
-      "description": "作为用户，我想在过滤抽屉中看到所有可用标签并筛选笔记。",
+      "title": "实现文件选择器支持图片和 PDF",
+      "description": "作为开发者，我需要实现支持相机、相册、文件管理器选择图片和 PDF 的功能。",
       "acceptanceCriteria": [
-        "修改 FilterDrawer 组件添加标签筛选区域",
-        "调用 TagService.fetchTags() 获取标签列表",
-        "标签按名称排序显示",
-        "每个标签支持点击切换选中状态",
-        "选中状态有视觉反馈",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "使用 expo-image-picker 选择相机和相册图片",
+        "使用 expo-document-picker 选择 PDF 文件",
+        "支持一次选择多个文件",
+        "返回统一的文件信息格式",
+        "Typecheck passes"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "Implemented with tag section in FilterDrawer, TagService integration, tag selection UI with chips"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-005",
-      "title": "实现标签多选筛选逻辑",
-      "description": "作为用户，我想通过多个标签筛选笔记，使用 AND 逻辑。",
+      "title": "创建 memo 页面工具栏增加 OCR 按钮",
+      "description": "作为用户，我想在创建 memo 页面的工具栏中使用 OCR 功能。",
       "acceptanceCriteria": [
-        "多选标签时使用 AND 逻辑筛选",
-        "筛选参数正确传递到 GET /api/v1/memos 的 tags 参数（逗号分隔）",
-        "清除标签筛选时恢复显示所有笔记",
-        "筛选变更触发笔记列表刷新",
-        "Typecheck passes"
+        "在 create.tsx 底部工具栏增加 OCR 按钮",
+        "使用 ImageText 或 ScanText 图标",
+        "点击后显示图片来源选择",
+        "OCR 完成后将文本追加到当前内容（换行分隔）",
+        "显示加载状态和错误提示",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "Implemented with FilterService.selectedTags array, tagsParam getter, ListMemosParams.tags, and filter change listener"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-006",
-      "title": "创建笔记页面添加标签选择",
-      "description": "作为用户，我想在创建笔记时添加标签。",
+      "title": "编辑 memo 页面支持 OCR",
+      "description": "作为用户，我想在编辑已有 memo 时也能使用 OCR 功能。",
       "acceptanceCriteria": [
-        "修改创建笔记页面（app/(memos)/create.tsx）",
-        "集成 TagSelector 组件",
-        "显示已有标签供选择",
-        "支持输入新标签名称并创建",
-        "创建笔记时正确传递 tags/tagIds 到 API",
+        "编辑模式复用了 create.tsx，已有 OCR 按钮",
+        "OCR 识别完成后将文本追加到现有内容之后（换行分隔）",
+        "不影响已有附件和内容",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": true,
-      "notes": "Integrated TagSelector in create.tsx with TagService, added tags and tagIds to createMemo API call, added updateMemoTags API call in edit mode, loads existing tags when editing memo"
-    },
-    {
-      "id": "US-007",
-      "title": "编辑笔记页面管理标签",
-      "description": "作为用户，我想在编辑笔记时添加或移除标签。",
-      "acceptanceCriteria": [
-        "修改编辑笔记页面（app/(memos)/[id].tsx）",
-        "加载并显示当前笔记的已有标签",
-        "集成 TagSelector 组件",
-        "支持添加新标签和移除已有标签",
-        "保存时调用 PUT /api/v1/memos/:memoId/tags 更新标签",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 7,
-      "passes": true,
-      "notes": "Tags display added to detail page [id].tsx. Tag editing is handled in create.tsx when memoId is provided (implemented in US-006)."
+      "passes": false,
+      "notes": ""
     }
   ]
 }
