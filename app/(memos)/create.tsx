@@ -160,17 +160,15 @@ const CreateMemoContent = view(() => {
         });
 
         // 调用 OCR 识别
-        const results = await parseImage([attachment.url]);
+        const texts = await parseImage([attachment.url]);
 
-        if (results && results.length > 0 && results[0].success) {
+        if (texts && texts.length > 0) {
           // 将识别结果填入内容
-          const ocrText = results[0].texts.join("\n");
+          const ocrText = texts.join("\n");
           setContent((prev) => (prev ? `${prev}\n${ocrText}` : ocrText));
           showSuccess("OCR 识别完成");
         } else {
-          const errorMsg = results?.[0]?.errorMessage || "OCR 识别失败";
-          console.error("OCR error:", errorMsg);
-          showError(errorMsg);
+          showError("OCR 识别失败，未检测到文字");
         }
       } catch (err) {
         console.error("Failed to process OCR:", err);
@@ -292,16 +290,15 @@ const CreateMemoContent = view(() => {
         });
 
         // 调用 OCR 识别
-        const results = await parseImage([attachment.url]);
+        const texts = await parseImage([attachment.url]);
 
-        if (results && results.length > 0 && results[0].success) {
+        if (texts && texts.length > 0) {
           // 追加识别结果到内容
-          const ocrText = results[0].texts.join("\n");
+          const ocrText = texts.join("\n");
           setContent((prev) => (prev ? `${prev}\n${ocrText}` : ocrText));
           showSuccess("OCR 识别完成");
         } else {
-          const errorMsg = results?.[0]?.errorMessage || "OCR 识别失败";
-          showError(errorMsg);
+          showError("OCR 识别失败，未检测到文字");
         }
       } catch (err) {
         console.error("Failed to process OCR:", err);

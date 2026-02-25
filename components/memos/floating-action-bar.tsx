@@ -124,17 +124,16 @@ export const FloatingActionBar = view(
           });
 
           // 调用 OCR 识别
-          const results = await parseImage([attachment.url]);
+          const texts = await parseImage([attachment.url]);
 
-          if (results && results.length > 0 && results[0].success) {
+          if (texts && texts.length > 0) {
             // 识别成功，跳转到创建页面并填入 OCR 结果
-            const ocrText = results[0].texts.join("\n");
+            const ocrText = texts.join("\n");
             const encodedContent = encodeURIComponent(ocrText);
             router.push(`/(memos)/create?ocrContent=${encodedContent}`);
             showSuccess("OCR 识别完成");
           } else {
-            const errorMsg = results?.[0]?.errorMessage || "OCR 识别失败";
-            showError(errorMsg);
+            showError("OCR 识别失败，未检测到文字");
           }
         } catch (error) {
           console.error("OCR processing error:", error);
