@@ -526,3 +526,22 @@
   - Append OCR result using: setContent(prev => prev ? \`${prev}\\n${ocrText}\` : ocrText)
 
 ---
+
+## 2026-02-25 - US-006 - 编辑页面支持 OCR
+- What was implemented:
+  - Already implemented through US-005
+  - create.tsx handles both create and edit modes (isEditMode flag)
+  - OCR button in toolbar works for both modes
+  - handleOcrPress appends text to existing content without affecting attachments
+  - Typecheck passes (pre-existing errors)
+  - Lint passes (no new warnings)
+
+- Files changed:
+  - .ralph/prd.json (updated passes: true for US-006)
+
+- **Learnings for future iterations:**
+  - Edit mode in create.tsx is determined by queryMemoId parameter
+  - OCR text is appended using setContent which works for both modes
+  - No separate implementation needed - US-005 covered both cases
+
+---
