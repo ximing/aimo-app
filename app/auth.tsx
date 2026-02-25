@@ -5,18 +5,18 @@
 import { useTheme } from "@/hooks/use-theme";
 import AuthService from "@/services/auth-service";
 import type { LoginRequest, RegisterRequest } from "@/types/auth";
-import { bindServices, useService } from "@rabjs/react";
+import { useService, view } from "@rabjs/react";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 type AuthMode = "login" | "register";
@@ -96,8 +96,12 @@ const AuthContent = () => {
       contentContainerStyle={styles.contentContainer}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.colors.foreground }]}>Memo App</Text>
-        <Text style={[styles.subtitle, { color: theme.colors.foregroundSecondary }]}>
+        <Text style={[styles.title, { color: theme.colors.foreground }]}>
+          Memo App
+        </Text>
+        <Text
+          style={[styles.subtitle, { color: theme.colors.foregroundSecondary }]}
+        >
           {mode === "login" ? "登录您的账户" : "创建新账户"}
         </Text>
       </View>
@@ -105,7 +109,14 @@ const AuthContent = () => {
       <View style={styles.form}>
         {/* 邮箱输入框 */}
         <TextInput
-          style={[styles.input, { color: theme.colors.foreground, borderColor: theme.colors.border, backgroundColor: theme.colors.card }]}
+          style={[
+            styles.input,
+            {
+              color: theme.colors.foreground,
+              borderColor: theme.colors.border,
+              backgroundColor: theme.colors.card,
+            },
+          ]}
           placeholder="邮箱"
           placeholderTextColor={theme.colors.foregroundTertiary}
           keyboardType="email-address"
@@ -117,7 +128,14 @@ const AuthContent = () => {
 
         {/* 密码输入框 */}
         <TextInput
-          style={[styles.input, { color: theme.colors.foreground, borderColor: theme.colors.border, backgroundColor: theme.colors.card }]}
+          style={[
+            styles.input,
+            {
+              color: theme.colors.foreground,
+              borderColor: theme.colors.border,
+              backgroundColor: theme.colors.card,
+            },
+          ]}
           placeholder="密码"
           placeholderTextColor={theme.colors.foregroundTertiary}
           secureTextEntry
@@ -130,7 +148,14 @@ const AuthContent = () => {
         {mode === "register" && (
           <>
             <TextInput
-              style={[styles.input, { color: theme.colors.foreground, borderColor: theme.colors.border, backgroundColor: theme.colors.card }]}
+              style={[
+                styles.input,
+                {
+                  color: theme.colors.foreground,
+                  borderColor: theme.colors.border,
+                  backgroundColor: theme.colors.card,
+                },
+              ]}
               placeholder="确认密码"
               placeholderTextColor={theme.colors.foregroundTertiary}
               secureTextEntry
@@ -139,7 +164,14 @@ const AuthContent = () => {
               editable={!authService.loading}
             />
             <TextInput
-              style={[styles.input, { color: theme.colors.foreground, borderColor: theme.colors.border, backgroundColor: theme.colors.card }]}
+              style={[
+                styles.input,
+                {
+                  color: theme.colors.foreground,
+                  borderColor: theme.colors.border,
+                  backgroundColor: theme.colors.card,
+                },
+              ]}
               placeholder="昵称（可选）"
               placeholderTextColor={theme.colors.foregroundTertiary}
               value={nickname}
@@ -151,7 +183,9 @@ const AuthContent = () => {
 
         {/* 错误提示 */}
         {authService.error && (
-          <Text style={[styles.errorText, { color: theme.colors.destructive }]}>{authService.error}</Text>
+          <Text style={[styles.errorText, { color: theme.colors.destructive }]}>
+            {authService.error}
+          </Text>
         )}
 
         {/* 提交按钮 */}
@@ -167,7 +201,12 @@ const AuthContent = () => {
           {authService.loading ? (
             <ActivityIndicator color={theme.colors.primaryForeground} />
           ) : (
-            <Text style={[styles.buttonText, { color: theme.colors.primaryForeground }]}>
+            <Text
+              style={[
+                styles.buttonText,
+                { color: theme.colors.primaryForeground },
+              ]}
+            >
               {mode === "login" ? "登录" : "注册"}
             </Text>
           )}
@@ -199,7 +238,7 @@ const AuthContent = () => {
   );
 };
 
-export default bindServices(AuthContent, []);
+export default view(AuthContent);
 
 const styles = StyleSheet.create({
   container: {

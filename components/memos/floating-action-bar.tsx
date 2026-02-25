@@ -5,22 +5,16 @@
  * 页面特定组件：仅在 (memos) 页面使用
  */
 
-import { uploadAttachment } from "@/api/attachment";
-import { parseImage } from "@/api/ocr";
 import { useTheme } from "@/hooks/use-theme";
-import { showError, showSuccess } from "@/utils/toast";
-import { view } from "@rabjs/react";
+import OcrService from "@/services/ocr-service";
+import { useService, view } from "@rabjs/react";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { FileText, Mic, MoreHorizontal } from "lucide-react-native";
 import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { MediaActionDrawer } from "./media-action-drawer";
-import {
-  OcrSourcePicker,
-  OcrSourceType,
-  handleOcrSourceSelect as processOcrSource,
-} from "./ocr-source-picker";
+import { OcrSourcePicker } from "./ocr-source-picker";
 import { VoiceRecorderModal } from "./voice-recorder-modal";
 
 interface FloatingActionBarProps {
@@ -28,14 +22,14 @@ interface FloatingActionBarProps {
   onAddPress?: () => void;
 }
 
-export const FloatingActionBar = view(
+const FloatingActionBarContent = view(
   ({ onMicPress, onAddPress }: FloatingActionBarProps) => {
     const theme = useTheme();
     const router = useRouter();
+    const ocrService = useService(OcrService);
     const [drawerVisible, setDrawerVisible] = useState(false);
     const [voiceRecorderVisible, setVoiceRecorderVisible] = useState(false);
     const [ocrPickerVisible, setOcrPickerVisible] = useState(false);
-    const [ocrLoading, setOcrLoading] = useState(false);
 
     const handleAddPress = React.useCallback(() => {
       if (onAddPress) {
@@ -105,45 +99,13 @@ export const FloatingActionBar = view(
       setOcrPickerVisible(true);
     }, []);
 
-    // 处理 OCR 来源选择
-    const handleOcrSourceSelect = React.useCallback(
-      async (source: OcrSourceType) => {
-        setOcrLoading(true);
-        try {
-          const file = await processOcrSource(source);
-          if (!file) {
-            setOcrLoading(false);
-            return;
-          }
-
-          // 上传文件获取 URL
-          const attachment = await uploadAttachment({
-            file: { uri: file.uri, type: file.mimeType },
-            fileName: file.name,
-            createdAt: Date.now(),
-          });
-
-          // 调用 OCR 识别
-          const texts = await parseImage([attachment.url]);
-
-          if (texts && texts.length > 0) {
-            // 识别成功，跳转到创建页面并填入 OCR 结果
-            const ocrText = texts.join("\n");
-            const encodedContent = encodeURIComponent(ocrText);
-            router.push(`/(memos)/create?ocrContent=${encodedContent}`);
-            showSuccess("OCR 识别完成");
-          } else {
-            showError("OCR 识别失败，未检测到文字");
-          }
-        } catch (error) {
-          console.error("OCR processing error:", error);
-          showError("OCR 识别失败，请稍后重试");
-        } finally {
-          setOcrLoading(false);
-        }
-      },
-      [router],
-    );
+    // 处理 OCR 来源选择 - 跳转到 create 页面并传入图片 URI
+    const handleOcrSourceSelect = React.useCallback(async () => {
+      // 关闭弹窗
+      setOcrPickerVisible(false);
+      // 使用 OCR Service 处理流程
+      await ocrService.startOcrFlowFromList(router);
+    }, [router, ocrService]);
 
     // 关闭抽屉
     const handleDrawerClose = React.useCallback(() => {
@@ -250,6 +212,8 @@ export const FloatingActionBar = view(
     );
   },
 );
+
+export default FloatingActionBarContent;
 
 const styles = StyleSheet.create({
   floatingActionBarWrapper: {

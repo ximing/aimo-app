@@ -3,12 +3,13 @@
  * 支持头像上传、修改昵称、查看邮箱
  */
 
-import AuthService from "@/services/auth-service";
 import { useTheme } from "@/hooks/use-theme";
+import AuthService from "@/services/auth-service";
 import { showError, showSuccess } from "@/utils/toast";
-import * as ImagePicker from "expo-image-picker";
 import { MaterialIcons } from "@expo/vector-icons";
-import { bindServices, useService, view } from "@rabjs/react";
+import { useService, view } from "@rabjs/react";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -22,9 +23,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Image } from "expo-image";
 
-const SettingsContent = view(() => {
+const SettingsContent = () => {
   const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -45,7 +45,7 @@ const SettingsContent = view(() => {
       if (!permissionResult.granted) {
         Alert.alert(
           "权限不足",
-          "需要访问相册权限才能上传头像，请前往设置开启。"
+          "需要访问相册权限才能上传头像，请前往设置开启。",
         );
         return;
       }
@@ -136,9 +136,7 @@ const SettingsContent = view(() => {
             color={theme.colors.foreground}
           />
         </TouchableOpacity>
-        <Text
-          style={[styles.headerTitle, { color: theme.colors.foreground }]}
-        >
+        <Text style={[styles.headerTitle, { color: theme.colors.foreground }]}>
           设置
         </Text>
         <View style={styles.headerRight} />
@@ -188,7 +186,10 @@ const SettingsContent = view(() => {
             </View>
           </TouchableOpacity>
           <Text
-            style={[styles.avatarHint, { color: theme.colors.foregroundSecondary }]}
+            style={[
+              styles.avatarHint,
+              { color: theme.colors.foregroundSecondary },
+            ]}
           >
             点击更换头像
           </Text>
@@ -198,7 +199,9 @@ const SettingsContent = view(() => {
         <View style={styles.formSection}>
           {/* 昵称 */}
           <View style={styles.formItem}>
-            <Text style={[styles.formLabel, { color: theme.colors.foreground }]}>
+            <Text
+              style={[styles.formLabel, { color: theme.colors.foreground }]}
+            >
               昵称
             </Text>
             <View style={styles.inputContainer}>
@@ -231,7 +234,9 @@ const SettingsContent = view(() => {
 
           {/* 邮箱 */}
           <View style={styles.formItem}>
-            <Text style={[styles.formLabel, { color: theme.colors.foreground }]}>
+            <Text
+              style={[styles.formLabel, { color: theme.colors.foreground }]}
+            >
               邮箱
             </Text>
             <View
@@ -259,10 +264,7 @@ const SettingsContent = view(() => {
               />
             </View>
             <Text
-              style={[
-                styles.hint,
-                { color: theme.colors.foregroundSecondary },
-              ]}
+              style={[styles.hint, { color: theme.colors.foregroundSecondary }]}
             >
               邮箱不可修改
             </Text>
@@ -271,10 +273,10 @@ const SettingsContent = view(() => {
       </View>
     </KeyboardAvoidingView>
   );
-});
+};
 
 // 使用 bindServices 注入 AuthService
-export default bindServices(SettingsContent, [AuthService]);
+export default view(SettingsContent);
 
 const styles = StyleSheet.create({
   container: {

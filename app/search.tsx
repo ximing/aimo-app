@@ -10,7 +10,7 @@
  */
 
 import { MaterialIcons } from "@expo/vector-icons";
-import { bindServices, useService } from "@rabjs/react";
+import { useService, view } from "@rabjs/react";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -402,10 +402,7 @@ const SearchPageContent = () => {
   );
 };
 
-export default bindServices(SearchPageContent, [
-  SearchService,
-  CategoryService,
-]);
+export default view(SearchPageContent);
 
 const styles = StyleSheet.create({
   container: {

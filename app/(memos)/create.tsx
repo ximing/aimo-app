@@ -7,20 +7,34 @@ import { deleteLocalFile, uploadAttachment } from "@/api/attachment";
 import { createMemo, updateMemo, updateMemoTags } from "@/api/memo";
 import { parseImage } from "@/api/ocr";
 import { MediaPreview } from "@/components/memos/media-preview";
-import { OcrSourcePicker, OcrSourceType, handleOcrSourceSelect as processOcrSource } from "@/components/memos/ocr-source-picker";
+import {
+  OcrSourcePicker,
+  OcrSourceType,
+  handleOcrSourceSelect as processOcrSource,
+} from "@/components/memos/ocr-source-picker";
 import { VoiceRecorderModal } from "@/components/memos/voice-recorder-modal";
 import { TagSelector } from "@/components/ui/tag-selector";
 import { useMediaPicker } from "@/hooks/use-media-picker";
 import { useTheme } from "@/hooks/use-theme";
 import MemoService from "@/services/memo-service";
+import OcrService from "@/services/ocr-service";
 import TagService from "@/services/tag-service";
 import VoiceMemoService from "@/services/voice-memo-service";
+import type { TagDto } from "@/types/tag";
 import { showError, showSuccess } from "@/utils/toast";
 import { MaterialIcons } from "@expo/vector-icons";
 import { bindServices, useService, view } from "@rabjs/react";
-import type { TagDto } from "@/types/tag";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Camera, Check, FileText, Image, Mic, ScanText, Video, X } from "lucide-react-native";
+import {
+  Camera,
+  Check,
+  FileText,
+  Image,
+  Mic,
+  ScanText,
+  Video,
+  X,
+} from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -40,6 +54,7 @@ const CreateMemoContent = view(() => {
   const insets = useSafeAreaInsets();
   const memoService = useService(MemoService);
   const voiceMemoService = useService(VoiceMemoService);
+  const ocrService = useService(OcrService);
   const tagService = useService(TagService);
   const {
     memoId: queryMemoId,
@@ -48,6 +63,7 @@ const CreateMemoContent = view(() => {
     audioUri: queryAudioUri,
     ocr: queryOcr,
     ocrContent: queryOcrContent,
+    ocrImageUri: queryOcrImageUri,
   } = useLocalSearchParams<{
     memoId?: string;
     imageUri?: string;
@@ -55,6 +71,7 @@ const CreateMemoContent = view(() => {
     audioUri?: string;
     ocr?: string;
     ocrContent?: string;
+    ocrImageUri?: string;
   }>();
   const {
     selectedMedia,
@@ -182,10 +199,63 @@ const CreateMemoContent = view(() => {
   // 处理 OCR 识别结果（当从首页传入 ocrContent 时）
   useEffect(() => {
     if (queryOcrContent) {
-      const decodedContent = decodeURIComponent(queryOcrContent);
-      setContent((prev) => (prev ? `${prev}\n${decodedContent}` : decodedContent));
+      try {
+        const decodedContent = decodeURIComponent(queryOcrContent);
+        setContent((prev) =>
+          prev ? `${prev}\n${decodedContent}` : decodedContent,
+        );
+      } catch (err) {
+        console.error("Failed to decode OCR content:", err);
+        // 如果解码失败，尝试直接使用原始内容
+        setContent((prev) =>
+          prev ? `${prev}\n${queryOcrContent}` : queryOcrContent,
+        );
+      }
     }
   }, [queryOcrContent]);
+
+  // 处理 OCR 图片识别流程（当传入 ocrImageUri 时）
+  useEffect(() => {
+    const handleOcrFromImage = async () => {
+      if (queryOcrImageUri) {
+        try {
+          // 解码图片 URI
+          const decodedUri = decodeURIComponent(queryOcrImageUri);
+
+          // 添加图片到 selectedMedia
+          const media = {
+            type: "image" as const,
+            uri: decodedUri,
+            name: `ocr-${Date.now()}.jpg`,
+            mimeType: "image/jpeg",
+          };
+          addMedia(media);
+
+          // 启动 OCR 流程
+          await ocrService.processSelectedImage(decodedUri);
+        } catch (err) {
+          console.error("Failed to process OCR from image:", err);
+          showError("OCR 识别失败，请稍后重试");
+        }
+      }
+    };
+
+    handleOcrFromImage();
+  }, [queryOcrImageUri, addMedia, ocrService]);
+
+  // 监听 OCR 结果，自动填入内容
+  useEffect(() => {
+    if (ocrService.ocrResultText && !content) {
+      setContent(ocrService.ocrResultText);
+    }
+  }, [ocrService.ocrResultText, content]);
+
+  // 监听 OCR 错误
+  useEffect(() => {
+    if (ocrService.ocrError) {
+      showError(ocrService.ocrError);
+    }
+  }, [ocrService.ocrError]);
 
   // 处理从外部传入的录音（录音完成后）
   useEffect(() => {
@@ -261,7 +331,7 @@ const CreateMemoContent = view(() => {
         showError("语音处理失败，请稍后重试");
       }
     },
-    [addMedia, voiceMemoService]
+    [addMedia, voiceMemoService],
   );
 
   // OCR 识别处理
@@ -272,43 +342,40 @@ const CreateMemoContent = view(() => {
   }, [ocrLoading]);
 
   // 处理 OCR 来源选择
-  const handleOcrSourceSelect = useCallback(
-    async (source: OcrSourceType) => {
-      setOcrLoading(true);
-      try {
-        const file = await processOcrSource(source);
-        if (!file) {
-          setOcrLoading(false);
-          return;
-        }
-
-        // 上传文件获取 URL
-        const attachment = await uploadAttachment({
-          file: { uri: file.uri, type: file.mimeType },
-          fileName: file.name,
-          createdAt: Date.now(),
-        });
-
-        // 调用 OCR 识别
-        const texts = await parseImage([attachment.url]);
-
-        if (texts && texts.length > 0) {
-          // 追加识别结果到内容
-          const ocrText = texts.join("\n");
-          setContent((prev) => (prev ? `${prev}\n${ocrText}` : ocrText));
-          showSuccess("OCR 识别完成");
-        } else {
-          showError("OCR 识别失败，未检测到文字");
-        }
-      } catch (err) {
-        console.error("Failed to process OCR:", err);
-        showError("OCR 识别失败，请稍后重试");
-      } finally {
+  const handleOcrSourceSelect = useCallback(async (source: OcrSourceType) => {
+    setOcrLoading(true);
+    try {
+      const file = await processOcrSource(source);
+      if (!file) {
         setOcrLoading(false);
+        return;
       }
-    },
-    []
-  );
+
+      // 上传文件获取 URL
+      const attachment = await uploadAttachment({
+        file: { uri: file.uri, type: file.mimeType },
+        fileName: file.name,
+        createdAt: Date.now(),
+      });
+
+      // 调用 OCR 识别
+      const texts = await parseImage([attachment.url]);
+
+      if (texts && texts.length > 0) {
+        // 追加识别结果到内容
+        const ocrText = texts.join("\n");
+        setContent((prev) => (prev ? `${prev}\n${ocrText}` : ocrText));
+        showSuccess("OCR 识别完成");
+      } else {
+        showError("OCR 识别失败，未检测到文字");
+      }
+    } catch (err) {
+      console.error("Failed to process OCR:", err);
+      showError("OCR 识别失败，请稍后重试");
+    } finally {
+      setOcrLoading(false);
+    }
+  }, []);
 
   // 处理返回
   const handleGoBack = useCallback(() => {
@@ -587,6 +654,49 @@ const CreateMemoContent = view(() => {
         </View>
       )}
 
+      {/* OCR 状态提示 */}
+      {ocrService.ocrFlowStatus !== "idle" &&
+        ocrService.ocrFlowStatus !== "success" &&
+        ocrService.ocrFlowStatus !== "failed" && (
+          <View
+            style={[
+              styles.transcriptionStatusContainer,
+              { backgroundColor: theme.colors.backgroundSecondary },
+            ]}
+          >
+            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <Text
+              style={[
+                styles.transcriptionStatusText,
+                { color: theme.colors.foregroundSecondary },
+              ]}
+            >
+              {ocrService.ocrFlowStatus === "uploading" && "正在上传图片..."}
+              {ocrService.ocrFlowStatus === "recognizing" && "正在识别文字..."}
+            </Text>
+          </View>
+        )}
+
+      {/* OCR 失败提示 */}
+      {ocrService.ocrFlowStatus === "failed" && (
+        <View
+          style={[
+            styles.transcriptionStatusContainer,
+            { backgroundColor: theme.colors.destructive + "15" },
+          ]}
+        >
+          <ScanText size={16} color={theme.colors.destructive} />
+          <Text
+            style={[
+              styles.transcriptionStatusText,
+              { color: theme.colors.destructive },
+            ]}
+          >
+            {ocrService.ocrError || "文字识别失败，请手动输入"}
+          </Text>
+        </View>
+      )}
+
       {/* 错误信息 */}
       {(error || mediaError) && (
         <View
@@ -651,7 +761,10 @@ const CreateMemoContent = view(() => {
           disabled={ocrLoading}
         >
           {ocrLoading ? (
-            <ActivityIndicator size="small" color={theme.colors.foregroundSecondary} />
+            <ActivityIndicator
+              size="small"
+              color={theme.colors.foregroundSecondary}
+            />
           ) : (
             <ScanText size={20} color={theme.colors.foregroundSecondary} />
           )}
@@ -716,7 +829,7 @@ const CreateMemoContent = view(() => {
   );
 });
 
-export default bindServices(CreateMemoContent, [MemoService, TagService, VoiceMemoService]);
+export default bindServices(CreateMemoContent, [VoiceMemoService]);
 
 const styles = StyleSheet.create({
   container: {

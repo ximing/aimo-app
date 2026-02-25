@@ -550,10 +550,7 @@ const MemoDetailContent = view(() => {
                     ]}
                   >
                     <Text
-                      style={[
-                        styles.tagText,
-                        { color: theme.colors.primary },
-                      ]}
+                      style={[styles.tagText, { color: theme.colors.primary }]}
                       numberOfLines={1}
                     >
                       {tag.name}
@@ -582,12 +579,20 @@ const MemoDetailContent = view(() => {
                   <MaterialIcons
                     name={memo.isPublic ? "public" : "lock"}
                     size={14}
-                    color={memo.isPublic ? theme.colors.success : theme.colors.foregroundTertiary}
+                    color={
+                      memo.isPublic
+                        ? theme.colors.success
+                        : theme.colors.foregroundTertiary
+                    }
                   />
                   <Text
                     style={[
                       styles.footerText,
-                      { color: memo.isPublic ? theme.colors.success : theme.colors.foregroundTertiary },
+                      {
+                        color: memo.isPublic
+                          ? theme.colors.success
+                          : theme.colors.foregroundTertiary,
+                      },
                     ]}
                   >
                     {memo.isPublic ? "已公开" : "私有"}
@@ -617,7 +622,9 @@ const MemoDetailContent = view(() => {
                       },
                     ]}
                   >
-                    {categoryService.categories.find(c => c.categoryId === memo.categoryId)?.name || memo.categoryId}
+                    {categoryService.categories.find(
+                      (c) => c.categoryId === memo.categoryId,
+                    )?.name || memo.categoryId}
                   </Text>
                 </View>
               )}
@@ -754,11 +761,7 @@ const MemoDetailContent = view(() => {
 
 MemoDetailContent.displayName = "MemoDetailContent";
 
-export default bindServices(MemoDetailContent, [
-  MemoService,
-  RelatedMemoService,
-  CategoryService,
-]);
+export default bindServices(MemoDetailContent, [RelatedMemoService]);
 
 const styles = StyleSheet.create({
   container: {

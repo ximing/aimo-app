@@ -16,7 +16,7 @@ import MemoService from "@/services/memo-service";
 import TagService from "@/services/tag-service";
 import type { Memo } from "@/types/memo";
 import { MaterialIcons } from "@expo/vector-icons";
-import { bindServices, useService } from "@rabjs/react";
+import { useService, view } from "@rabjs/react";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -223,7 +223,7 @@ const MemosListContent = () => {
   );
 };
 
-export default bindServices(MemosListContent, []);
+export default view(MemosListContent);
 
 const styles = StyleSheet.create({
   container: {
