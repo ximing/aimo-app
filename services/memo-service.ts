@@ -9,6 +9,7 @@ import {
   getMemo as apiGetMemo,
   getMemos as apiGetMemos,
   getRelatedMemos as apiGetRelatedMemos,
+  updateMemo as apiUpdateMemo,
 } from "@/api/memo";
 import type { MemoActivityStatsDto } from "@/types/insights";
 import type { ListMemosParams, Memo, RelatedMemoItem } from "@/types/memo";
@@ -160,6 +161,31 @@ class MemoService extends Service {
       this.memos = this.memos.filter((memo) => memo.memoId !== memoId);
     } catch (err) {
       this.error = err instanceof Error ? err.message : "删除 memo 失败";
+      throw err;
+    }
+  }
+
+  /**
+   * 更新 memo 公开状态
+   */
+  async updateMemoVisibility(
+    memoId: string,
+    isPublic: boolean,
+  ): Promise<void> {
+    try {
+      const updatedMemo = await apiUpdateMemo(memoId, { isPublic });
+      // 更新列表中的 memo
+      const index = this.memos.findIndex((m) => m.memoId === memoId);
+      if (index !== -1) {
+        this.memos[index] = updatedMemo;
+      }
+      // 更新当前详情页的 memo
+      if (this.currentMemo?.memoId === memoId) {
+        this.currentMemo = updatedMemo;
+      }
+    } catch (err) {
+      this.error =
+        err instanceof Error ? err.message : "更新公开状态失败";
       throw err;
     }
   }

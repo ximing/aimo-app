@@ -72,6 +72,7 @@ export interface UpdateMemoRequest {
   categoryId?: string;
   attachments?: string[];
   relations?: string[];
+  isPublic?: boolean;
 }
 
 /**

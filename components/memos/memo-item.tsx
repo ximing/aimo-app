@@ -108,12 +108,21 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
     const now = new Date();
     const diffTime = now.getTime() - date.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
 
-    if (diffDays === 0) {
-      return date.toLocaleTimeString("zh-CN", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+    // 负数或当天显示"刚刚"
+    if (diffDays <= 0) {
+      if (diffMinutes < 1) {
+        return "刚刚";
+      } else if (diffMinutes < 60) {
+        return `${diffMinutes} 分钟前`;
+      } else {
+        // 当天但超过1小时，显示具体时间
+        return date.toLocaleTimeString("zh-CN", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
     } else if (diffDays === 1) {
       return "昨天";
     } else if (diffDays < 7) {
@@ -207,6 +216,19 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
     setMenuVisible(false);
     Clipboard.setString(memo.content);
     showSuccess("已复制到剪贴板");
+  };
+
+  // 处理公开/私密状态切换
+  const handleToggleVisibility = async () => {
+    setMenuVisible(false);
+    try {
+      const newVisibility = !memo.isPublic;
+      await memoService.updateMemoVisibility(memo.memoId, newVisibility);
+      showSuccess(newVisibility ? "已设为公共" : "已设为私密");
+    } catch (error) {
+      console.error("更新公开状态失败:", error);
+      showError("更新公开状态失败");
+    }
   };
 
   // 格式化完整时间
@@ -625,6 +647,28 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
                   ]}
                 >
                   复制
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.actionButton,
+                  { borderBottomColor: theme.colors.border },
+                ]}
+                onPress={handleToggleVisibility}
+              >
+                <MaterialIcons
+                  name={memo.isPublic ? "lock" : "public"}
+                  size={22}
+                  color={theme.colors.foreground}
+                />
+                <Text
+                  style={[
+                    styles.actionButtonText,
+                    { color: theme.colors.foreground },
+                  ]}
+                >
+                  {memo.isPublic ? "设为私密" : "设为公共"}
                 </Text>
               </TouchableOpacity>
 
