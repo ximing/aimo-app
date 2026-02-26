@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Pending start
+All stories complete
 
 ## Codebase Patterns
 
@@ -11,13 +11,32 @@ Pending start
 - API calls: Pure async functions in api/ directory
 - UI components: Located in components/ui and components/memos
 - Page routing: Expo Router in app/ directory
+- Service registration: Register services in app/_layout.tsx using `register()` function
 
 ## Stories
 
-- [ ] US-001: 创建每日推荐 API 函数
-- [ ] US-002: 创建推荐数据 Service
-- [ ] US-003: 创建推荐模块 UI 组件
-- [ ] US-004: 卡片点击跳转到详情页
+- [x] US-001: 创建每日推荐 API 函数
+- [x] US-002: 创建推荐数据 Service
+- [x] US-003: 创建推荐模块 UI 组件
+- [x] US-004: 卡片点击跳转到详情页
 
 ## Notes
 
+## 2026-02-26 - US-003/US-004
+- Implemented recommendation-card.tsx component with title, tag (blue for recommendation, orange for history), and date
+- Implemented recommendation-section.tsx container with horizontal ScrollView and skeleton loading state
+- Integrated recommendation section into memo list page (app/(memos)/index.tsx)
+- Registered RecommendationService in app/_layout.tsx
+- Added exports to components/memos/index.ts
+- Typecheck passes (existing unrelated errors in codebase)
+- Lint passes with no new warnings
+- Browser verification: Requires authentication to access memo list, code review complete
+
+**Learnings for future iterations:**
+  - Services must be registered in app/_layout.tsx using `register()` from @rabjs/react before they can be used with `useService()`
+  - Components using services should be wrapped with `view()` decorator to make them reactive
+  - Theme colors use hex codes (e.g., #007AFF for blue, #FF9500 for orange)
+  - Empty data should return null to hide the component entirely
+  - For navigation in cards, use `router.push('/memos/[id]')` pattern
+
+---
