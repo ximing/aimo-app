@@ -545,3 +545,25 @@
   - No separate implementation needed - US-005 covered both cases
 
 ---
+
+## 2026-02-26 - US-001 - 创建每日推荐 API 函数
+- What was implemented:
+  - Created types/recommendation.ts with RecommendationType, RecommendationItem, and response types
+  - Created api/recommendation.ts with getDailyRecommendations() and getHistoryTodayMemos() functions
+  - getDailyRecommendations calls GET /recommendation/daily
+  - getHistoryTodayMemos calls GET /recommendation/history-today
+  - Both functions return RecommendationItem[] with id, title, content, createdAt, type fields
+  - Typecheck passes (no new errors, pre-existing errors in other files)
+  - Lint passes (no new errors, 20 pre-existing warnings)
+
+- Files changed:
+  - types/recommendation.ts (new)
+  - api/recommendation.ts (new)
+
+- **Learnings for future iterations:**
+  - API follows existing patterns: uses apiGet, returns data or throws errors with Chinese messages
+  - RecommendationType is 'daily' | 'history_today' to distinguish between recommendation and history
+  - Response structure uses code/message/data pattern, items array contains RecommendationItem[]
+  - API endpoints: /recommendation/daily and /recommendation/history-today
+
+---
