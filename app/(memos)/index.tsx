@@ -5,6 +5,7 @@
 import {
   FilterDrawer,
   FloatingActionBar,
+  RecommendationSection,
   SearchHeader,
   SidebarDrawer,
 } from "@/components/memos";
@@ -167,6 +168,9 @@ const MemosListContent = () => {
         sortOrder={filterService.sortOrder}
         onChangeSort={filterService.setSortOption}
       />
+
+      {/* 推荐模块 */}
+      <RecommendationSection />
 
       {/* 列表 */}
       <FlatList

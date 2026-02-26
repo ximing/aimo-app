@@ -22,3 +22,5 @@ export { FilterDrawer } from "./filter-drawer";
 export { CreateCategoryModal } from "./create-category-modal";
 export { DateFilterDropdown } from "./date-filter-dropdown";
 export { CategoryFilterDropdown } from "./category-filter-dropdown";
+export { RecommendationSection } from "./recommendation-section";
+export { RecommendationCard } from "./recommendation-card";
