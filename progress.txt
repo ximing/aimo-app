@@ -567,3 +567,25 @@
   - API endpoints: /recommendation/daily and /recommendation/history-today
 
 ---
+
+## 2026-02-26 - US-002 - 创建推荐数据 Service
+- What was implemented:
+  - Created services/recommendation.service.ts extending @rabjs/react Service
+  - Service properties: recommendations (RecommendationItem[]), historyToday (RecommendationItem[]), loading (boolean), error (string | null)
+  - Implemented fetchRecommendations() method using Promise.all() to fetch both daily and history today data in parallel
+  - Added helper getters: hasData (checks if any recommendations exist), allItems (merges both arrays)
+  - Added clearError() and reset() methods for state management
+  - Typecheck passes (pre-existing errors in other files)
+  - Lint passes (0 errors, 20 pre-existing warnings)
+
+- Files changed:
+  - services/recommendation.service.ts (new)
+
+- **Learnings for future iterations:**
+  - RecommendationService follows same Service pattern as TagService, MemoService
+  - Use Promise.all() to fetch multiple API endpoints in parallel for better performance
+  - Service getters (hasData, allItems) provide convenient computed properties
+  - Async methods set loading=true at start, update data on success, set error on failure, ensure loading=false in finally block
+  - @rabjs/react Service automatically makes properties reactive - no need for decorators
+
+---
