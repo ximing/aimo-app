@@ -1,4 +1,4 @@
-# Ralph Progress: ocr
+# Ralph Progress: daily-recommendation
 
 ## Current Status
 
@@ -14,12 +14,10 @@ Pending start
 
 ## Stories
 
-- [ ] US-001: 创建 OCR API 函数
-- [ ] US-002: MediaActionDrawer 增加识图入口
-- [ ] US-003: 新建 memo 页面自动 OCR
-- [ ] US-004: 实现文件选择器支持图片和 PDF
-- [ ] US-005: 创建 memo 页面工具栏增加 OCR 按钮
-- [ ] US-006: 编辑 memo 页面支持 OCR
+- [ ] US-001: 创建每日推荐 API 函数
+- [ ] US-002: 创建推荐数据 Service
+- [ ] US-003: 创建推荐模块 UI 组件
+- [ ] US-004: 卡片点击跳转到详情页
 
 ## Notes
 

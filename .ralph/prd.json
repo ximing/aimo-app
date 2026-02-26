@@ -1,17 +1,17 @@
 {
   "project": "Aimo",
-  "branchName": "ralph/ocr",
-  "description": "OCR 识别功能 - 从图片/PDF提取文字，支持浮动操作栏和创建/编辑页面入口",
+  "branchName": "ralph/daily-recommendation",
+  "description": "每日推荐功能 - 在 memo 首页展示每日推荐和历史的今天备忘录",
   "userStories": [
     {
       "id": "US-001",
-      "title": "创建 OCR API 函数",
-      "description": "作为开发者，我需要在前端实现 OCR API 调用函数。",
+      "title": "创建每日推荐 API 函数",
+      "description": "作为开发者，我需要调用后端 API 获取每日推荐和历史今天数据，以便在前端展示。",
       "acceptanceCriteria": [
-        "创建 api/ocr.ts 文件",
-        "实现 parseImage(files: string[]) 函数调用 POST /api/v1/ocr/parse",
-        "函数返回识别文本数组",
-        "正确处理 API 错误响应",
+        "在 api/ 目录创建 recommendation.ts 文件",
+        "实现 getDailyRecommendations() 函数调用 /recommendation/daily 接口",
+        "实现 getHistoryTodayMemos() 函数调用 /recommendation/history-today 接口",
+        "接口返回数据包含: id, title, content, createdAt, type (区分推荐还是历史)",
         "Typecheck passes"
       ],
       "priority": 1,
@@ -20,83 +20,50 @@
     },
     {
       "id": "US-002",
-      "title": "MediaActionDrawer 增加识图入口",
-      "description": "作为用户，我想从浮动操作栏的更多菜单中使用 OCR 功能。",
+      "title": "创建推荐数据 Service",
+      "description": "作为开发者，我需要创建一个 Service 来管理推荐数据的状态和获取逻辑。",
       "acceptanceCriteria": [
-        "在 MediaActionDrawer 组件中增加识图按钮",
-        "使用 ImageText 或 ScanText 图标",
-        "点击后弹出图片来源选择（相机/相册/文件）",
-        "选择文件后导航到新建 memo 页面并传递文件信息",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "在 services/ 目录创建 recommendation.service.ts",
+        "Service 包含属性: recommendations, historyToday, loading, error",
+        "实现 fetchRecommendations() 方法获取推荐数据",
+        "实现进入页面时自动获取数据的逻辑",
+        "Typecheck passes"
       ],
       "priority": 2,
-      "passes": true,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-003",
-      "title": "新建 memo 页面自动 OCR",
-      "description": "作为用户，我想在创建 memo 时自动对上传的图片/PDF 进行 OCR。",
+      "title": "创建推荐模块 UI 组件",
+      "description": "作为用户，我希望在 memo 首页顶部看到推荐模块，包含横向滚动的推荐卡片。",
       "acceptanceCriteria": [
-        "create.tsx 接收传递的文件信息",
-        "自动调用 uploadAttachment 上传文件",
-        "上传完成后获取 HTTPS URL",
-        "调用 OCR parse 接口获取识别文本",
-        "OCR 完成后将文本填入输入框",
-        "显示 OCR 处理中的加载状态",
+        "在 components/memos/ 目录创建 recommendation-section.tsx 容器组件",
+        "在 components/memos/ 目录创建 recommendation-card.tsx 卡片组件",
+        "推荐模块位于 memo list 顶部",
+        "使用横向 ScrollView 展示卡片",
+        "推荐卡片显示蓝色'推荐'标签，历史卡片显示橙色'历史的今天'标签",
+        "卡片显示标题和日期",
+        "加载状态显示骨架屏，空数据时隐藏模块",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": true,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-004",
-      "title": "实现文件选择器支持图片和 PDF",
-      "description": "作为开发者，我需要实现支持相机、相册、文件管理器选择图片和 PDF 的功能。",
+      "title": "卡片点击跳转到详情页",
+      "description": "作为用户，我希望点击推荐卡片时能跳转到对应的 memo 详情页。",
       "acceptanceCriteria": [
-        "使用 expo-image-picker 选择相机和相册图片",
-        "使用 expo-document-picker 选择 PDF 文件",
-        "支持一次选择多个文件",
-        "返回统一的文件信息格式",
-        "Typecheck passes"
+        "点击卡片使用 router.push('/memos/[id]') 导航到详情页",
+        "详情页能正常加载并显示 memo 内容",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-005",
-      "title": "创建 memo 页面工具栏增加 OCR 按钮",
-      "description": "作为用户，我想在创建 memo 页面的工具栏中使用 OCR 功能。",
-      "acceptanceCriteria": [
-        "在 create.tsx 底部工具栏增加 OCR 按钮",
-        "使用 ImageText 或 ScanText 图标",
-        "点击后显示图片来源选择",
-        "OCR 完成后将文本追加到当前内容（换行分隔）",
-        "显示加载状态和错误提示",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 5,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-006",
-      "title": "编辑 memo 页面支持 OCR",
-      "description": "作为用户，我想在编辑已有 memo 时也能使用 OCR 功能。",
-      "acceptanceCriteria": [
-        "编辑模式复用了 create.tsx，已有 OCR 按钮",
-        "OCR 识别完成后将文本追加到现有内容之后（换行分隔）",
-        "不影响已有附件和内容",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 6,
-      "passes": true,
+      "passes": false,
       "notes": ""
     }
   ]
