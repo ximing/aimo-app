@@ -95,6 +95,5 @@ export const getApkDownloadUrl = (
  * 获取当前应用版本
  */
 export const getAppVersion = (): string => {
-  // Expo 项目使用 expo-constants 获取版本
   return Constants.expoConfig?.version ?? "1.0.0";
 };
