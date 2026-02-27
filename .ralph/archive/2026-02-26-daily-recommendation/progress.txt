@@ -1,0 +1,25 @@
+# Ralph Progress: ocr
+
+## Current Status
+
+Pending start
+
+## Codebase Patterns
+
+- Service pattern: Use `@rabjs/react` Service class with observable properties
+- Component pattern: Use `view()` decorator for theme-aware components
+- API calls: Pure async functions in api/ directory
+- UI components: Located in components/ui and components/memos
+- Page routing: Expo Router in app/ directory
+
+## Stories
+
+- [ ] US-001: 创建 OCR API 函数
+- [ ] US-002: MediaActionDrawer 增加识图入口
+- [ ] US-003: 新建 memo 页面自动 OCR
+- [ ] US-004: 实现文件选择器支持图片和 PDF
+- [ ] US-005: 创建 memo 页面工具栏增加 OCR 按钮
+- [ ] US-006: 编辑 memo 页面支持 OCR
+
+## Notes
+

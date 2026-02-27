@@ -89,7 +89,7 @@ const RecommendationSectionComponent = view(() => {
           contentContainerStyle={styles.scrollContent}
         >
           {allItems.map((item) => (
-            <RecommendationCard key={item.id} item={item} />
+            <RecommendationCard key={item.memoId} item={item} />
           ))}
         </ScrollView>
       )}

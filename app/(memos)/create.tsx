@@ -97,12 +97,25 @@ const CreateMemoContent = view(() => {
   const [voiceRecorderVisible, setVoiceRecorderVisible] = useState(false);
   const [ocrPickerVisible, setOcrPickerVisible] = useState(false);
 
-  // 初始化加载编辑数据
+  // 初始化加载编辑数据 + 新建时清空状态
   useEffect(() => {
     const initEditData = async () => {
-      if (queryMemoId) {
-        setIsLoading(true);
-        try {
+      // 如果不是编辑模式（没有 memoId），则清空所有状态
+      if (!queryMemoId) {
+        setContent("");
+        setSelectedTags([]);
+        setAudioUri(null);
+        clearMedia();
+        // 清空 VoiceMemoService 的状态
+        voiceMemoService.resetAll();
+        // 清空 OcrService 的状态
+        ocrService.resetOcr();
+        return;
+      }
+
+      // 编辑模式：加载已有数据
+      setIsLoading(true);
+      try {
           // 从 Service 获取已缓存的数据或直接调用 API
           const memo = memoService.currentMemo;
           if (memo && memo.memoId === queryMemoId) {
@@ -127,7 +140,6 @@ const CreateMemoContent = view(() => {
         } finally {
           setIsLoading(false);
         }
-      }
     };
 
     initEditData();

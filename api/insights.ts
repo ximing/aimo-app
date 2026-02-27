@@ -4,9 +4,9 @@
  */
 
 import type {
-    DailyRecommendationsResponseDto,
-    MemoActivityStatsDto,
-    OnThisDayResponseDto,
+  DailyRecommendationsResponseDto,
+  MemoActivityStatsDto,
+  OnThisDayResponseDto,
 } from "@/types/insights";
 import { apiGet } from "./common";
 
@@ -50,7 +50,7 @@ export const getDailyRecommendations =
     const response = await apiGet<DailyRecommendationsResponseDto>(
       "/insights/daily-recommendations",
     );
-
+    console.log(response);
     if (response.code !== 0) {
       throw new Error(response.msg || "获取每日推荐失败");
     }

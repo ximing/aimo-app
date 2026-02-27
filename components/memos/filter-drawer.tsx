@@ -65,6 +65,9 @@ export const FilterDrawer = view(
     const theme = useTheme();
     // 新建分类 Modal 状态
     const [createModalVisible, setCreateModalVisible] = useState(false);
+    // 下拉框显示状态
+    const [sortDropdownVisible, setSortDropdownVisible] = useState(false);
+    const [categoryDropdownVisible, setCategoryDropdownVisible] = useState(false);
     // 动画值
     const translateX = useRef(new Animated.Value(DRAWER_WIDTH)).current;
     const opacity = useRef(new Animated.Value(0)).current;
@@ -176,6 +179,17 @@ export const FilterDrawer = view(
               </TouchableOpacity>
             </View>
 
+            {/* 下拉框遮罩层 - 点击关闭所有下拉框 */}
+            {(categoryDropdownVisible || sortDropdownVisible) && (
+              <Pressable
+                style={styles.dropdownOverlay}
+                onPress={() => {
+                  setCategoryDropdownVisible(false);
+                  setSortDropdownVisible(false);
+                }}
+              />
+            )}
+
             {/* 分类区域 */}
             <View style={styles.section}>
               <Text
@@ -186,175 +200,174 @@ export const FilterDrawer = view(
               >
                 分类
               </Text>
-
-              {/* 全部分类选项 */}
               <TouchableOpacity
                 style={[
-                  styles.optionItem,
-                  selectedCategoryId === undefined && [
-                    styles.optionItemSelected,
-                    { backgroundColor: theme.colors.primary + "15" },
-                  ],
+                  styles.dropdownButton,
+                  { backgroundColor: theme.colors.card, borderColor: theme.colors.border },
                 ]}
-                onPress={() => handleCategorySelect(undefined)}
+                onPress={() => setCategoryDropdownVisible(!categoryDropdownVisible)}
               >
-                <MaterialIcons
-                  name="folder-open"
-                  size={20}
-                  color={
-                    selectedCategoryId === undefined
-                      ? theme.colors.primary
-                      : theme.colors.foregroundSecondary
-                  }
-                />
-                <Text
-                  style={[
-                    styles.optionText,
-                    {
-                      color:
-                        selectedCategoryId === undefined
-                          ? theme.colors.primary
-                          : theme.colors.foreground,
-                    },
-                  ]}
-                >
-                  全部分类
-                </Text>
-                {selectedCategoryId === undefined && (
+                <View style={styles.dropdownButtonContent}>
                   <MaterialIcons
-                    name="check"
-                    size={20}
-                    color={theme.colors.primary}
-                    style={styles.checkIcon}
-                  />
-                )}
-              </TouchableOpacity>
-
-              {/* 无分类选项 */}
-              <TouchableOpacity
-                style={[
-                  styles.optionItem,
-                  selectedCategoryId === "__uncategorized__" && [
-                    styles.optionItemSelected,
-                    { backgroundColor: theme.colors.primary + "15" },
-                  ],
-                ]}
-                onPress={() => handleCategorySelect("__uncategorized__")}
-              >
-                <MaterialIcons
-                  name="folder"
-                  size={20}
-                  color={
-                    selectedCategoryId === "__uncategorized__"
-                      ? theme.colors.primary
-                      : theme.colors.foregroundSecondary
-                  }
-                />
-                <Text
-                  style={[
-                    styles.optionText,
-                    {
-                      color:
-                        selectedCategoryId === "__uncategorized__"
-                          ? theme.colors.primary
-                          : theme.colors.foreground,
-                    },
-                  ]}
-                >
-                  无分类
-                </Text>
-                {selectedCategoryId === "__uncategorized__" && (
-                  <MaterialIcons
-                    name="check"
-                    size={20}
-                    color={theme.colors.primary}
-                    style={styles.checkIcon}
-                  />
-                )}
-              </TouchableOpacity>
-
-              {/* 分隔线 */}
-              {categories.length > 0 && (
-                <View
-                  style={[
-                    styles.divider,
-                    { backgroundColor: theme.colors.border },
-                  ]}
-                />
-              )}
-
-              {/* 用户自定义分类列表 */}
-              {categories.map((category) => (
-                <TouchableOpacity
-                  key={category.categoryId}
-                  style={[
-                    styles.optionItem,
-                    selectedCategoryId === category.categoryId && [
-                      styles.optionItemSelected,
-                      { backgroundColor: theme.colors.primary + "15" },
-                    ],
-                  ]}
-                  onPress={() => handleCategorySelect(category.categoryId)}
-                >
-                  <View
-                    style={[
-                      styles.categoryDot,
-                      {
-                        backgroundColor:
-                          category.color || theme.colors.foregroundSecondary,
-                      },
-                    ]}
+                    name="folder"
+                    size={18}
+                    color={theme.colors.foregroundSecondary}
                   />
                   <Text
-                    style={[
-                      styles.optionText,
-                      {
-                        color:
-                          selectedCategoryId === category.categoryId
-                            ? theme.colors.primary
-                            : theme.colors.foreground,
-                      },
-                    ]}
-                    numberOfLines={1}
+                    style={[styles.dropdownButtonText, { color: theme.colors.foreground }]}
                   >
-                    {category.name}
+                    {getCategoryDisplayName(selectedCategoryId)}
                   </Text>
-                  {selectedCategoryId === category.categoryId && (
-                    <MaterialIcons
-                      name="check"
-                      size={20}
-                      color={theme.colors.primary}
-                      style={styles.checkIcon}
-                    />
-                  )}
-                </TouchableOpacity>
-              ))}
-
-              {/* 新建分类按钮 */}
-              <TouchableOpacity
-                style={[
-                  styles.optionItem,
-                  styles.addCategoryButton,
-                ]}
-                onPress={() => setCreateModalVisible(true)}
-              >
+                </View>
                 <MaterialIcons
-                  name="add"
+                  name={categoryDropdownVisible ? "keyboard-arrow-up" : "keyboard-arrow-down"}
                   size={20}
-                  color={theme.colors.primary}
+                  color={theme.colors.foregroundTertiary}
                 />
-                <Text
+              </TouchableOpacity>
+
+              {/* 分类下拉展开 */}
+              {categoryDropdownVisible && (
+                <View
                   style={[
-                    styles.optionText,
-                    { color: theme.colors.primary },
+                    styles.inlineDropdown,
+                    { backgroundColor: theme.colors.card, borderColor: theme.colors.border },
                   ]}
                 >
-                  新建分类
-                </Text>
-              </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.inlineDropdownItem,
+                      selectedCategoryId === undefined && {
+                        backgroundColor: theme.colors.primary + "15",
+                      },
+                    ]}
+                    onPress={() => {
+                      handleCategorySelect(undefined);
+                      setCategoryDropdownVisible(false);
+                    }}
+                  >
+                    <MaterialIcons
+                      name="folder-open"
+                      size={18}
+                      color={
+                        selectedCategoryId === undefined
+                          ? theme.colors.primary
+                          : theme.colors.foregroundSecondary
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.inlineDropdownItemText,
+                        {
+                          color:
+                            selectedCategoryId === undefined
+                              ? theme.colors.primary
+                              : theme.colors.foreground,
+                        },
+                      ]}
+                    >
+                      全部分类
+                    </Text>
+                    {selectedCategoryId === undefined && (
+                      <MaterialIcons name="check" size={18} color={theme.colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.inlineDropdownItem,
+                      selectedCategoryId === "__uncategorized__" && {
+                        backgroundColor: theme.colors.primary + "15",
+                      },
+                    ]}
+                    onPress={() => {
+                      handleCategorySelect("__uncategorized__");
+                      setCategoryDropdownVisible(false);
+                    }}
+                  >
+                    <MaterialIcons
+                      name="folder"
+                      size={18}
+                      color={
+                        selectedCategoryId === "__uncategorized__"
+                          ? theme.colors.primary
+                          : theme.colors.foregroundSecondary
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.inlineDropdownItemText,
+                        {
+                          color:
+                            selectedCategoryId === "__uncategorized__"
+                              ? theme.colors.primary
+                              : theme.colors.foreground,
+                        },
+                      ]}
+                    >
+                      无分类
+                    </Text>
+                    {selectedCategoryId === "__uncategorized__" && (
+                      <MaterialIcons name="check" size={18} color={theme.colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                  {categories.map((category) => (
+                    <TouchableOpacity
+                      key={category.categoryId}
+                      style={[
+                        styles.inlineDropdownItem,
+                        selectedCategoryId === category.categoryId && {
+                          backgroundColor: theme.colors.primary + "15",
+                        },
+                      ]}
+                      onPress={() => {
+                        handleCategorySelect(category.categoryId);
+                        setCategoryDropdownVisible(false);
+                      }}
+                    >
+                      <View
+                        style={[
+                          styles.categoryDot,
+                          {
+                            backgroundColor:
+                              category.color || theme.colors.foregroundSecondary,
+                          },
+                        ]}
+                      />
+                      <Text
+                        style={[
+                          styles.inlineDropdownItemText,
+                          {
+                            color:
+                              selectedCategoryId === category.categoryId
+                                ? theme.colors.primary
+                                : theme.colors.foreground,
+                          },
+                        ]}
+                      >
+                        {category.name}
+                      </Text>
+                      {selectedCategoryId === category.categoryId && (
+                        <MaterialIcons name="check" size={18} color={theme.colors.primary} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                  <TouchableOpacity
+                    style={[styles.inlineDropdownItem, styles.addCategoryInlineItem]}
+                    onPress={() => {
+                      setCategoryDropdownVisible(false);
+                      setCreateModalVisible(true);
+                    }}
+                  >
+                    <MaterialIcons name="add" size={18} color={theme.colors.primary} />
+                    <Text style={[styles.inlineDropdownItemText, { color: theme.colors.primary }]}>
+                      新建分类
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
 
-            {/* 标签区域 */}
+            {/* 排序区域 */}
             <View style={styles.section}>
               <Text
                 style={[
@@ -362,8 +375,185 @@ export const FilterDrawer = view(
                   { color: theme.colors.foregroundSecondary },
                 ]}
               >
-                标签
+                排序方式
               </Text>
+              <TouchableOpacity
+                style={[
+                  styles.dropdownButton,
+                  { backgroundColor: theme.colors.card, borderColor: theme.colors.border },
+                ]}
+                onPress={() => setSortDropdownVisible(!sortDropdownVisible)}
+              >
+                <View style={styles.dropdownButtonContent}>
+                  <MaterialIcons
+                    name="sort"
+                    size={18}
+                    color={theme.colors.foregroundSecondary}
+                  />
+                  <Text
+                    style={[styles.dropdownButtonText, { color: theme.colors.foreground }]}
+                  >
+                    {sortField === "createdAt" ? "创建时间" : "编辑时间"}{" "}
+                    {sortOrder === "desc" ? "从新到旧" : "从旧到新"}
+                  </Text>
+                </View>
+                <MaterialIcons
+                  name={sortDropdownVisible ? "keyboard-arrow-up" : "keyboard-arrow-down"}
+                  size={20}
+                  color={theme.colors.foregroundTertiary}
+                />
+              </TouchableOpacity>
+
+              {/* 排序下拉展开 */}
+              {sortDropdownVisible && (
+                <View
+                  style={[
+                    styles.inlineDropdown,
+                    { backgroundColor: theme.colors.card, borderColor: theme.colors.border },
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={[
+                      styles.inlineDropdownItem,
+                      sortField === "createdAt" && sortOrder === "desc" && {
+                        backgroundColor: theme.colors.primary + "15",
+                      },
+                    ]}
+                    onPress={() => {
+                      onChangeSort("createdAt", "desc");
+                      setSortDropdownVisible(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.inlineDropdownItemText,
+                        {
+                          color:
+                            sortField === "createdAt" && sortOrder === "desc"
+                              ? theme.colors.primary
+                              : theme.colors.foreground,
+                        },
+                      ]}
+                    >
+                      创建时间 从新到旧
+                    </Text>
+                    {sortField === "createdAt" && sortOrder === "desc" && (
+                      <MaterialIcons name="check" size={18} color={theme.colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.inlineDropdownItem,
+                      sortField === "createdAt" && sortOrder === "asc" && {
+                        backgroundColor: theme.colors.primary + "15",
+                      },
+                    ]}
+                    onPress={() => {
+                      onChangeSort("createdAt", "asc");
+                      setSortDropdownVisible(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.inlineDropdownItemText,
+                        {
+                          color:
+                            sortField === "createdAt" && sortOrder === "asc"
+                              ? theme.colors.primary
+                              : theme.colors.foreground,
+                        },
+                      ]}
+                    >
+                      创建时间 从旧到新
+                    </Text>
+                    {sortField === "createdAt" && sortOrder === "asc" && (
+                      <MaterialIcons name="check" size={18} color={theme.colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.inlineDropdownItem,
+                      sortField === "updatedAt" && sortOrder === "desc" && {
+                        backgroundColor: theme.colors.primary + "15",
+                      },
+                    ]}
+                    onPress={() => {
+                      onChangeSort("updatedAt", "desc");
+                      setSortDropdownVisible(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.inlineDropdownItemText,
+                        {
+                          color:
+                            sortField === "updatedAt" && sortOrder === "desc"
+                              ? theme.colors.primary
+                              : theme.colors.foreground,
+                        },
+                      ]}
+                    >
+                      编辑时间 从新到旧
+                    </Text>
+                    {sortField === "updatedAt" && sortOrder === "desc" && (
+                      <MaterialIcons name="check" size={18} color={theme.colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.inlineDropdownItem,
+                      sortField === "updatedAt" && sortOrder === "asc" && {
+                        backgroundColor: theme.colors.primary + "15",
+                      },
+                    ]}
+                    onPress={() => {
+                      onChangeSort("updatedAt", "asc");
+                      setSortDropdownVisible(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.inlineDropdownItemText,
+                        {
+                          color:
+                            sortField === "updatedAt" && sortOrder === "asc"
+                              ? theme.colors.primary
+                              : theme.colors.foreground,
+                        },
+                      ]}
+                    >
+                      编辑时间 从旧到新
+                    </Text>
+                    {sortField === "updatedAt" && sortOrder === "asc" && (
+                      <MaterialIcons name="check" size={18} color={theme.colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            {/* 标签区域 */}
+            <View style={styles.section}>
+              <View style={styles.tagHeaderRow}>
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    { color: theme.colors.foregroundSecondary },
+                  ]}
+                >
+                  标签
+                </Text>
+                {selectedTagIds.length > 0 && (
+                  <TouchableOpacity
+                    style={styles.clearTagsButtonSmall}
+                    onPress={() => selectedTagIds.forEach(id => onToggleTag(id))}
+                  >
+                    <Text style={[styles.clearTagsTextSmall, { color: theme.colors.destructive }]}>
+                      清除
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
 
               {/* 标签按名称排序 */}
               {(() => {
@@ -391,42 +581,34 @@ export const FilterDrawer = view(
                           key={tag.tagId}
                           style={[
                             styles.tagChip,
-                            isSelected && [
-                              styles.tagChipSelected,
-                              { backgroundColor: theme.colors.primary + "20" },
-                            ],
+                            isSelected
+                              ? { backgroundColor: theme.colors.primary + "20" }
+                              : { backgroundColor: "transparent", borderWidth: 1, borderColor: theme.colors.border },
                           ]}
                           onPress={() => onToggleTag(tag.tagId)}
                         >
-                          <MaterialIcons
-                            name="label"
-                            size={14}
-                            color={
-                              isSelected
-                                ? theme.colors.primary
-                                : theme.colors.foregroundSecondary
-                            }
-                          />
                           <Text
                             style={[
                               styles.tagChipText,
-                              {
-                                color: isSelected
-                                  ? theme.colors.primary
-                                  : theme.colors.foreground,
-                              },
+                              isSelected
+                                ? { color: theme.colors.primary }
+                                : { color: theme.colors.foregroundSecondary },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            #
+                          </Text>
+                          <Text
+                            style={[
+                              styles.tagChipText,
+                              isSelected
+                                ? { color: theme.colors.primary }
+                                : { color: theme.colors.foreground },
                             ]}
                             numberOfLines={1}
                           >
                             {tag.name}
                           </Text>
-                          {isSelected && (
-                            <MaterialIcons
-                              name="check"
-                              size={14}
-                              color={theme.colors.primary}
-                            />
-                          )}
                         </TouchableOpacity>
                       );
                     })}
@@ -434,217 +616,6 @@ export const FilterDrawer = view(
                 </ScrollView>
               );
               })()}
-
-              {/* 清除标签筛选按钮 */}
-              {selectedTagIds.length > 0 && (
-                <TouchableOpacity
-                  style={[
-                    styles.optionItem,
-                    styles.clearTagsButton,
-                  ]}
-                  onPress={() => selectedTagIds.forEach(id => onToggleTag(id))}
-                >
-                  <MaterialIcons
-                    name="clear"
-                    size={18}
-                    color={theme.colors.destructive}
-                  />
-                  <Text
-                    style={[
-                      styles.optionText,
-                      { color: theme.colors.destructive },
-                    ]}
-                  >
-                    清除标签筛选
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* 排序区域 */}
-            <View style={styles.section}>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: theme.colors.foregroundSecondary },
-                ]}
-              >
-                排序方式
-              </Text>
-
-              {/* 排序字段 */}
-              <View style={styles.sortGroup}>
-                <Text
-                  style={[
-                    styles.sortGroupLabel,
-                    { color: theme.colors.foregroundQuaternary },
-                  ]}
-                >
-                  排序字段
-                </Text>
-                <View style={styles.sortOptions}>
-                  <TouchableOpacity
-                    style={[
-                      styles.sortOption,
-                      sortField === "createdAt" && [
-                        styles.sortOptionSelected,
-                        {
-                          backgroundColor: theme.colors.primary,
-                          borderColor: theme.colors.primary,
-                        },
-                      ],
-                      sortField !== "createdAt" && {
-                        borderColor: theme.colors.border,
-                        backgroundColor: theme.colors.card,
-                      },
-                    ]}
-                    onPress={() => handleSortFieldChange("createdAt")}
-                  >
-                    <Text
-                      style={[
-                        styles.sortOptionText,
-                        {
-                          color:
-                            sortField === "createdAt"
-                              ? theme.colors.primaryForeground
-                              : theme.colors.foreground,
-                        },
-                      ]}
-                    >
-                      创建时间
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.sortOption,
-                      sortField === "updatedAt" && [
-                        styles.sortOptionSelected,
-                        {
-                          backgroundColor: theme.colors.primary,
-                          borderColor: theme.colors.primary,
-                        },
-                      ],
-                      sortField !== "updatedAt" && {
-                        borderColor: theme.colors.border,
-                        backgroundColor: theme.colors.card,
-                      },
-                    ]}
-                    onPress={() => handleSortFieldChange("updatedAt")}
-                  >
-                    <Text
-                      style={[
-                        styles.sortOptionText,
-                        {
-                          color:
-                            sortField === "updatedAt"
-                              ? theme.colors.primaryForeground
-                              : theme.colors.foreground,
-                        },
-                      ]}
-                    >
-                      编辑时间
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* 排序方向 */}
-              <View style={styles.sortGroup}>
-                <Text
-                  style={[
-                    styles.sortGroupLabel,
-                    { color: theme.colors.foregroundQuaternary },
-                  ]}
-                >
-                  排序方向
-                </Text>
-                <View style={styles.sortOptions}>
-                  <TouchableOpacity
-                    style={[
-                      styles.sortOption,
-                      sortOrder === "desc" && [
-                        styles.sortOptionSelected,
-                        {
-                          backgroundColor: theme.colors.primary,
-                          borderColor: theme.colors.primary,
-                        },
-                      ],
-                      sortOrder !== "desc" && {
-                        borderColor: theme.colors.border,
-                        backgroundColor: theme.colors.card,
-                      },
-                    ]}
-                    onPress={() => handleSortOrderChange("desc")}
-                  >
-                    <MaterialIcons
-                      name="arrow-downward"
-                      size={16}
-                      color={
-                        sortOrder === "desc"
-                          ? theme.colors.primaryForeground
-                          : theme.colors.foreground
-                      }
-                      style={styles.sortOptionIcon}
-                    />
-                    <Text
-                      style={[
-                        styles.sortOptionText,
-                        {
-                          color:
-                            sortOrder === "desc"
-                              ? theme.colors.primaryForeground
-                              : theme.colors.foreground,
-                        },
-                      ]}
-                    >
-                      从新到旧
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.sortOption,
-                      sortOrder === "asc" && [
-                        styles.sortOptionSelected,
-                        {
-                          backgroundColor: theme.colors.primary,
-                          borderColor: theme.colors.primary,
-                        },
-                      ],
-                      sortOrder !== "asc" && {
-                        borderColor: theme.colors.border,
-                        backgroundColor: theme.colors.card,
-                      },
-                    ]}
-                    onPress={() => handleSortOrderChange("asc")}
-                  >
-                    <MaterialIcons
-                      name="arrow-upward"
-                      size={16}
-                      color={
-                        sortOrder === "asc"
-                          ? theme.colors.primaryForeground
-                          : theme.colors.foreground
-                      }
-                      style={styles.sortOptionIcon}
-                    />
-                    <Text
-                      style={[
-                        styles.sortOptionText,
-                        {
-                          color:
-                            sortOrder === "asc"
-                              ? theme.colors.primaryForeground
-                              : theme.colors.foreground,
-                        },
-                      ]}
-                    >
-                      从旧到新
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
             </View>
 
             {/* 底部信息 */}
@@ -695,6 +666,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
+  // 下拉框遮罩层
+  dropdownOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 5,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -715,6 +691,7 @@ const styles = StyleSheet.create({
   section: {
     paddingHorizontal: 16,
     paddingVertical: 12,
+    position: "relative",
   },
   sectionTitle: {
     fontSize: 13,
@@ -722,6 +699,20 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 8,
+  },
+  tagHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  clearTagsButtonSmall: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  clearTagsTextSmall: {
+    fontSize: 13,
+    fontWeight: "500",
   },
   optionItem: {
     flexDirection: "row",
@@ -755,15 +746,9 @@ const styles = StyleSheet.create({
     height: 1,
     marginVertical: 8,
   },
-  sortGroup: {
-    marginBottom: 16,
-  },
-  sortGroupLabel: {
-    fontSize: 13,
-    marginBottom: 8,
-  },
   sortOptions: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   sortOption: {
@@ -813,23 +798,68 @@ const styles = StyleSheet.create({
   tagChip: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 16,
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "transparent",
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 10,
     marginBottom: 4,
   },
   tagChipSelected: {
     borderRadius: 16,
   },
   tagChipText: {
-    fontSize: 13,
+    fontSize: 11,
+    fontWeight: "500",
     marginLeft: 4,
     marginRight: 2,
   },
-  clearTagsButton: {
-    marginTop: 8,
+  // 下拉按钮样式
+  dropdownButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  dropdownButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  dropdownButtonText: {
+    fontSize: 15,
+    marginLeft: 10,
+  },
+  // 内联下拉框样式（悬浮）
+  inlineDropdown: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    top: "100%",
+    zIndex: 20,
+    marginTop: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  inlineDropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  inlineDropdownItemText: {
+    fontSize: 15,
+    flex: 1,
+  },
+  addCategoryInlineItem: {
+    borderTopWidth: 1,
+    borderTopColor: "transparent",
   },
 });

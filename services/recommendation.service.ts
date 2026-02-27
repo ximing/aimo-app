@@ -3,17 +3,18 @@
  * 使用 @rabjs/react 进行响应式状态管理
  */
 
-import type { RecommendationItem } from "@/types/recommendation";
+import type { MemoListItemDto } from "@/types/memo";
+import type { OnThisDayMemoDto } from "@/types/insights";
 import {
   getDailyRecommendations,
-  getHistoryTodayMemos,
-} from "@/api/recommendation";
+  getOnThisDayMemos,
+} from "@/api/insights";
 import { Service } from "@rabjs/react";
 
 class RecommendationService extends Service {
   // 响应式属性
-  recommendations: RecommendationItem[] = [];
-  historyToday: RecommendationItem[] = [];
+  recommendations: MemoListItemDto[] = [];
+  historyToday: OnThisDayMemoDto[] = [];
   loading = false;
   error: string | null = null;
 
@@ -26,13 +27,13 @@ class RecommendationService extends Service {
 
     try {
       // 并行获取两个接口
-      const [recommendations, historyToday] = await Promise.all([
+      const [recommendationsData, historyTodayData] = await Promise.all([
         getDailyRecommendations(),
-        getHistoryTodayMemos(),
+        getOnThisDayMemos(),
       ]);
 
-      this.recommendations = recommendations;
-      this.historyToday = historyToday;
+      this.recommendations = recommendationsData.items;
+      this.historyToday = historyTodayData.items;
     } catch (err) {
       this.error = err instanceof Error ? err.message : "获取推荐数据失败";
       throw err;
@@ -68,7 +69,7 @@ class RecommendationService extends Service {
   /**
    * 获取合并后的所有推荐项
    */
-  get allItems(): RecommendationItem[] {
+  get allItems(): MemoListItemDto[] | OnThisDayMemoDto[] {
     return [...this.recommendations, ...this.historyToday];
   }
 }

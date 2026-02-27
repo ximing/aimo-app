@@ -1,0 +1,103 @@
+{
+  "project": "Aimo",
+  "branchName": "ralph/ocr",
+  "description": "OCR 识别功能 - 从图片/PDF提取文字，支持浮动操作栏和创建/编辑页面入口",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "创建 OCR API 函数",
+      "description": "作为开发者，我需要在前端实现 OCR API 调用函数。",
+      "acceptanceCriteria": [
+        "创建 api/ocr.ts 文件",
+        "实现 parseImage(files: string[]) 函数调用 POST /api/v1/ocr/parse",
+        "函数返回识别文本数组",
+        "正确处理 API 错误响应",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "MediaActionDrawer 增加识图入口",
+      "description": "作为用户，我想从浮动操作栏的更多菜单中使用 OCR 功能。",
+      "acceptanceCriteria": [
+        "在 MediaActionDrawer 组件中增加识图按钮",
+        "使用 ImageText 或 ScanText 图标",
+        "点击后弹出图片来源选择（相机/相册/文件）",
+        "选择文件后导航到新建 memo 页面并传递文件信息",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "新建 memo 页面自动 OCR",
+      "description": "作为用户，我想在创建 memo 时自动对上传的图片/PDF 进行 OCR。",
+      "acceptanceCriteria": [
+        "create.tsx 接收传递的文件信息",
+        "自动调用 uploadAttachment 上传文件",
+        "上传完成后获取 HTTPS URL",
+        "调用 OCR parse 接口获取识别文本",
+        "OCR 完成后将文本填入输入框",
+        "显示 OCR 处理中的加载状态",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "实现文件选择器支持图片和 PDF",
+      "description": "作为开发者，我需要实现支持相机、相册、文件管理器选择图片和 PDF 的功能。",
+      "acceptanceCriteria": [
+        "使用 expo-image-picker 选择相机和相册图片",
+        "使用 expo-document-picker 选择 PDF 文件",
+        "支持一次选择多个文件",
+        "返回统一的文件信息格式",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "创建 memo 页面工具栏增加 OCR 按钮",
+      "description": "作为用户，我想在创建 memo 页面的工具栏中使用 OCR 功能。",
+      "acceptanceCriteria": [
+        "在 create.tsx 底部工具栏增加 OCR 按钮",
+        "使用 ImageText 或 ScanText 图标",
+        "点击后显示图片来源选择",
+        "OCR 完成后将文本追加到当前内容（换行分隔）",
+        "显示加载状态和错误提示",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "编辑 memo 页面支持 OCR",
+      "description": "作为用户，我想在编辑已有 memo 时也能使用 OCR 功能。",
+      "acceptanceCriteria": [
+        "编辑模式复用了 create.tsx，已有 OCR 按钮",
+        "OCR 识别完成后将文本追加到现有内容之后（换行分隔）",
+        "不影响已有附件和内容",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    }
+  ]
+}
