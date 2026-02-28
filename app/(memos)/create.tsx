@@ -3,8 +3,7 @@
  * 提供编辑标题、内容、上传媒体等功能
  */
 
-import { deleteLocalFile, uploadAttachment } from "@/api/attachment";
-import { createMemo, updateMemo, updateMemoTags } from "@/api/memo";
+import { uploadAttachment } from "@/api/attachment";
 import { parseImage } from "@/api/ocr";
 import { MediaPreview } from "@/components/memos/media-preview";
 import {
@@ -16,11 +15,9 @@ import { VoiceRecorderModal } from "@/components/memos/voice-recorder-modal";
 import { TagSelector } from "@/components/ui/tag-selector";
 import { useMediaPicker } from "@/hooks/use-media-picker";
 import { useTheme } from "@/hooks/use-theme";
-import MemoService from "@/services/memo-service";
+import CreateMemoService from "@/services/create-memo-service";
 import OcrService from "@/services/ocr-service";
-import TagService from "@/services/tag-service";
 import VoiceMemoService from "@/services/voice-memo-service";
-import type { TagDto } from "@/types/tag";
 import { showError, showSuccess } from "@/utils/toast";
 import { MaterialIcons } from "@expo/vector-icons";
 import { bindServices, useService, view } from "@rabjs/react";
@@ -52,10 +49,9 @@ const CreateMemoContent = view(() => {
   const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const memoService = useService(MemoService);
+  const createMemoService = useService(CreateMemoService);
   const voiceMemoService = useService(VoiceMemoService);
   const ocrService = useService(OcrService);
-  const tagService = useService(TagService);
   const {
     memoId: queryMemoId,
     imageUri: queryImageUri,
@@ -87,63 +83,33 @@ const CreateMemoContent = view(() => {
     addMedia,
   } = useMediaPicker();
 
-  const [content, setContent] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [audioUri, setAudioUri] = useState<string | null>(null);
-  const [selectedTags, setSelectedTags] = useState<TagDto[]>([]);
   const [voiceRecorderVisible, setVoiceRecorderVisible] = useState(false);
   const [ocrPickerVisible, setOcrPickerVisible] = useState(false);
 
   // 初始化加载编辑数据 + 新建时清空状态
   useEffect(() => {
     const initEditData = async () => {
-      // 如果不是编辑模式（没有 memoId），则清空所有状态
       if (!queryMemoId) {
-        setContent("");
-        setSelectedTags([]);
-        setAudioUri(null);
         clearMedia();
-        // 清空 VoiceMemoService 的状态
         voiceMemoService.resetAll();
-        // 清空 OcrService 的状态
         ocrService.resetOcr();
-        return;
       }
 
-      // 编辑模式：加载已有数据
-      setIsLoading(true);
       try {
-          // 从 Service 获取已缓存的数据或直接调用 API
-          const memo = memoService.currentMemo;
-          if (memo && memo.memoId === queryMemoId) {
-            // 使用已缓存的数据
-            setContent(memo.content);
-            setSelectedTags(memo.tags || []);
-            setIsEditMode(true);
-          } else {
-            // 需要重新加载数据
-            await memoService.fetchMemoDetail(queryMemoId);
-            const freshMemo = memoService.currentMemo;
-            if (freshMemo) {
-              setContent(freshMemo.content);
-              setSelectedTags(freshMemo.tags || []);
-              setIsEditMode(true);
-            }
-          }
-        } catch (err) {
-          const errorMsg = err instanceof Error ? err.message : "加载数据失败";
-          setError(errorMsg);
-          console.error("Failed to load memo:", err);
-        } finally {
-          setIsLoading(false);
-        }
+        await createMemoService.initEditData(queryMemoId);
+      } catch (err) {
+        console.error("Failed to load memo:", err);
+      }
     };
 
     initEditData();
-  }, [queryMemoId, memoService]);
+  }, [
+    queryMemoId,
+    clearMedia,
+    createMemoService,
+    voiceMemoService,
+    ocrService,
+  ]);
 
   // 处理从外部传入的图片（拍照或相册选择后）
   useEffect(() => {
@@ -194,7 +160,7 @@ const CreateMemoContent = view(() => {
         if (texts && texts.length > 0) {
           // 将识别结果填入内容
           const ocrText = texts.join("\n");
-          setContent((prev) => (prev ? `${prev}\n${ocrText}` : ocrText));
+          createMemoService.appendContent(ocrText);
           showSuccess("OCR 识别完成");
         } else {
           showError("OCR 识别失败，未检测到文字");
@@ -206,25 +172,21 @@ const CreateMemoContent = view(() => {
     };
 
     handleOcr();
-  }, [queryOcr, queryImageUri]);
+  }, [queryOcr, queryImageUri, createMemoService]);
 
   // 处理 OCR 识别结果（当从首页传入 ocrContent 时）
   useEffect(() => {
     if (queryOcrContent) {
       try {
         const decodedContent = decodeURIComponent(queryOcrContent);
-        setContent((prev) =>
-          prev ? `${prev}\n${decodedContent}` : decodedContent,
-        );
+        createMemoService.appendContent(decodedContent);
       } catch (err) {
         console.error("Failed to decode OCR content:", err);
         // 如果解码失败，尝试直接使用原始内容
-        setContent((prev) =>
-          prev ? `${prev}\n${queryOcrContent}` : queryOcrContent,
-        );
+        createMemoService.appendContent(queryOcrContent);
       }
     }
-  }, [queryOcrContent]);
+  }, [queryOcrContent, createMemoService]);
 
   // 处理 OCR 图片识别流程（当传入 ocrImageUri 时）
   useEffect(() => {
@@ -257,10 +219,10 @@ const CreateMemoContent = view(() => {
 
   // 监听 OCR 结果，自动填入内容
   useEffect(() => {
-    if (ocrService.ocrResultText && !content) {
-      setContent(ocrService.ocrResultText);
+    if (ocrService.ocrResultText && !createMemoService.content) {
+      createMemoService.setContent(ocrService.ocrResultText);
     }
-  }, [ocrService.ocrResultText, content]);
+  }, [ocrService.ocrResultText, createMemoService]);
 
   // 监听 OCR 错误
   useEffect(() => {
@@ -278,7 +240,7 @@ const CreateMemoContent = view(() => {
           const decodedUri = decodeURIComponent(queryAudioUri);
 
           // 保存音频 URI，供后续删除使用
-          setAudioUri(decodedUri);
+          createMemoService.setAudioUri(decodedUri);
 
           // 添加音频到 selectedMedia
           const audioMedia = {
@@ -304,14 +266,14 @@ const CreateMemoContent = view(() => {
     return () => {
       voiceMemoService.stopPolling();
     };
-  }, [queryAudioUri, addMedia, voiceMemoService]);
+  }, [queryAudioUri, addMedia, createMemoService, voiceMemoService]);
 
   // 监听转写结果，自动填入内容
   useEffect(() => {
-    if (voiceMemoService.transcriptionText && !content) {
-      setContent(voiceMemoService.transcriptionText);
+    if (voiceMemoService.transcriptionText && !createMemoService.content) {
+      createMemoService.setContent(voiceMemoService.transcriptionText);
     }
-  }, [voiceMemoService.transcriptionText, content]);
+  }, [voiceMemoService.transcriptionText, createMemoService]);
 
   // 监听转写错误
   useEffect(() => {
@@ -325,7 +287,7 @@ const CreateMemoContent = view(() => {
     async (audioUri: string) => {
       try {
         // 保存音频 URI
-        setAudioUri(audioUri);
+        createMemoService.setAudioUri(audioUri);
 
         // 添加音频到 selectedMedia
         const audioMedia = {
@@ -343,7 +305,7 @@ const CreateMemoContent = view(() => {
         showError("语音处理失败，请稍后重试");
       }
     },
-    [addMedia, voiceMemoService],
+    [addMedia, createMemoService, voiceMemoService],
   );
 
   // OCR 识别处理
@@ -354,40 +316,43 @@ const CreateMemoContent = view(() => {
   }, [ocrLoading]);
 
   // 处理 OCR 来源选择
-  const handleOcrSourceSelect = useCallback(async (source: OcrSourceType) => {
-    setOcrLoading(true);
-    try {
-      const file = await processOcrSource(source);
-      if (!file) {
+  const handleOcrSourceSelect = useCallback(
+    async (source: OcrSourceType) => {
+      setOcrLoading(true);
+      try {
+        const file = await processOcrSource(source);
+        if (!file) {
+          setOcrLoading(false);
+          return;
+        }
+
+        // 上传文件获取 URL
+        const attachment = await uploadAttachment({
+          file: { uri: file.uri, type: file.mimeType },
+          fileName: file.name,
+          createdAt: Date.now(),
+        });
+
+        // 调用 OCR 识别
+        const texts = await parseImage([attachment.url]);
+
+        if (texts && texts.length > 0) {
+          // 追加识别结果到内容
+          const ocrText = texts.join("\n");
+          createMemoService.appendContent(ocrText);
+          showSuccess("OCR 识别完成");
+        } else {
+          showError("OCR 识别失败，未检测到文字");
+        }
+      } catch (err) {
+        console.error("Failed to process OCR:", err);
+        showError("OCR 识别失败，请稍后重试");
+      } finally {
         setOcrLoading(false);
-        return;
       }
-
-      // 上传文件获取 URL
-      const attachment = await uploadAttachment({
-        file: { uri: file.uri, type: file.mimeType },
-        fileName: file.name,
-        createdAt: Date.now(),
-      });
-
-      // 调用 OCR 识别
-      const texts = await parseImage([attachment.url]);
-
-      if (texts && texts.length > 0) {
-        // 追加识别结果到内容
-        const ocrText = texts.join("\n");
-        setContent((prev) => (prev ? `${prev}\n${ocrText}` : ocrText));
-        showSuccess("OCR 识别完成");
-      } else {
-        showError("OCR 识别失败，未检测到文字");
-      }
-    } catch (err) {
-      console.error("Failed to process OCR:", err);
-      showError("OCR 识别失败，请稍后重试");
-    } finally {
-      setOcrLoading(false);
-    }
-  }, []);
+    },
+    [createMemoService],
+  );
 
   // 处理返回
   const handleGoBack = useCallback(() => {
@@ -396,104 +361,38 @@ const CreateMemoContent = view(() => {
 
   // 处理提交
   const handleSubmit = useCallback(async () => {
-    if (!content.trim()) {
-      setError("请输入内容");
+    if (!createMemoService.content.trim()) {
+      createMemoService.setError("请输入内容");
       return;
     }
 
-    setSubmitting(true);
-    setError(null);
-
     try {
-      // 上传媒体文件
-      const attachmentIds: string[] = [];
-      for (const media of selectedMedia) {
-        const attachment = await uploadAttachment({
-          file: { uri: media.uri, type: media.mimeType },
-          fileName: media.name,
-          createdAt: Date.now(),
-        });
-        attachmentIds.push(attachment.attachmentId);
-      }
-
-      // 构建 memo 内容
-      const memoContent = content.trim();
-
-      // 分离新标签（只有名称）和已有标签（有tagId）
-      const newTags = selectedTags.filter((t) => !t.tagId).map((t) => t.name);
-      const existingTagIds = selectedTags
-        .filter((t) => !!t.tagId)
-        .map((t) => t.tagId as string);
-
-      // 判断是否有音频类型的附件
-      const hasAudio =
-        selectedMedia.some((media) => media.type === "audio") || !!audioUri;
-      // [{"mimeType": "audio/m4a", "name": "voice-memo-1771646384864.m4a", "type": "audio", "uri": "file:///data/user/0/host.exp.exponent/cache/voice-memo-1771646384764.m4a"}, {"mimeType": "image/jpeg", "name": "image-1771646396244-0.jpg", "size": 4195546, "type": "image", "uri": "file:///data/user/0/host.exp.exponent/cache/ImagePicker/ed72ce81-e878-4191-b1d3-34ca2e8084d0.jpeg"}]
-      // console.log("selectedMedia", selectedMedia);
-      if (isEditMode && queryMemoId) {
-        // 编辑模式
-        const memo = await updateMemo(queryMemoId, {
-          content: memoContent,
-          attachments: attachmentIds.length > 0 ? attachmentIds : undefined,
-        });
-
-        console.log("Memo updated:", memo);
-
-        // 更新标签
-        await updateMemoTags(queryMemoId, {
-          tags: newTags.length > 0 ? newTags : undefined,
-          tagIds: existingTagIds.length > 0 ? existingTagIds : undefined,
-        });
-
-        showSuccess("编辑成功");
-
-        // 刷新列表和详情
-        await memoService.refreshMemos();
-        await memoService.fetchMemoDetail(queryMemoId);
-      } else {
-        // 创建模式
-        const memo = await createMemo({
-          content: memoContent,
-          type: hasAudio ? "audio" : "text",
-          attachments: attachmentIds.length > 0 ? attachmentIds : undefined,
-          tags: newTags.length > 0 ? newTags : undefined,
-          tagIds: existingTagIds.length > 0 ? existingTagIds : undefined,
-        });
-
-        console.log("Memo created:", memo);
-        showSuccess("创建成功");
-
-        // 删除本地录音文件
-        if (audioUri) {
-          await deleteLocalFile(audioUri);
-          setAudioUri(null);
-        }
-
-        // 刷新列表
-        await memoService.refreshMemos();
-      }
-
-      // 返回
+      const submitMode = await createMemoService.submitMemo(
+        queryMemoId,
+        selectedMedia,
+      );
+      showSuccess(submitMode === "edit" ? "编辑成功" : "创建成功");
       router.back();
     } catch (err) {
       const errorMsg =
-        err instanceof Error
+        createMemoService.error ||
+        (err instanceof Error
           ? err.message
-          : isEditMode
+          : createMemoService.isEditMode
             ? "编辑失败"
-            : "创建失败";
-      setError(errorMsg);
+            : "创建失败");
+      createMemoService.setError(errorMsg);
       showError(errorMsg);
       console.error(
-        isEditMode ? "Failed to update memo:" : "Failed to create memo:",
+        createMemoService.isEditMode
+          ? "Failed to update memo:"
+          : "Failed to create memo:",
         err,
       );
-    } finally {
-      setSubmitting(false);
     }
-  }, [content, selectedMedia, router, memoService, isEditMode, queryMemoId]);
+  }, [createMemoService, queryMemoId, selectedMedia, router]);
 
-  if (isLoading && isEditMode) {
+  if (createMemoService.isLoading && createMemoService.isEditMode) {
     return (
       <View
         style={[
@@ -533,7 +432,7 @@ const CreateMemoContent = view(() => {
             { backgroundColor: theme.colors.backgroundTertiary },
           ]}
           onPress={handleGoBack}
-          disabled={submitting}
+          disabled={createMemoService.submitting}
         >
           <X size={20} color={theme.colors.foreground} />
         </TouchableOpacity>
@@ -545,13 +444,13 @@ const CreateMemoContent = view(() => {
             styles.headerIconButton,
             {
               backgroundColor: theme.colors.primary,
-              opacity: submitting ? 0.5 : 1,
+              opacity: createMemoService.submitting ? 0.5 : 1,
             },
           ]}
           onPress={handleSubmit}
-          disabled={submitting}
+          disabled={createMemoService.submitting}
         >
-          {submitting ? (
+          {createMemoService.submitting ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
             <Check size={20} color="#fff" />
@@ -574,15 +473,15 @@ const CreateMemoContent = view(() => {
             styles.contentInput,
             {
               flex: 1,
-              color: content
+              color: createMemoService.content
                 ? theme.colors.foreground
                 : theme.colors.foregroundTertiary,
             },
           ]}
           placeholder="输入内容..."
           placeholderTextColor={theme.colors.foregroundTertiary}
-          onChangeText={setContent}
-          value={content}
+          onChangeText={createMemoService.setContent}
+          value={createMemoService.content}
           multiline
           scrollEnabled
         />
@@ -602,9 +501,9 @@ const CreateMemoContent = view(() => {
         ]}
       >
         <TagSelector
-          selectedTags={selectedTags}
-          onChange={setSelectedTags}
-          disabled={submitting}
+          selectedTags={createMemoService.selectedTags}
+          onChange={createMemoService.setSelectedTags}
+          disabled={createMemoService.submitting}
         />
       </View>
 
@@ -710,7 +609,7 @@ const CreateMemoContent = view(() => {
       )}
 
       {/* 错误信息 */}
-      {(error || mediaError) && (
+      {(createMemoService.error || mediaError) && (
         <View
           style={[
             styles.errorContainer,
@@ -718,10 +617,12 @@ const CreateMemoContent = view(() => {
           ]}
         >
           <MaterialIcons name="error" size={18} color="#fff" />
-          <Text style={styles.errorText}>{error || mediaError}</Text>
+          <Text style={styles.errorText}>
+            {createMemoService.error || mediaError}
+          </Text>
           <TouchableOpacity
             onPress={() => {
-              setError(null);
+              createMemoService.clearError();
               clearMediaError();
             }}
           >
@@ -841,7 +742,10 @@ const CreateMemoContent = view(() => {
   );
 });
 
-export default bindServices(CreateMemoContent, [VoiceMemoService]);
+export default bindServices(CreateMemoContent, [
+  CreateMemoService,
+  VoiceMemoService,
+]);
 
 const styles = StyleSheet.create({
   container: {

@@ -19,6 +19,7 @@ import { getFileTypeFromMime } from "@/utils/attachment";
 import { showSuccess } from "@/utils/toast";
 import { MaterialIcons } from "@expo/vector-icons";
 import { bindServices, useService, view } from "@rabjs/react";
+import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Sparkles } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -63,22 +64,25 @@ const MemoDetailContent = view(() => {
   const slideAnim = useRef(new Animated.Value(300)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
-  // 初始加载详情和分类
-  useEffect(() => {
-    if (id) {
+  // 页面聚焦时刷新详情（首次进入和从其他页面返回）
+  useFocusEffect(
+    useCallback(() => {
+      if (!id) return;
+
       detailService.fetchMemoDetail(id).catch((err) => {
         console.error("加载详情失败:", err);
       });
-    }
+    }, [id, detailService]),
+  );
 
-    // 初始化分类数据（用于显示分类名称）
+  // 初始化分类数据，并在页面卸载时清理详情数据
+  useEffect(() => {
     categoryService.initialize();
 
-    // 页面卸载时清除详情数据
     return () => {
       detailService.clearDetail();
     };
-  }, [id, detailService, categoryService]);
+  }, [detailService, categoryService]);
 
   // 菜单动画
   useEffect(() => {
