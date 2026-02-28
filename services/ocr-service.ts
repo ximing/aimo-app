@@ -29,22 +29,15 @@ export default class OcrService extends Service {
   ocrImageUri: string | null = null;
 
   /**
-   * 开始 OCR 流程：从列表页选择图片并跳转到 create 页面
+   * 开始 OCR 流程：从列表页按指定来源选择文件并跳转到 create 页面
    */
-  async startOcrFlowFromList(router: Router.Router): Promise<void> {
+  async startOcrFlowFromList(
+    router: Router.Router,
+    source: OcrSourceType,
+  ): Promise<void> {
     try {
-      // 1. 选择图片来源
-      // 先尝试相机
-      let file = await handleOcrSourceSelect("camera");
-      if (!file) {
-        // 如果相机取消，尝试相册
-        file = await handleOcrSourceSelect("gallery");
-      }
-      if (!file) {
-        // 如果相册也取消，尝试文件
-        file = await handleOcrSourceSelect("file");
-      }
-
+      // 1. 根据用户选择的来源获取文件
+      const file = await handleOcrSourceSelect(source);
       if (!file) {
         // 用户取消了选择
         return;

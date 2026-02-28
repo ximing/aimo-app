@@ -14,7 +14,7 @@ import { FileText, Mic, MoreHorizontal } from "lucide-react-native";
 import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { MediaActionDrawer } from "./media-action-drawer";
-import { OcrSourcePicker } from "./ocr-source-picker";
+import { OcrSourcePicker, type OcrSourceType } from "./ocr-source-picker";
 import { VoiceRecorderModal } from "./voice-recorder-modal";
 
 interface FloatingActionBarProps {
@@ -100,12 +100,15 @@ const FloatingActionBarContent = view(
     }, []);
 
     // 处理 OCR 来源选择 - 跳转到 create 页面并传入图片 URI
-    const handleOcrSourceSelect = React.useCallback(async () => {
-      // 关闭弹窗
-      setOcrPickerVisible(false);
-      // 使用 OCR Service 处理流程
-      await ocrService.startOcrFlowFromList(router);
-    }, [router, ocrService]);
+    const handleOcrSourceSelect = React.useCallback(
+      async (source: OcrSourceType) => {
+        // 关闭弹窗
+        setOcrPickerVisible(false);
+        // 使用 OCR Service 处理对应来源
+        await ocrService.startOcrFlowFromList(router, source);
+      },
+      [router, ocrService],
+    );
 
     // 关闭抽屉
     const handleDrawerClose = React.useCallback(() => {
