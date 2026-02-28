@@ -45,6 +45,10 @@ jobs:
       - name: 🔑 Grant execute permission to gradlew
         run: chmod +x android/gradlew
 
+      - name: ⚙️ Configure JVM memory for Gradle
+        run: |
+          echo "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError" >> android/gradle.properties
+
       - name: 🏗 Build signed Android APK (Release)
         working-directory: android
         env:
