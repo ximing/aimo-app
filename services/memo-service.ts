@@ -6,13 +6,11 @@
 import { getActivityStats as apiGetActivityStats } from "@/api/insights";
 import {
   deleteMemo as apiDeleteMemo,
-  getMemo as apiGetMemo,
   getMemos as apiGetMemos,
-  getRelatedMemos as apiGetRelatedMemos,
   updateMemo as apiUpdateMemo,
 } from "@/api/memo";
 import type { MemoActivityStatsDto } from "@/types/insights";
-import type { ListMemosParams, Memo, RelatedMemoItem } from "@/types/memo";
+import type { ListMemosParams, Memo } from "@/types/memo";
 import { Service, resolve } from "@rabjs/react";
 import FilterService, {
   type SortField,
@@ -41,15 +39,9 @@ class MemoService extends Service {
 
   // 筛选相关属性（从 FilterService 同步）
   categoryFilter: string | undefined = undefined;
-  tagsFilter: string = '';
+  tagsFilter: string = "";
   sortField: SortField = "createdAt";
   sortOrder: SortOrder = "desc";
-
-  // 详情页相关属性
-  currentMemo: Memo | null = null;
-  relatedMemos: RelatedMemoItem[] = [];
-  detailLoading = false;
-  detailError: string | null = null;
 
   // 活动统计相关属性
   activityStats: MemoActivityStatsDto | null = null;
@@ -168,10 +160,7 @@ class MemoService extends Service {
   /**
    * 更新 memo 公开状态
    */
-  async updateMemoVisibility(
-    memoId: string,
-    isPublic: boolean,
-  ): Promise<void> {
+  async updateMemoVisibility(memoId: string, isPublic: boolean): Promise<void> {
     try {
       const updatedMemo = await apiUpdateMemo(memoId, { isPublic });
       // 更新列表中的 memo
@@ -179,48 +168,10 @@ class MemoService extends Service {
       if (index !== -1) {
         this.memos[index] = updatedMemo;
       }
-      // 更新当前详情页的 memo
-      if (this.currentMemo?.memoId === memoId) {
-        this.currentMemo = updatedMemo;
-      }
     } catch (err) {
-      this.error =
-        err instanceof Error ? err.message : "更新公开状态失败";
+      this.error = err instanceof Error ? err.message : "更新公开状态失败";
       throw err;
     }
-  }
-
-  /**
-   * 获取 memo 详情及相关笔记
-   */
-  async fetchMemoDetail(memoId: string): Promise<void> {
-    this.detailLoading = true;
-    this.detailError = null;
-
-    try {
-      const [memo, relatedData] = await Promise.all([
-        apiGetMemo(memoId),
-        apiGetRelatedMemos(memoId, 1, 10),
-      ]);
-
-      this.currentMemo = memo;
-      this.relatedMemos = relatedData.items;
-    } catch (err) {
-      this.detailError =
-        err instanceof Error ? err.message : "获取 memo 详情失败";
-      throw err;
-    } finally {
-      this.detailLoading = false;
-    }
-  }
-
-  /**
-   * 清除详情页状态
-   */
-  clearDetail(): void {
-    this.currentMemo = null;
-    this.relatedMemos = [];
-    this.detailError = null;
   }
 
   /**
@@ -257,7 +208,6 @@ class MemoService extends Service {
     this.error = null;
     this.hasMore = true;
     this.currentPage = 1;
-    this.clearDetail();
   }
 
   /**

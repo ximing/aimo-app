@@ -68,7 +68,7 @@ export interface CreateMemoRequest {
  * 注: attachments 和 relations 字段仅接受 ID
  */
 export interface UpdateMemoRequest {
-  content: string;
+  content?: string;
   categoryId?: string;
   attachments?: string[];
   relations?: string[];

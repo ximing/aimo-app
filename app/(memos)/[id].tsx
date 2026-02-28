@@ -11,7 +11,7 @@ import {
 } from "@/components/memos";
 import { useTheme } from "@/hooks/use-theme";
 import CategoryService from "@/services/category-service";
-import MemoService from "@/services/memo-service";
+import DetailService from "@/services/detail-service";
 import RelatedMemoService from "@/services/related-memo-service";
 import type { AttachmentDto } from "@/types/memo";
 import type { TagDto } from "@/types/tag";
@@ -43,7 +43,7 @@ const MemoDetailContent = view(() => {
   const router = useRouter();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const memoService = useService(MemoService);
+  const detailService = useService(DetailService);
   const relatedMemoService = useService(RelatedMemoService);
   const categoryService = useService(CategoryService);
 
@@ -66,7 +66,7 @@ const MemoDetailContent = view(() => {
   // 初始加载详情和分类
   useEffect(() => {
     if (id) {
-      memoService.fetchMemoDetail(id).catch((err) => {
+      detailService.fetchMemoDetail(id).catch((err) => {
         console.error("加载详情失败:", err);
       });
     }
@@ -76,9 +76,9 @@ const MemoDetailContent = view(() => {
 
     // 页面卸载时清除详情数据
     return () => {
-      memoService.clearDetail();
+      detailService.clearDetail();
     };
-  }, [id, memoService, categoryService]);
+  }, [id, detailService, categoryService]);
 
   // 菜单动画
   useEffect(() => {
@@ -129,7 +129,7 @@ const MemoDetailContent = view(() => {
 
     if (fileType === "image") {
       const imageAttachments =
-        memoService.currentMemo?.attachments?.filter(
+        detailService.currentMemo?.attachments?.filter(
           (att) => getFileTypeFromMime(att.type) === "image",
         ) || [];
       const imageIndex = imageAttachments.findIndex(
@@ -202,7 +202,7 @@ const MemoDetailContent = view(() => {
     setDeleteConfirmVisible(false);
     try {
       if (memo?.memoId) {
-        await memoService.deleteMemo(memo.memoId);
+        await detailService.deleteMemo(memo.memoId);
         router.back();
       }
     } catch (error) {
@@ -216,7 +216,7 @@ const MemoDetailContent = view(() => {
   };
 
   // 加载状态
-  if (memoService.detailLoading && !memoService.currentMemo) {
+  if (detailService.detailLoading && !detailService.currentMemo) {
     return (
       <View
         style={[
@@ -230,7 +230,7 @@ const MemoDetailContent = view(() => {
   }
 
   // 错误状态
-  if (memoService.detailError && !memoService.currentMemo) {
+  if (detailService.detailError && !detailService.currentMemo) {
     return (
       <View
         style={[
@@ -258,7 +258,7 @@ const MemoDetailContent = view(() => {
             { color: theme.colors.foregroundTertiary },
           ]}
         >
-          {memoService.detailError}
+          {detailService.detailError}
         </Text>
         <TouchableOpacity
           style={[
@@ -267,7 +267,7 @@ const MemoDetailContent = view(() => {
           ]}
           onPress={() => {
             if (id) {
-              memoService.fetchMemoDetail(id);
+              detailService.fetchMemoDetail(id);
             }
           }}
         >
@@ -277,7 +277,7 @@ const MemoDetailContent = view(() => {
     );
   }
 
-  const memo = memoService.currentMemo;
+  const memo = detailService.currentMemo;
   if (!memo) {
     return (
       <View
@@ -761,7 +761,11 @@ const MemoDetailContent = view(() => {
 
 MemoDetailContent.displayName = "MemoDetailContent";
 
-export default bindServices(MemoDetailContent, [RelatedMemoService]);
+export default bindServices(MemoDetailContent, [
+  RelatedMemoService,
+  DetailService,
+]);
+
 
 const styles = StyleSheet.create({
   container: {

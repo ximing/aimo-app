@@ -187,7 +187,7 @@ const RelatedMemoListContent = view(
               key={memo.id || `memo-${index}`}
               style={[
                 styles.memoCard,
-                { backgroundColor: theme.colors.backgroundTertiary },
+                { backgroundColor: theme.colors.card },
               ]}
               onPress={() => handleMemoPress(memo.memoId)}
               activeOpacity={0.7}
@@ -195,7 +195,7 @@ const RelatedMemoListContent = view(
               <View style={styles.memoContent}>
                 <Text
                   style={[styles.memoText, { color: theme.colors.foreground }]}
-                  numberOfLines={2}
+                  numberOfLines={3}
                 >
                   {memo.content}
                 </Text>
@@ -257,23 +257,23 @@ const styles = StyleSheet.create({
     minHeight: 200,
   },
   listContent: {
-    paddingVertical: 8,
-    gap: 8,
+    paddingVertical: 4,
+    gap: 6,
   },
   memoCard: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 8,
-    padding: 12,
-    marginHorizontal: 8,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   memoContent: {
     flex: 1,
     marginRight: 8,
   },
   memoText: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
     marginBottom: 6,
   },
   memoMeta: {

@@ -169,15 +169,13 @@ const MemosListContent = () => {
         onChangeSort={filterService.setSortOption}
       />
 
-      {/* 推荐模块 */}
-      <RecommendationSection />
-
       {/* 列表 */}
       <FlatList
         ref={flatListRef}
         data={memoService.memos}
         renderItem={renderItem}
         keyExtractor={(item) => item.memoId}
+        ListHeaderComponent={<RecommendationSection />}
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}
         refreshControl={
