@@ -1,0 +1,108 @@
+name: Build and Release (Advanced EAS)
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: 🏗 Setup repo
+        uses: actions/checkout@v4
+
+      - name: 🏗 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18.x"
+          cache: npm
+
+      - name: 🏗 Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EAS_TOKEN }}
+          packager: npm
+          eas-cache: false
+
+      - name: 📦 Install dependencies
+        run: npm install
+
+      - name: 📋 Get version info
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION-${{ github.run_number }}" >> $GITHUB_OUTPUT
+
+      - name: 📝 Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ steps.version.outputs.version }}-${{ github.run_number }}" --title "Release v${{ steps.version.outputs.version }}-${{ github.run_number }}" --notes "Building Android APK and iOS IPA on EAS Cloud..." || echo "Release already exists"
+
+      - name: 🚀 Build Android on EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EAS_TOKEN }}
+        env:
+          EAS_BUILD_NO_EXPO_GO_WARNING: "true"
+
+      - name: 📦 Build and Download APK
+        id: build_android
+        run: |
+          echo "Starting Android build..."
+          eas build --platform android --profile production --non-interactive --wait --json > build-output.json
+
+          # Extract build ID and artifact URL
+          BUILD_ID=$(cat build-output.json | jq -r '.[0].id')
+          ARTIFACT_URL=$(cat build-output.json | jq -r '.[0].artifacts.buildUrl')
+
+          echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
+          echo "artifact_url=$ARTIFACT_URL" >> $GITHUB_OUTPUT
+          echo "Android build completed: $BUILD_ID"
+
+          # Download APK
+          echo "Downloading APK from EAS..."
+          curl -L -o app-release.apk "$ARTIFACT_URL"
+          ls -lh app-release.apk
+
+      - name: 📤 Upload APK to GitHub Release
+        if: steps.build_android.outputs.artifact_url != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "v${{ steps.version.outputs.version }}-${{ github.run_number }}" \
+            app-release.apk \
+            --clobber
+
+      - name: 📄 Generate latest.json
+        if: steps.build_android.outputs.artifact_url != ''
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          CREATE_TIME=$(date +%s%3N)
+          echo "{\"version\":\"$VERSION\",\"releaseDate\":$CREATE_TIME,\"path\":\"app-release.apk\"}" > latest.json
+          cat latest.json
+
+      - name: 📤 Upload latest.json to GitHub Release
+        if: steps.build_android.outputs.artifact_url != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "v${{ steps.version.outputs.version }}-${{ github.run_number }}" \
+            latest.json \
+            --clobber
+
+      - name: 📦 Build Summary
+        if: always()
+        run: |
+          echo "✅ Build completed!"
+          echo "📱 Build ID: ${{ steps.build_android.outputs.build_id }}"
+          echo "🔗 EAS Dashboard: https://expo.dev/accounts/$(whoami)/projects/aimo-app/builds/${{ steps.build_android.outputs.build_id }}"
+          echo "📦 Release: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}-${{ github.run_number }}"

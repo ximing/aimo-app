@@ -1,4 +1,4 @@
-name: Build and Release (Advanced EAS)
+name: Build and Release Android
 
 on:
   push:
@@ -7,13 +7,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-release:
+  build-android:
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-      - name: 🏗 Setup repo
+      - name: 🏗 Checkout repo
         uses: actions/checkout@v4
 
       - name: 🏗 Setup Node
@@ -22,16 +22,42 @@ jobs:
           node-version: "18.x"
           cache: npm
 
-      - name: 🏗 Setup Expo and EAS
-        uses: expo/expo-github-action@v8
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
         with:
-          eas-version: latest
-          token: ${{ secrets.EAS_TOKEN }}
-          packager: npm
-          eas-cache: false
+          distribution: temurin
+          java-version: "17"
+
+      - name: 🤖 Setup Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: 📦 Install dependencies
         run: npm install
+
+      - name: 🔧 Prebuild Android (generate native project)
+        run: npx expo prebuild --platform android --non-interactive --clean
+
+      - name: 🔑 Restore keystore from secret
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/aimo-release.keystore
+          ls -lh android/app/aimo-release.keystore
+
+      - name: 🔑 Grant execute permission to gradlew
+        run: chmod +x android/gradlew
+
+      - name: 🏗 Build signed Android APK (Release)
+        working-directory: android
+        env:
+          KEYSTORE_PATH: app/aimo-release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          ./gradlew assembleRelease --no-daemon \
+            -Pandroid.injected.signing.store.file="$(pwd)/app/aimo-release.keystore" \
+            -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
 
       - name: 📋 Get version info
         id: version
@@ -40,69 +66,46 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION-${{ github.run_number }}" >> $GITHUB_OUTPUT
 
-      - name: 📝 Create GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: 🔍 Locate APK
+        id: apk
         run: |
-          gh release create "v${{ steps.version.outputs.version }}-${{ github.run_number }}" --title "Release v${{ steps.version.outputs.version }}-${{ github.run_number }}" --notes "Building Android APK and iOS IPA on EAS Cloud..." || echo "Release already exists"
+          APK_PATH=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
+          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+          echo "Found APK: $APK_PATH"
+          ls -lh "$APK_PATH"
 
-      - name: 🚀 Build Android on EAS
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EAS_TOKEN }}
-        env:
-          EAS_BUILD_NO_EXPO_GO_WARNING: "true"
-
-      - name: 📦 Build and Download APK
-        id: build_android
+      - name: ✍️ Rename APK
         run: |
-          echo "Starting Android build..."
-          eas build --platform android --profile production --non-interactive --wait --json > build-output.json
-
-          # Extract build ID and artifact URL
-          BUILD_ID=$(cat build-output.json | jq -r '.[0].id')
-          ARTIFACT_URL=$(cat build-output.json | jq -r '.[0].artifacts.buildUrl')
-
-          echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
-          echo "artifact_url=$ARTIFACT_URL" >> $GITHUB_OUTPUT
-          echo "Android build completed: $BUILD_ID"
-
-          # Download APK
-          echo "Downloading APK from EAS..."
-          curl -L -o app-release.apk "$ARTIFACT_URL"
+          cp "${{ steps.apk.outputs.apk_path }}" app-release.apk
           ls -lh app-release.apk
 
-      - name: 📤 Upload APK to GitHub Release
-        if: steps.build_android.outputs.artifact_url != ''
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload "v${{ steps.version.outputs.version }}-${{ github.run_number }}" \
-            app-release.apk \
-            --clobber
-
       - name: 📄 Generate latest.json
-        if: steps.build_android.outputs.artifact_url != ''
         run: |
           VERSION=$(node -p "require('./package.json').version")
           CREATE_TIME=$(date +%s%3N)
-          echo "{\"version\":\"$VERSION\",\"releaseDate\":$CREATE_TIME,\"path\":\"app-release.apk\"}" > latest.json
+          cat > latest.json <<EOF
+          {"version":"$VERSION","releaseDate":$CREATE_TIME,"path":"app-release.apk"}
+          EOF
           cat latest.json
 
-      - name: 📤 Upload latest.json to GitHub Release
-        if: steps.build_android.outputs.artifact_url != ''
+      - name: 🚀 Create GitHub Release and Upload artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "v${{ steps.version.outputs.version }}-${{ github.run_number }}" \
-            latest.json \
-            --clobber
+          TAG="v${{ steps.version.outputs.version }}-${{ github.run_number }}"
+          gh release create "$TAG" \
+            --title "Release $TAG" \
+            --notes "🤖 Android APK built via GitHub Actions (signed release build)" \
+            app-release.apk \
+            latest.json
+
+      - name: 🧹 Clean up keystore
+        if: always()
+        run: rm -f android/app/aimo-release.keystore
 
       - name: 📦 Build Summary
         if: always()
         run: |
           echo "✅ Build completed!"
-          echo "📱 Build ID: ${{ steps.build_android.outputs.build_id }}"
-          echo "🔗 EAS Dashboard: https://expo.dev/accounts/$(whoami)/projects/aimo-app/builds/${{ steps.build_android.outputs.build_id }}"
+          echo "🏷️  Tag: v${{ steps.version.outputs.version }}-${{ github.run_number }}"
           echo "📦 Release: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}-${{ github.run_number }}"
