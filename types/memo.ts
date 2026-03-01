@@ -30,6 +30,7 @@ export interface MemoListItemDto {
   type: "text" | "audio" | "video"; // 笔记类型
   categoryId?: string;
   isPublic?: boolean; // 是否公开
+  source?: string; // 外链来源（http/https）
   attachments?: AttachmentDto[];
   relations?: MemoListItemDto[];
   tags?: TagDto[];

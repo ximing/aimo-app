@@ -176,6 +176,21 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
   };
 
   const contentDisplay = getContentDisplay();
+  const sourceUrl = memo.source?.trim() ?? "";
+
+  const openSourceUrl = async () => {
+    try {
+      await Linking.openURL(sourceUrl);
+    } catch (error) {
+      console.error("打开来源链接失败:", error);
+      showError("打开来源链接失败");
+    }
+  };
+
+  const handleSourcePress = (e: any) => {
+    e.stopPropagation?.();
+    void openSourceUrl();
+  };
 
   // 处理更多按钮点击
   const handleMorePress = (e: any) => {
@@ -520,6 +535,20 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
                     : theme.colors.foregroundTertiary
                 }
               />
+              {hasSourceUrl && (
+                <TouchableOpacity
+                  style={styles.sourceIconButton}
+                  onPress={handleSourcePress}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <MaterialIcons
+                    name="open-in-new"
+                    size={13}
+                    color={theme.colors.info}
+                  />
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* 右侧菜单按钮 */}
@@ -883,6 +912,10 @@ const styles = StyleSheet.create({
   },
   date: {
     fontSize: 12,
+  },
+  sourceIconButton: {
+    paddingHorizontal: 2,
+    paddingVertical: 2,
   },
   categoryContainer: {
     flexDirection: "row",

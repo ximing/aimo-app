@@ -16,7 +16,7 @@ import RelatedMemoService from "@/services/related-memo-service";
 import type { AttachmentDto } from "@/types/memo";
 import type { TagDto } from "@/types/tag";
 import { getFileTypeFromMime } from "@/utils/attachment";
-import { showSuccess } from "@/utils/toast";
+import { showError, showSuccess } from "@/utils/toast";
 import { MaterialIcons } from "@expo/vector-icons";
 import { bindServices, useService, view } from "@rabjs/react";
 import { useFocusEffect } from "@react-navigation/native";
@@ -27,6 +27,7 @@ import {
   ActivityIndicator,
   Animated,
   Clipboard,
+  Linking,
   Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -302,6 +303,23 @@ const MemoDetailContent = view(() => {
     );
   }
 
+  const sourceUrl = memo.source?.trim() ?? "";
+  const hasSourceUrl = /^https?:\/\//i.test(sourceUrl);
+
+  const handleOpenSource = async () => {
+    if (!hasSourceUrl) {
+      showError("来源链接无效");
+      return;
+    }
+
+    try {
+      await Linking.openURL(sourceUrl);
+    } catch (error) {
+      console.error("打开来源链接失败:", error);
+      showError("打开来源链接失败");
+    }
+  };
+
   return (
     <View
       style={[
@@ -574,8 +592,8 @@ const MemoDetailContent = view(() => {
             </Text>
           </View>
 
-          {/* 公开/私有 + 分类 - 在内容下面 */}
-          {(memo.isPublic !== undefined || memo.categoryId) && (
+          {/* 公开/私有 + 分类 + 来源 - 在内容下面 */}
+          {(memo.isPublic !== undefined || memo.categoryId || hasSourceUrl) && (
             <View style={styles.footerSection}>
               {/* 公开/私有状态 */}
               {memo.isPublic !== undefined && (
@@ -631,6 +649,23 @@ const MemoDetailContent = view(() => {
                     )?.name || memo.categoryId}
                   </Text>
                 </View>
+              )}
+              {/* 来源外链 */}
+              {hasSourceUrl && (
+                <TouchableOpacity
+                  style={styles.footerItem}
+                  onPress={handleOpenSource}
+                  activeOpacity={0.7}
+                >
+                  <MaterialIcons
+                    name="open-in-new"
+                    size={14}
+                    color={theme.colors.info}
+                  />
+                  <Text style={[styles.footerText, { color: theme.colors.info }]}>
+                    来源
+                  </Text>
+                </TouchableOpacity>
               )}
             </View>
           )}
