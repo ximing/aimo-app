@@ -535,7 +535,7 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
                     : theme.colors.foregroundTertiary
                 }
               />
-              {hasSourceUrl && (
+              {memo.source && (
                 <TouchableOpacity
                   style={styles.sourceIconButton}
                   onPress={handleSourcePress}

@@ -304,14 +304,8 @@ const MemoDetailContent = view(() => {
   }
 
   const sourceUrl = memo.source?.trim() ?? "";
-  const hasSourceUrl = /^https?:\/\//i.test(sourceUrl);
 
   const handleOpenSource = async () => {
-    if (!hasSourceUrl) {
-      showError("来源链接无效");
-      return;
-    }
-
     try {
       await Linking.openURL(sourceUrl);
     } catch (error) {
@@ -593,7 +587,7 @@ const MemoDetailContent = view(() => {
           </View>
 
           {/* 公开/私有 + 分类 + 来源 - 在内容下面 */}
-          {(memo.isPublic !== undefined || memo.categoryId || hasSourceUrl) && (
+          {(memo.isPublic !== undefined || memo.categoryId) && (
             <View style={styles.footerSection}>
               {/* 公开/私有状态 */}
               {memo.isPublic !== undefined && (
@@ -651,7 +645,7 @@ const MemoDetailContent = view(() => {
                 </View>
               )}
               {/* 来源外链 */}
-              {hasSourceUrl && (
+              {memo.source && (
                 <TouchableOpacity
                   style={styles.footerItem}
                   onPress={handleOpenSource}
@@ -662,7 +656,9 @@ const MemoDetailContent = view(() => {
                     size={14}
                     color={theme.colors.info}
                   />
-                  <Text style={[styles.footerText, { color: theme.colors.info }]}>
+                  <Text
+                    style={[styles.footerText, { color: theme.colors.info }]}
+                  >
                     来源
                   </Text>
                 </TouchableOpacity>
@@ -804,7 +800,6 @@ export default bindServices(MemoDetailContent, [
   RelatedMemoService,
   DetailService,
 ]);
-
 
 const styles = StyleSheet.create({
   container: {
