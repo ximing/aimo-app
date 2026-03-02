@@ -78,6 +78,13 @@ jobs:
           echo "Found APK: $APK_PATH"
           ls -lh "$APK_PATH"
 
+      - name: 🐍 Install AWS CLI
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -q awscliv2.zip
+          ./aws/install
+          aws --version
+
       - name: ✍️ Rename APK
         run: |
           cp "${{ steps.apk.outputs.apk_path }}" app-release.apk
@@ -102,6 +109,39 @@ jobs:
             --notes "🤖 Android APK built via GitHub Actions (signed release build)" \
             app-release.apk \
             latest.json
+
+      - name: ☁️ Upload to MinIO (S3)
+        if: success()
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.MINIO_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+        run: |
+          # Configure AWS CLI for MinIO
+          aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID" --profile minio
+          aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY" --profile minio
+          aws configure set region us-east-1 --profile minio
+          aws configure set signature_version s3v4 --profile minio
+
+          VERSION=$(node -p "require('./package.json').version")
+          BUILD_NUM=${{ github.run_number }}
+          DIST_PATH="${VERSION}-${BUILD_NUM}"
+
+          # Upload APK to versioned directory
+          aws s3 cp app-release.apk s3://${{ secrets.MINIO_BUCKET }}/${DIST_PATH}/app-release.apk \
+            --profile minio \
+            --endpoint-url https://${{ secrets.MINIO_ENDPOINT }} \
+            --acl public-read
+
+          # Upload latest.json to root
+          aws s3 cp latest.json s3://${{ secrets.MINIO_BUCKET }}/latest.json \
+            --profile minio \
+            --endpoint-url https://${{ secrets.MINIO_ENDPOINT }} \
+            --acl public-read
+
+          echo "✅ Uploaded to MinIO:"
+          echo "   - ${DIST_PATH}/app-release.apk"
+          echo "   - latest.json"
+          echo "   URL: https://${{ secrets.MINIO_BUCKET }}.${{ secrets.MINIO_ENDPOINT }}/${DIST_PATH}/app-release.apk"
 
       - name: 🧹 Clean up keystore
         if: always()
