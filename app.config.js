@@ -6,6 +6,8 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const packageJson = require("./package.json");
 
+const latestJsonUrl = process.env.EXPO_PUBLIC_LATEST_JSON_URL || process.env.LATEST_JSON_URL || "";
+
 module.exports = {
   expo: {
     name: "aimo",
@@ -56,6 +58,9 @@ module.exports = {
       router: {},
       eas: {
         projectId: "a9dd2767-f4a6-4412-9543-9e8a0d1595ae",
+      },
+      update: {
+        latestJsonUrl,
       },
     },
     runtimeVersion: {

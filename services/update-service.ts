@@ -2,27 +2,24 @@
  * 版本检查服务
  *
  * 功能：
- * - 检查 GitHub 最新 Release
+ * - 从构建时注入的 latest.json 地址检查最新版本
  * - 比较版本号判断是否需要升级
  * - 提供 APK 下载和安装功能
  */
 
 import { Service } from "@rabjs/react";
 import * as Linking from "expo-linking";
-import { File, Directory, Paths } from "expo-file-system";
+import { File, Paths } from "expo-file-system";
 import * as IntentLauncher from "expo-intent-launcher";
 import { Platform } from "react-native";
 import {
   getLatestRelease,
+  getLatestJsonUrl,
   getApkDownloadUrl,
   getAppVersion,
-  type GitHubRelease,
+  type LatestReleaseManifest,
 } from "@/api/github";
-import { needsUpdate, formatVersion } from "@/utils/version";
-
-// GitHub 仓库配置
-const GITHUB_OWNER = "ximing";
-const GITHUB_REPO = "aimo-app";
+import { needsUpdate } from "@/utils/version";
 
 class UpdateService extends Service {
   /**
@@ -31,9 +28,14 @@ class UpdateService extends Service {
   loading = false;
 
   /**
-   * 最新 Release 信息
+   * latest.json 中的最新版本信息
    */
-  latestRelease: GitHubRelease | null = null;
+  latestRelease: LatestReleaseManifest | null = null;
+
+  /**
+   * latest.json 地址（构建时注入）
+   */
+  latestJsonUrl: string | null = getLatestJsonUrl();
 
   /**
    * 错误信息
@@ -66,15 +68,15 @@ class UpdateService extends Service {
    * 获取最新版本号
    */
   get latestVersion(): string | null {
-    return this.latestRelease?.tag_name ?? null;
+    return this.latestRelease?.version ?? null;
   }
 
   /**
    * 检查是否有可用更新
    */
   get hasUpdate(): boolean {
-    if (!this.latestRelease) return false;
-    return needsUpdate(this.currentVersion, this.latestRelease.tag_name);
+    if (!this.latestRelease?.version) return false;
+    return needsUpdate(this.currentVersion, this.latestRelease.version);
   }
 
   /**
@@ -85,8 +87,13 @@ class UpdateService extends Service {
     this.error = null;
 
     try {
-      const release = await getLatestRelease(GITHUB_OWNER, GITHUB_REPO);
-      this.latestRelease = release;
+      const latestJsonUrl = getLatestJsonUrl();
+      if (!latestJsonUrl) {
+        throw new Error("未配置 latest.json 地址");
+      }
+
+      this.latestJsonUrl = latestJsonUrl;
+      this.latestRelease = await getLatestRelease(latestJsonUrl);
       this.loading = false;
       return this.hasUpdate;
     } catch (err) {
@@ -102,7 +109,20 @@ class UpdateService extends Service {
    */
   getApkUrl(): string | null {
     if (!this.latestRelease) return null;
-    return getApkDownloadUrl(this.latestRelease, this.currentVersion);
+
+    const directDownloadUrl = getApkDownloadUrl(this.latestRelease);
+    if (directDownloadUrl) {
+      return directDownloadUrl;
+    }
+
+    // 兜底：当 latest.json 只提供 path 字段时，基于 latest.json URL 计算下载地址
+    if (this.latestJsonUrl && this.latestRelease.path) {
+      const baseUrl = this.latestJsonUrl.replace(/\/latest\.json(\?.*)?$/i, "");
+      const normalizedPath = this.latestRelease.path.replace(/^\//, "");
+      return `${baseUrl}/${normalizedPath}`;
+    }
+
+    return null;
   }
 
   /**
@@ -154,7 +174,6 @@ class UpdateService extends Service {
   private async installApk(uri: string): Promise<void> {
     try {
       if (Platform.OS === "android") {
-        // 使用 expo-intent-launcher 打开 APK 安装
         // 使用字符串直接指定 action，避免类型问题
         await IntentLauncher.startActivityAsync(
           "android.intent.action.VIEW" as any,
@@ -165,37 +184,40 @@ class UpdateService extends Service {
         );
       }
     } catch (err) {
-      // 如果安装失败，尝试直接打开 GitHub Release 页面让用户手动下载
+      // 如果安装失败，尝试打开下载链接让用户手动下载安装
       console.error("Failed to install APK:", err);
       try {
-        // 打开 GitHub Release 页面
-        if (this.latestRelease?.html_url) {
-          await Linking.openURL(this.latestRelease.html_url);
-        }
+        await this.openReleasePage();
       } catch (linkErr) {
-        this.error = "安装失败，请前往 GitHub Release 页面手动下载安装";
-        console.error("Failed to open release page:", linkErr);
+        this.error = "安装失败，请手动下载安装";
+        console.error("Failed to open download page:", linkErr);
       }
     }
   }
 
   /**
-   * 打开应用商店页面（如果有）
+   * 打开应用商店页面（兼容方法，当前跳转下载链接）
    */
   async openAppStore(): Promise<void> {
-    // 如果 release 中有 HTML URL，可以尝试打开
-    if (this.latestRelease?.html_url) {
-      await Linking.openURL(this.latestRelease.html_url);
-    }
+    await this.openReleasePage();
   }
 
   /**
-   * 打开 GitHub Release 页面
+   * 打开下载页面
    */
   async openReleasePage(): Promise<void> {
-    if (this.latestRelease?.html_url) {
-      await Linking.openURL(this.latestRelease.html_url);
+    const apkUrl = this.getApkUrl();
+    if (apkUrl) {
+      await Linking.openURL(apkUrl);
+      return;
     }
+
+    if (this.latestJsonUrl) {
+      await Linking.openURL(this.latestJsonUrl);
+      return;
+    }
+
+    this.error = "未配置升级地址";
   }
 
   /**

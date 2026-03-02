@@ -34,6 +34,21 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install
 
+      - name: 🔧 Prepare update config
+        env:
+          MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+          MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
+        run: |
+          ENDPOINT_HOST="${MINIO_ENDPOINT#http://}"
+          ENDPOINT_HOST="${ENDPOINT_HOST#https://}"
+          ENDPOINT_HOST="${ENDPOINT_HOST%/}"
+          LATEST_JSON_URL="https://${ENDPOINT_HOST}/${MINIO_BUCKET}/latest.json"
+
+          echo "ENDPOINT_HOST=$ENDPOINT_HOST" >> $GITHUB_ENV
+          echo "LATEST_JSON_URL=$LATEST_JSON_URL" >> $GITHUB_ENV
+          echo "EXPO_PUBLIC_LATEST_JSON_URL=$LATEST_JSON_URL" >> $GITHUB_ENV
+          echo "✅ Update manifest URL: $LATEST_JSON_URL"
+
       - name: 🔧 Prebuild Android (generate native project)
         run: npx expo prebuild --platform android --non-interactive --clean
 
@@ -87,13 +102,16 @@ jobs:
           ls -lh app-release.apk
 
       - name: 📄 Generate latest.json
+        env:
+          MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
           BUILD_NUM=${{ github.run_number }}
           CREATE_TIME=$(date +%s%3N)
           APK_PATH="${VERSION}-${BUILD_NUM}/app-release.apk"
+          DOWNLOAD_URL="https://${ENDPOINT_HOST}/${MINIO_BUCKET}/${APK_PATH}"
           cat > latest.json <<EOF
-          {"version":"$VERSION","buildNumber":"$BUILD_NUM","releaseDate":$CREATE_TIME,"path":"$APK_PATH"}
+          {"version":"$VERSION","buildNumber":"$BUILD_NUM","releaseDate":$CREATE_TIME,"path":"$APK_PATH","downloadUrl":"$DOWNLOAD_URL"}
           EOF
           cat latest.json
 
@@ -114,7 +132,6 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.MINIO_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.MINIO_SECRET_KEY }}
           AWS_DEFAULT_REGION: us-east-1
-          MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
           MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
         run: |
           set -euo pipefail
@@ -122,12 +139,7 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           BUILD_NUM=${{ github.run_number }}
           DIST_DIR="${VERSION}-${BUILD_NUM}"
-
-          if [[ "$MINIO_ENDPOINT" =~ ^https?:// ]]; then
-            ENDPOINT_URL="$MINIO_ENDPOINT"
-          else
-            ENDPOINT_URL="https://$MINIO_ENDPOINT"
-          fi
+          ENDPOINT_URL="https://${ENDPOINT_HOST}"
 
           # Upload APK to versioned directory: {version}-{build}/app-release.apk
           aws s3 cp app-release.apk "s3://${MINIO_BUCKET}/${DIST_DIR}/app-release.apk" \
@@ -141,6 +153,7 @@ jobs:
           echo "   - ${DIST_DIR}/app-release.apk"
           echo "   - latest.json"
           echo "   URL(path-style): ${ENDPOINT_URL}/${MINIO_BUCKET}/${DIST_DIR}/app-release.apk"
+          echo "   latest.json: ${LATEST_JSON_URL}"
 
       - name: 🧹 Clean up keystore
         if: always()

@@ -1,91 +1,82 @@
 /**
- * GitHub API
- * 用于检查应用更新
+ * 更新检测 API
+ * 从构建时注入的 latest.json 获取最新版本信息
  */
 
 import Constants from "expo-constants";
 
-const GITHUB_API_BASE = "https://api.github.com";
+export interface LatestReleaseManifest {
+  version: string;
+  buildNumber?: string;
+  releaseDate?: number;
+  path?: string;
+  downloadUrl?: string;
+  body?: string;
+}
 
-/**
- * GitHub Release 信息
- */
-export interface GitHubRelease {
-  url: string;
-  assets_url: string;
-  upload_url: string;
-  html_url: string;
-  id: number;
-  node_id: string;
-  tag_name: string;
-  target_commitish: string;
-  name: string;
-  body: string;
-  draft: boolean;
-  prerelease: boolean;
-  created_at: string;
-  published_at: string;
-  author: {
-    login: string;
-    id: number;
-    avatar_url: string;
-    html_url: string;
+interface ExpoExtraConfig {
+  update?: {
+    latestJsonUrl?: string;
   };
-  assets: Array<{
-    url: string;
-    id: number;
-    node_id: string;
-    name: string;
-    label: string;
-    content_type: string;
-    size: number;
-    download_count: number;
-    created_at: string;
-    updated_at: string;
-    browser_download_url: string;
-  }>;
 }
 
 /**
- * 获取 GitHub 仓库的最新 Release
- * @param owner 仓库所有者
- * @param repo 仓库名称
+ * 获取构建时注入的 latest.json 地址
+ */
+export const getLatestJsonUrl = (): string | null => {
+  const latestJsonUrl = (Constants.expoConfig?.extra as ExpoExtraConfig | undefined)?.update
+    ?.latestJsonUrl;
+
+  if (typeof latestJsonUrl !== "string") {
+    return null;
+  }
+
+  const normalizedUrl = latestJsonUrl.trim();
+  return normalizedUrl.length > 0 ? normalizedUrl : null;
+};
+
+/**
+ * 获取 latest.json 内容
  */
 export const getLatestRelease = async (
-  owner: string,
-  repo: string,
-): Promise<GitHubRelease> => {
-  const response = await fetch(`${GITHUB_API_BASE}/repos/${owner}/${repo}/releases/latest`, {
+  latestJsonUrl: string,
+): Promise<LatestReleaseManifest> => {
+  const response = await fetch(latestJsonUrl, {
     method: "GET",
     headers: {
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
+      Accept: "application/json",
     },
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch release: ${response.status}`);
+    throw new Error(`Failed to fetch latest.json: ${response.status}`);
   }
 
-  return response.json();
+  const payload = (await response.json()) as Partial<LatestReleaseManifest>;
+
+  if (typeof payload.version !== "string" || !payload.version.trim()) {
+    throw new Error("Invalid latest.json: missing version");
+  }
+
+  return {
+    version: payload.version.trim(),
+    buildNumber:
+      typeof payload.buildNumber === "string" ? payload.buildNumber : undefined,
+    releaseDate:
+      typeof payload.releaseDate === "number" ? payload.releaseDate : undefined,
+    path: typeof payload.path === "string" ? payload.path : undefined,
+    downloadUrl:
+      typeof payload.downloadUrl === "string" ? payload.downloadUrl : undefined,
+    body: typeof payload.body === "string" ? payload.body : undefined,
+  };
 };
 
 /**
- * 从 release 中获取 Android APK 下载链接
- * @param release Release 信息
- * @param appVersion 当前应用版本
+ * 从 latest.json 中获取 APK 下载链接
  */
-export const getApkDownloadUrl = (
-  release: GitHubRelease,
-  appVersion: string,
-): string | null => {
-  // 查找 .apk 文件
-  const apkAsset = release.assets.find((asset) =>
-    asset.name.endsWith(".apk"),
-  );
-
-  if (apkAsset) {
-    return apkAsset.browser_download_url;
+export const getApkDownloadUrl = (release: LatestReleaseManifest): string | null => {
+  if (typeof release.downloadUrl === "string" && release.downloadUrl.trim()) {
+    return release.downloadUrl;
   }
 
   return null;
