@@ -78,12 +78,8 @@ jobs:
           echo "Found APK: $APK_PATH"
           ls -lh "$APK_PATH"
 
-      - name: 🐍 Install AWS CLI
-        run: |
-          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-          unzip -q awscliv2.zip
-          ./aws/install
-          aws --version
+      - name: ✅ Check AWS CLI
+        run: aws --version
 
       - name: ✍️ Rename APK
         run: |
@@ -93,9 +89,11 @@ jobs:
       - name: 📄 Generate latest.json
         run: |
           VERSION=$(node -p "require('./package.json').version")
+          BUILD_NUM=${{ github.run_number }}
           CREATE_TIME=$(date +%s%3N)
+          APK_PATH="${VERSION}-${BUILD_NUM}/app-release.apk"
           cat > latest.json <<EOF
-          {"version":"$VERSION","releaseDate":$CREATE_TIME,"path":"app-release.apk"}
+          {"version":"$VERSION","buildNumber":"$BUILD_NUM","releaseDate":$CREATE_TIME,"path":"$APK_PATH"}
           EOF
           cat latest.json
 
@@ -115,33 +113,34 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.MINIO_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+          MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+          MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
         run: |
-          # Configure AWS CLI for MinIO
-          aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID" --profile minio
-          aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY" --profile minio
-          aws configure set region us-east-1 --profile minio
-          aws configure set signature_version s3v4 --profile minio
+          set -euo pipefail
 
           VERSION=$(node -p "require('./package.json').version")
           BUILD_NUM=${{ github.run_number }}
-          DIST_PATH="${VERSION}-${BUILD_NUM}"
+          DIST_DIR="${VERSION}-${BUILD_NUM}"
 
-          # Upload APK to versioned directory
-          aws s3 cp app-release.apk s3://${{ secrets.MINIO_BUCKET }}/${DIST_PATH}/app-release.apk \
-            --profile minio \
-            --endpoint-url https://${{ secrets.MINIO_ENDPOINT }} \
-            --acl public-read
+          if [[ "$MINIO_ENDPOINT" =~ ^https?:// ]]; then
+            ENDPOINT_URL="$MINIO_ENDPOINT"
+          else
+            ENDPOINT_URL="https://$MINIO_ENDPOINT"
+          fi
 
-          # Upload latest.json to root
-          aws s3 cp latest.json s3://${{ secrets.MINIO_BUCKET }}/latest.json \
-            --profile minio \
-            --endpoint-url https://${{ secrets.MINIO_ENDPOINT }} \
-            --acl public-read
+          # Upload APK to versioned directory: {version}-{build}/app-release.apk
+          aws s3 cp app-release.apk "s3://${MINIO_BUCKET}/${DIST_DIR}/app-release.apk" \
+            --endpoint-url "$ENDPOINT_URL"
+
+          # Upload latest.json to bucket root
+          aws s3 cp latest.json "s3://${MINIO_BUCKET}/latest.json" \
+            --endpoint-url "$ENDPOINT_URL"
 
           echo "✅ Uploaded to MinIO:"
-          echo "   - ${DIST_PATH}/app-release.apk"
+          echo "   - ${DIST_DIR}/app-release.apk"
           echo "   - latest.json"
-          echo "   URL: https://${{ secrets.MINIO_BUCKET }}.${{ secrets.MINIO_ENDPOINT }}/${DIST_PATH}/app-release.apk"
+          echo "   URL(path-style): ${ENDPOINT_URL}/${MINIO_BUCKET}/${DIST_DIR}/app-release.apk"
 
       - name: 🧹 Clean up keystore
         if: always()
