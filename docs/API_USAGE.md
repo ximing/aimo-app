@@ -5,8 +5,9 @@
 ## 基本配置
 
 所有 API 请求都使用以下基础 URL：
+
 ```
-https://memo.aisoil.fun/api/v1
+https://m.aimo.plus/api/v1
 ```
 
 ## 项目结构
@@ -39,56 +40,63 @@ aimo-app/
 ### 认证 (Auth)
 
 **导入**:
+
 ```typescript
-import { register, login } from '@/api';
+import { register, login } from "@/api";
 ```
 
 **函数**:
+
 - `register(params)` - 注册用户
 - `login(params)` - 登录用户
 
 **使用示例**:
+
 ```typescript
 // 注册
 const user = await register({
-  email: 'user@example.com',
-  password: 'password123',
-  nickname: 'John Doe',
+  email: "user@example.com",
+  password: "password123",
+  nickname: "John Doe",
 });
 
 // 登录
 const { token, user } = await login({
-  email: 'user@example.com',
-  password: 'password123',
+  email: "user@example.com",
+  password: "password123",
 });
 ```
 
 ### 用户 (User)
 
 **导入**:
+
 ```typescript
-import { getUserInfo, updateUserInfo } from '@/api';
+import { getUserInfo, updateUserInfo } from "@/api";
 ```
 
 **函数**:
+
 - `getUserInfo()` - 获取当前用户信息
 - `updateUserInfo(params)` - 更新用户信息
 
 **使用示例**:
+
 ```typescript
 // 获取用户信息
 const userInfo = await getUserInfo();
 
 // 更新用户信息
 const updated = await updateUserInfo({
-  nickname: 'Jane Doe',
-  phone: '+1234567890',
+  nickname: "Jane Doe",
+  phone: "+1234567890",
 });
 ```
 
 ### 分类 (Category)
 
 **导入**:
+
 ```typescript
 import {
   getCategories,
@@ -96,10 +104,11 @@ import {
   createCategory,
   updateCategory,
   deleteCategory,
-} from '@/api';
+} from "@/api";
 ```
 
 **函数**:
+
 - `getCategories()` - 获取所有分类
 - `getCategory(categoryId)` - 获取单个分类
 - `createCategory(params)` - 创建分类
@@ -107,21 +116,22 @@ import {
 - `deleteCategory(categoryId)` - 删除分类
 
 **使用示例**:
+
 ```typescript
 // 获取所有分类
 const categories = await getCategories();
 
 // 创建分类
 const newCategory = await createCategory({
-  name: '工作',
-  color: '#4CAF50',
-  description: '工作相关的笔记',
+  name: "工作",
+  color: "#4CAF50",
+  description: "工作相关的笔记",
 });
 
 // 更新分类
 const updated = await updateCategory(categoryId, {
-  name: '工作和学习',
-  color: '#9C27B0',
+  name: "工作和学习",
+  color: "#9C27B0",
 });
 
 // 删除分类
@@ -131,6 +141,7 @@ await deleteCategory(categoryId);
 ### 笔记 (Memo)
 
 **导入**:
+
 ```typescript
 import {
   getMemos,
@@ -140,10 +151,11 @@ import {
   deleteMemo,
   searchMemosByVector,
   getRelatedMemos,
-} from '@/api';
+} from "@/api";
 ```
 
 **函数**:
+
 - `getMemos(params?)` - 获取笔记列表（支持分页、排序、搜索）
 - `getMemo(memoId)` - 获取单个笔记
 - `createMemo(params)` - 创建笔记
@@ -153,30 +165,31 @@ import {
 - `getRelatedMemos(memoId, limit?)` - 查找相关笔记
 
 **使用示例**:
+
 ```typescript
 // 获取笔记列表
 const result = await getMemos({
   page: 1,
   limit: 10,
-  sortBy: 'updatedAt',
-  sortOrder: 'desc',
+  sortBy: "updatedAt",
+  sortOrder: "desc",
 });
 console.log(result.items); // 笔记列表
 console.log(result.total); // 总数
-console.log(result.page);  // 当前页
+console.log(result.page); // 当前页
 
 // 创建笔记
 const newMemo = await createMemo({
-  content: '这是一个新笔记',
-  categoryId: 'category_123456',
+  content: "这是一个新笔记",
+  categoryId: "category_123456",
   attachments: [],
   relationIds: [],
 });
 
 // 更新笔记
 const updated = await updateMemo(memoId, {
-  content: '更新后的内容',
-  categoryId: 'category_123456',
+  content: "更新后的内容",
+  categoryId: "category_123456",
 });
 
 // 删除笔记
@@ -184,7 +197,7 @@ await deleteMemo(memoId);
 
 // 向量搜索
 const searchResults = await searchMemosByVector({
-  query: '如何学习编程',
+  query: "如何学习编程",
   page: 1,
   limit: 20,
 });
@@ -196,6 +209,7 @@ const relatedMemos = await getRelatedMemos(memoId, 10);
 ### 附件 (Attachment)
 
 **导入**:
+
 ```typescript
 import {
   getAttachments,
@@ -203,10 +217,11 @@ import {
   uploadAttachment,
   deleteAttachment,
   getAttachmentUrl,
-} from '@/api';
+} from "@/api";
 ```
 
 **函数**:
+
 - `getAttachments(params?)` - 获取附件列表
 - `getAttachment(attachmentId)` - 获取单个附件信息
 - `uploadAttachment(params)` - 上传附件
@@ -214,6 +229,7 @@ import {
 - `getAttachmentUrl(attachmentId)` - 获取附件下载 URL
 
 **使用示例**:
+
 ```typescript
 // 获取附件列表
 const attachments = await getAttachments({
@@ -224,7 +240,7 @@ const attachments = await getAttachments({
 // 上传附件
 const attachment = await uploadAttachment({
   file: fileObject,
-  fileName: 'document.pdf',
+  fileName: "document.pdf",
   createdAt: Date.now(),
 });
 
@@ -239,22 +255,25 @@ const url = getAttachmentUrl(attachmentId);
 ### 备份 (Backup)
 
 **导入**:
+
 ```typescript
-import { getBackupStatus, forceBackup, cleanupBackups } from '@/api';
+import { getBackupStatus, forceBackup, cleanupBackups } from "@/api";
 ```
 
 **函数**:
+
 - `getBackupStatus()` - 获取备份状态
 - `forceBackup()` - 立即备份
 - `cleanupBackups()` - 清理过期备份
 
 **使用示例**:
+
 ```typescript
 // 获取备份状态
 const status = await getBackupStatus();
-console.log(status.lastBackupTime);      // 上次备份时间
-console.log(status.lastBackupStatus);    // 备份状态
-console.log(status.isRunning);           // 是否正在运行
+console.log(status.lastBackupTime); // 上次备份时间
+console.log(status.lastBackupStatus); // 备份状态
+console.log(status.isRunning); // 是否正在运行
 
 // 立即备份
 await forceBackup();
@@ -266,17 +285,20 @@ await cleanupBackups();
 ## 公共工具函数
 
 **导入**:
+
 ```typescript
-import { getToken, saveToken, clearToken, createFormData } from '@/api';
+import { getToken, saveToken, clearToken, createFormData } from "@/api";
 ```
 
 **函数**:
+
 - `getToken()` - 获取保存的 token
 - `saveToken(token)` - 保存 token
 - `clearToken()` - 清除 token
 - `createFormData(file, fileName, fields?)` - 创建表单数据（文件上传用）
 
 **使用示例**:
+
 ```typescript
 // 获取 token
 const token = getToken();
@@ -288,11 +310,9 @@ saveToken(myToken);
 clearToken();
 
 // 创建表单数据
-const formData = createFormData(
-  fileBlob,
-  'image.jpg',
-  { createdAt: Date.now() }
-);
+const formData = createFormData(fileBlob, "image.jpg", {
+  createdAt: Date.now(),
+});
 ```
 
 ## 类型导入
@@ -307,7 +327,7 @@ import type {
   Attachment,
   BackupStatus,
   // ... 其他类型
-} from '@/api';
+} from "@/api";
 ```
 
 ## 错误处理
@@ -318,7 +338,7 @@ import type {
 try {
   const result = await getMemos();
 } catch (error) {
-  console.error('获取笔记列表失败:', error.message);
+  console.error("获取笔记列表失败:", error.message);
 }
 ```
 
@@ -327,9 +347,9 @@ try {
 建议在 Service 中使用这些 API 函数进行状态管理：
 
 ```typescript
-import { Service } from '@rabjs/react';
-import { getMemos, createMemo } from '@/api';
-import type { Memo } from '@/api';
+import { Service } from "@rabjs/react";
+import { getMemos, createMemo } from "@/api";
+import type { Memo } from "@/api";
 
 class MemoService extends Service {
   memos: Memo[] = [];
@@ -351,7 +371,7 @@ class MemoService extends Service {
       this.memos.unshift(memo);
       return memo;
     } catch (error) {
-      console.error('创建笔记失败:', error);
+      console.error("创建笔记失败:", error);
       throw error;
     }
   }
@@ -389,7 +409,7 @@ const MemoList = view(() => {
 ### 创建带附件的笔记
 
 ```typescript
-import { uploadAttachment, createMemo } from '@/api';
+import { uploadAttachment, createMemo } from "@/api";
 
 async function createMemoWithAttachment(content: string, file: File) {
   // 1. 上传附件
@@ -411,7 +431,7 @@ async function createMemoWithAttachment(content: string, file: File) {
 ### 分页加载
 
 ```typescript
-import { getMemos } from '@/api';
+import { getMemos } from "@/api";
 
 let currentPage = 1;
 const limit = 20;
@@ -434,24 +454,31 @@ async function loadMore() {
 ## 常见问题
 
 ### Q: 如何处理认证？
+
 A: 登录后会自动保存 token，所有后续请求都会自动附加 token：
+
 ```typescript
 await login({ email, password }); // token 自动保存
 ```
 
 ### Q: 如何取消认证？
+
 A: 调用 `clearToken()` 清除 token：
+
 ```typescript
 clearToken();
 ```
 
 ### Q: 如何在请求中使用自定义 token？
+
 A: 直接调用 API 的内部函数（高级用法）
 
 ### Q: 是否支持离线？
+
 A: 不支持，需要自行实现本地缓存
 
 ### Q: 文件上传有大小限制吗？
+
 A: 有，详见 `/docs/api/attachment.md`
 
 ## 相关文档

@@ -5,8 +5,8 @@
 
 import type { ApiRequestOptions, ApiResponse } from "@/types/common";
 
-// const API_HOST = "https://m.aimo.plus";
-const API_HOST = "https://memo.aisoil.fun";
+const API_HOST = "https://m.aimo.plus";
+// const API_HOST = "https://memo.aisoil.fun";
 const API_VERSION = "/api/v1";
 export const BASE_URL = `${API_HOST}${API_VERSION}`;
 

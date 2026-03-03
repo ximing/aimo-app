@@ -401,7 +401,7 @@ export function useMemos() {
 所有 API 配置都在 `api/common.ts` 中：
 
 ```typescript
-export const BASE_URL = "https://memo.aisoil.fun/api/v1";
+export const BASE_URL = "https://m.aimo.plus/api/v1";
 export const TOKEN_KEY = "aimo_token";
 ```
 
