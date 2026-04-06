@@ -114,12 +114,18 @@ class CreateMemoService extends Service {
     try {
       const attachmentIds: string[] = [];
       for (const media of selectedMedia) {
-        const attachment = await uploadAttachment({
-          file: { uri: media.uri, type: media.mimeType },
-          fileName: media.name,
-          createdAt: Date.now(),
-        });
-        attachmentIds.push(attachment.attachmentId);
+        // 如果已有 attachmentId（编辑模式从服务器加载的附件），直接使用
+        if (media.attachmentId) {
+          attachmentIds.push(media.attachmentId);
+        } else {
+          // 否则上传本地文件
+          const attachment = await uploadAttachment({
+            file: { uri: media.uri, type: media.mimeType },
+            fileName: media.name,
+            createdAt: Date.now(),
+          });
+          attachmentIds.push(attachment.attachmentId);
+        }
       }
 
       const newTags = this.selectedTags

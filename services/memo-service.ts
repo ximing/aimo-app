@@ -172,10 +172,14 @@ class MemoService extends Service {
         content: existingMemo.content,
         isPublic,
       });
-      // 更新列表中的 memo
+      // 更新列表中的 memo（创建新数组以触发响应式更新）
       const index = this.memos.findIndex((m) => m.memoId === memoId);
       if (index !== -1) {
-        this.memos[index] = updatedMemo;
+        this.memos = [
+          ...this.memos.slice(0, index),
+          updatedMemo,
+          ...this.memos.slice(index + 1),
+        ];
       }
     } catch (err) {
       this.error = err instanceof Error ? err.message : "更新公开状态失败";
@@ -194,10 +198,14 @@ class MemoService extends Service {
       const updatedMemo = await apiUpdateMemo(memoId, {
         categoryId: categoryId || undefined,
       });
-      // 更新列表中的 memo
+      // 更新列表中的 memo（创建新数组以触发响应式更新）
       const index = this.memos.findIndex((m) => m.memoId === memoId);
       if (index !== -1) {
-        this.memos[index] = updatedMemo;
+        this.memos = [
+          ...this.memos.slice(0, index),
+          updatedMemo,
+          ...this.memos.slice(index + 1),
+        ];
       }
     } catch (err) {
       this.error = err instanceof Error ? err.message : "更新分类失败";

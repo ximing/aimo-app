@@ -142,6 +142,7 @@ const CreateMemoContent = view(() => {
           name: att.filename,
           mimeType: att.type,
           size: att.size,
+          attachmentId: att.attachmentId,
         };
       })
       .filter((media): media is SelectedMedia => media !== null);

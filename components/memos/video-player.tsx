@@ -37,7 +37,9 @@ export const VideoPlayer = view(({
   const theme = useTheme();
   const [isLoading, setIsLoading] = useState(true);
 
-  const player = useVideoPlayer(video?.url ?? '', (player) => {
+  // 提前检查，避免为无效 URL 创建 player
+  const videoUrl = video?.url;
+  const player = useVideoPlayer(videoUrl ?? '', (player) => {
     player.loop = false;
     player.play();
   });
@@ -65,8 +67,12 @@ export const VideoPlayer = view(({
   // 清理：关闭时停止播放
   useEffect(() => {
     return () => {
-      if (player) {
-        player.pause();
+      try {
+        if (player) {
+          player.pause();
+        }
+      } catch (e) {
+        // Player may already be released when unmounting
       }
     };
   }, [player]);
@@ -76,15 +82,23 @@ export const VideoPlayer = view(({
   }
 
   const togglePlayPause = () => {
-    if (isPlaying) {
-      player.pause();
-    } else {
-      player.play();
+    try {
+      if (isPlaying) {
+        player.pause();
+      } else {
+        player.play();
+      }
+    } catch (e) {
+      // Player may already be released
     }
   };
 
   const handleClose = () => {
-    player.pause();
+    try {
+      player.pause();
+    } catch (e) {
+      // Player may already be released
+    }
     onClose();
   };
 
@@ -97,8 +111,8 @@ export const VideoPlayer = view(({
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const currentTime = player.currentTime ?? 0;
-  const duration = player.duration ?? 0;
+  const currentTime = (status === 'readyToPlay' && player) ? (player?.currentTime ?? 0) : 0;
+  const duration = (status === 'readyToPlay' && player) ? (player?.duration ?? 0) : 0;
 
   return (
     <Modal

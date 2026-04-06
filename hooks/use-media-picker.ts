@@ -14,6 +14,8 @@ export interface SelectedMedia {
   name: string;
   mimeType: string;
   size?: number;
+  /** 已有附件的 ID（编辑模式从服务器加载的附件） */
+  attachmentId?: string;
 }
 
 export function useMediaPicker() {
