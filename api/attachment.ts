@@ -239,7 +239,7 @@ export const downloadAttachment = async (
     }
 
     // 合并数据块
-    const blob = new Blob(chunks);
+    const blob = new Blob(chunks as BlobPart[]);
 
     // 检查是否在 React Native 环境
     if (typeof document === "undefined") {

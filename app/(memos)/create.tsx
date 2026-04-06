@@ -5,6 +5,7 @@
 
 import { uploadAttachment } from "@/api/attachment";
 import { parseImage } from "@/api/ocr";
+import { CategoryPickerModal } from "@/components/memos/category-picker-modal";
 import { MediaPreview } from "@/components/memos/media-preview";
 import {
   OcrSourcePicker,
@@ -13,12 +14,14 @@ import {
 } from "@/components/memos/ocr-source-picker";
 import { VoiceRecorderModal } from "@/components/memos/voice-recorder-modal";
 import { TagSelector } from "@/components/ui/tag-selector";
-import { useMediaPicker } from "@/hooks/use-media-picker";
+import { useMediaPicker, type SelectedMedia } from "@/hooks/use-media-picker";
 import { useTheme } from "@/hooks/use-theme";
 import CreateMemoService from "@/services/create-memo-service";
+import CategoryService from "@/services/category-service";
 import OcrService from "@/services/ocr-service";
 import VoiceMemoService from "@/services/voice-memo-service";
 import { showError, showSuccess } from "@/utils/toast";
+import { getFileTypeFromMime } from "@/utils/attachment";
 import { MaterialIcons } from "@expo/vector-icons";
 import { bindServices, useService, view } from "@rabjs/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -50,6 +53,7 @@ const CreateMemoContent = view(() => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const createMemoService = useService(CreateMemoService);
+  const categoryService = useService(CategoryService);
   const voiceMemoService = useService(VoiceMemoService);
   const ocrService = useService(OcrService);
   const {
@@ -81,10 +85,12 @@ const CreateMemoContent = view(() => {
     clearMedia,
     clearError: clearMediaError,
     addMedia,
+    setMedia,
   } = useMediaPicker();
 
   const [voiceRecorderVisible, setVoiceRecorderVisible] = useState(false);
   const [ocrPickerVisible, setOcrPickerVisible] = useState(false);
+  const [categoryPickerVisible, setCategoryPickerVisible] = useState(false);
 
   // 初始化加载编辑数据 + 新建时清空状态
   useEffect(() => {
@@ -110,6 +116,40 @@ const CreateMemoContent = view(() => {
     voiceMemoService,
     ocrService,
   ]);
+
+  // 编辑模式下，加载已有附件到媒体预览
+  useEffect(() => {
+    if (!createMemoService.isEditMode || !createMemoService.currentMemo) {
+      return;
+    }
+
+    const attachments = createMemoService.currentMemo.attachments;
+    if (!attachments || attachments.length === 0) {
+      return;
+    }
+
+    // 把 AttachmentDto 转换成 SelectedMedia
+    const existingMedia: SelectedMedia[] = attachments
+      .map((att): SelectedMedia | null => {
+        const fileType = getFileTypeFromMime(att.type);
+        // 只处理支持的媒体类型
+        if (!["image", "video", "audio", "pdf"].includes(fileType)) {
+          return null;
+        }
+        return {
+          type: fileType as "image" | "video" | "audio" | "pdf",
+          uri: att.url,
+          name: att.filename,
+          mimeType: att.type,
+          size: att.size,
+        };
+      })
+      .filter((media): media is SelectedMedia => media !== null);
+
+    if (existingMedia.length > 0) {
+      setMedia(existingMedia);
+    }
+  }, [createMemoService.isEditMode, createMemoService.currentMemo, setMedia]);
 
   // 处理从外部传入的图片（拍照或相册选择后）
   useEffect(() => {
@@ -723,7 +763,24 @@ const CreateMemoContent = view(() => {
         >
           <Mic size={20} color={theme.colors.foregroundSecondary} />
         </TouchableOpacity>
+
+        {/* 分类按钮 */}
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => setCategoryPickerVisible(true)}
+        >
+          <MaterialIcons name="folder" size={20} color={theme.colors.foregroundSecondary} />
+        </TouchableOpacity>
       </View>
+
+      {/* 分类选择弹窗 */}
+      <CategoryPickerModal
+        visible={categoryPickerVisible}
+        categories={categoryService.categories}
+        selectedCategoryId={createMemoService.selectedCategoryId}
+        onSelect={(id) => createMemoService.setSelectedCategoryId(id)}
+        onClose={() => setCategoryPickerVisible(false)}
+      />
 
       {/* 录音弹窗 */}
       <VoiceRecorderModal
@@ -744,6 +801,7 @@ const CreateMemoContent = view(() => {
 
 export default bindServices(CreateMemoContent, [
   CreateMemoService,
+  CategoryService,
   VoiceMemoService,
 ]);
 

@@ -89,7 +89,9 @@ class UpdateService extends Service {
     try {
       const latestJsonUrl = getLatestJsonUrl();
       if (!latestJsonUrl) {
-        throw new Error("未配置 latest.json 地址");
+        // 未配置 latest.json，跳过更新检查
+        this.loading = false;
+        return false;
       }
 
       this.latestJsonUrl = latestJsonUrl;

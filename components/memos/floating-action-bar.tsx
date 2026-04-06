@@ -10,9 +10,9 @@ import OcrService from "@/services/ocr-service";
 import { useService, view } from "@rabjs/react";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import { FileText, Mic, MoreHorizontal } from "lucide-react-native";
+import { Mic, MoreHorizontal, Plus } from "lucide-react-native";
 import React, { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { MediaActionDrawer } from "./media-action-drawer";
 import { OcrSourcePicker, type OcrSourceType } from "./ocr-source-picker";
 import { VoiceRecorderModal } from "./voice-recorder-modal";
@@ -156,36 +156,24 @@ const FloatingActionBarContent = view(
             style={styles.actionButton}
             onPress={handleMicPress}
           >
-            <Mic size={18} color={theme.colors.foreground} />
-            <Text
-              style={[styles.actionLabel, { color: theme.colors.foreground }]}
-            >
-              录音
-            </Text>
+            <Mic size={24} color={theme.colors.foreground} />
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.actionButton}
+            style={[
+              styles.addButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
             onPress={handleAddPress}
           >
-            <FileText size={18} color={theme.colors.foreground} />
-            <Text
-              style={[styles.actionLabel, { color: theme.colors.foreground }]}
-            >
-              文本
-            </Text>
+            <Plus size={24} color="#fff" />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.actionButton}
             onPress={handleMorePress}
           >
-            <MoreHorizontal size={18} color={theme.colors.foreground} />
-            <Text
-              style={[styles.actionLabel, { color: theme.colors.foreground }]}
-            >
-              更多
-            </Text>
+            <MoreHorizontal size={24} color={theme.colors.foreground} />
           </TouchableOpacity>
         </View>
 
@@ -227,7 +215,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     zIndex: 100,
     pointerEvents: "box-none",
-    marginHorizontal: 30,
+    marginHorizontal: 60,
   },
   floatingActionBar: {
     flexDirection: "row",
@@ -242,10 +230,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
+    paddingVertical: 8,
   },
-  actionLabel: {
-    fontSize: 10,
-    marginTop: 2,
+  addButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+    width: 36,
+    height: 36,
   },
 });

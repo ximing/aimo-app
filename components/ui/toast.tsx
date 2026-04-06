@@ -12,7 +12,7 @@ export const Toast = () => {
   const [visible, setVisible] = useState(false);
   const [message, setMessage] = useState("");
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const timeoutRef = useRef<number>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 注册全局 Toast 回调
   useEffect(() => {

@@ -1,17 +1,28 @@
 import { useEffect, useState } from "react";
-import { Appearance, View, Text, StyleSheet, Image } from "react-native";
+import { Appearance, ColorSchemeName, View, Text, StyleSheet, Image } from "react-native";
+
+/**
+ * Normalize ColorSchemeName to 'light' | 'dark'
+ * Handles 'unspecified' value from newer React Native versions
+ */
+function normalizeColorScheme(scheme: ColorSchemeName | null | undefined): 'light' | 'dark' {
+  if (scheme === 'unspecified' || scheme === null || scheme === undefined) {
+    return 'light';
+  }
+  return scheme;
+}
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export function SplashScreen() {
   const systemColorScheme = useColorScheme();
   const [colorScheme, setColorScheme] = useState<'light' | 'dark'>(
-    Appearance.getColorScheme() ?? "light"
+    normalizeColorScheme(Appearance.getColorScheme())
   );
 
   useEffect(() => {
     // 监听系统主题变化
     const subscription = Appearance.addChangeListener(({ colorScheme }) => {
-      setColorScheme(colorScheme ?? "light");
+      setColorScheme(normalizeColorScheme(colorScheme));
     });
     return () => subscription.remove();
   }, []);

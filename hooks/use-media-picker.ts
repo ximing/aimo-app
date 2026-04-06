@@ -184,6 +184,11 @@ export function useMediaPicker() {
     setSelectedMedia([]);
   }, []);
 
+  // 设置所有媒体（用于编辑模式加载已有附件）
+  const setMedia = useCallback((media: SelectedMedia[]) => {
+    setSelectedMedia(media);
+  }, []);
+
   // 清空错误
   const clearError = useCallback(() => {
     setError(null);
@@ -206,5 +211,6 @@ export function useMediaPicker() {
     clearMedia,
     clearError,
     addMedia,
+    setMedia,
   };
 }

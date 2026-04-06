@@ -12,7 +12,18 @@
 
 import { Service } from '@rabjs/react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Appearance } from 'react-native';
+import { Appearance, ColorSchemeName } from 'react-native';
+
+/**
+ * Normalize ColorSchemeName to 'light' | 'dark'
+ * Handles 'unspecified' value from newer React Native versions
+ */
+function normalizeColorScheme(scheme: ColorSchemeName | null | undefined): 'light' | 'dark' {
+  if (scheme === 'unspecified' || scheme === null || scheme === undefined) {
+    return 'light';
+  }
+  return scheme;
+}
 
 const THEME_STORAGE_KEY = '@theme_mode';
 
@@ -30,7 +41,7 @@ class ThemeService extends Service {
   /**
    * 系统当前颜色方案
    */
-  systemColorScheme: 'light' | 'dark' = Appearance.getColorScheme() ?? 'light';
+  systemColorScheme: 'light' | 'dark' = normalizeColorScheme(Appearance.getColorScheme());
 
   /**
    * 实际使用的颜色方案（计算属性）
@@ -69,7 +80,7 @@ class ThemeService extends Service {
 
       // 监听系统主题变化
       const subscription = Appearance.addChangeListener(({ colorScheme }) => {
-        this.systemColorScheme = colorScheme ?? 'light';
+        this.systemColorScheme = normalizeColorScheme(colorScheme);
       });
 
       // 返回清理函数

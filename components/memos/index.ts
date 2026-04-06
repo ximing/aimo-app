@@ -20,6 +20,7 @@ export { OcrSourcePicker, handleOcrSourceSelect } from "./ocr-source-picker";
 export type { OcrSourceType, OcrFileResult } from "./ocr-source-picker";
 export { FilterDrawer } from "./filter-drawer";
 export { CreateCategoryModal } from "./create-category-modal";
+export { CategoryPickerModal } from "./category-picker-modal";
 export { DateFilterDropdown } from "./date-filter-dropdown";
 export { CategoryFilterDropdown } from "./category-filter-dropdown";
 export { RecommendationSection } from "./recommendation-section";

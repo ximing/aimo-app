@@ -12,6 +12,9 @@ Aimo is a React Native + Expo cross-platform memo/note-taking application with i
 # Start development server (then press i/a/w for platform)
 npm start
 
+# Reset project (clears cache and regenerates native projects)
+npm run reset-project
+
 # Platform-specific start
 npm run ios       # iOS simulator
 npm run android   # Android emulator
@@ -22,6 +25,7 @@ npm run lint      # Run ESLint with expo config
 
 # Git hooks (runs automatically on commit)
 npm run prepare   # Setup Husky hooks
+npm run commitlint # Validate commit message format
 ```
 
 ## Architecture
@@ -79,7 +83,7 @@ Key rules:
 
 - All business logic goes in Service classes, not components
 - Services are registered via `bindServices()` and accessed via `useService()`
-- Components using services should be wrapped with `view()` or use `bindServices()`
+- Components using services should be wrapped with `view()` (for class components) or `observer()` (for function components); `bindServices()` automatically injects the observer
 - Service properties are automatically reactive - no need for decorators
 
 ### Routing (Expo Router)

@@ -1,9 +1,9 @@
 /**
  * Video Player Component - 视频播放器组件
- * 使用 expo-av 播放视频
+ * 使用 expo-video 播放视频
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   View,
@@ -15,10 +15,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useEvent } from 'expo';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { view } from '@rabjs/react';
 import { useTheme } from '@/hooks/use-theme';
 import type { AttachmentDto } from '@/types/memo';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -34,74 +35,70 @@ export const VideoPlayer = view(({
   onClose,
 }: VideoPlayerProps) => {
   const theme = useTheme();
-  const videoRef = useRef<Video>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [duration, setDuration] = useState(0);
-  const [position, setPosition] = useState(0);
+
+  const player = useVideoPlayer(video?.url ?? '', (player) => {
+    player.loop = false;
+    player.play();
+  });
+
+  const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
+  const { status } = useEvent(player, 'statusChange', { status: player.status });
 
   // 当 visible 变化时重置状态
   useEffect(() => {
     if (visible) {
-      setIsPlaying(true);
       setIsLoading(true);
-      setPosition(0);
-    } else {
-      setIsPlaying(false);
     }
   }, [visible]);
+
+  // 监听播放器状态
+  useEffect(() => {
+    if (status === 'readyToPlay' || status === 'loading') {
+      setIsLoading(status === 'loading');
+    }
+    if (status === 'readyToPlay') {
+      setIsLoading(false);
+    }
+  }, [status]);
 
   // 清理：关闭时停止播放
   useEffect(() => {
     return () => {
-      if (videoRef.current) {
-        videoRef.current.stopAsync();
+      if (player) {
+        player.pause();
       }
     };
-  }, []);
+  }, [player]);
 
   if (!visible || !video) {
     return null;
   }
 
-  const handlePlaybackStatusUpdate = (status: AVPlaybackStatus) => {
-    if (status.isLoaded) {
-      setIsLoading(false);
-      setIsPlaying(status.isPlaying);
-      setPosition(status.positionMillis);
-      setDuration(status.durationMillis || 0);
-
-      // 视频播放结束
-      if (status.didJustFinish) {
-        setIsPlaying(false);
-      }
-    }
-  };
-
-  const togglePlayPause = async () => {
-    if (!videoRef.current) return;
-
+  const togglePlayPause = () => {
     if (isPlaying) {
-      await videoRef.current.pauseAsync();
+      player.pause();
     } else {
-      await videoRef.current.playAsync();
+      player.play();
     }
   };
 
-  const handleClose = async () => {
-    if (videoRef.current) {
-      await videoRef.current.stopAsync();
-    }
+  const handleClose = () => {
+    player.pause();
     onClose();
   };
 
-  // 格式化时间（毫秒转 mm:ss）
-  const formatTime = (millis: number) => {
-    const totalSeconds = Math.floor(millis / 1000);
+  // 格式化时间（秒转 mm:ss）
+  const formatTime = (seconds: number) => {
+    if (!seconds || !isFinite(seconds)) return '0:00';
+    const totalSeconds = Math.floor(seconds);
     const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    const secs = totalSeconds % 60;
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
+
+  const currentTime = player.currentTime ?? 0;
+  const duration = player.duration ?? 0;
 
   return (
     <Modal
@@ -125,14 +122,11 @@ export const VideoPlayer = view(({
 
         {/* 视频播放器 */}
         <View style={styles.videoContainer}>
-          <Video
-            ref={videoRef}
-            source={{ uri: video.url }}
+          <VideoView
+            player={player}
             style={styles.video}
-            resizeMode={ResizeMode.CONTAIN}
-            shouldPlay={true}
-            isLooping={false}
-            onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+            contentFit="contain"
+            allowsPictureInPicture
           />
 
           {/* 加载指示器 */}
@@ -165,7 +159,7 @@ export const VideoPlayer = view(({
           {duration > 0 && (
             <View style={styles.timeContainer}>
               <Text style={styles.timeText}>
-                {formatTime(position)} / {formatTime(duration)}
+                {formatTime(currentTime)} / {formatTime(duration)}
               </Text>
             </View>
           )}

@@ -69,8 +69,8 @@ class RecommendationService extends Service {
   /**
    * 获取合并后的所有推荐项
    */
-  get allItems(): MemoListItemDto[] | OnThisDayMemoDto[] {
-    return [...this.recommendations, ...this.historyToday];
+  get allItems(): (MemoListItemDto | OnThisDayMemoDto)[] {
+    return [...this.recommendations, ...this.historyToday] as (MemoListItemDto | OnThisDayMemoDto)[];
   }
 }
 

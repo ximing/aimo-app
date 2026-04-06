@@ -21,6 +21,7 @@ export type CreateMemoSubmitMode = "create" | "edit";
 class CreateMemoService extends Service {
   content = "";
   selectedTags: TagDto[] = [];
+  selectedCategoryId: string | null = null;
   submitting = false;
   error: string | null = null;
   isLoading = false;
@@ -45,6 +46,10 @@ class CreateMemoService extends Service {
     this.selectedTags = tags;
   }
 
+  setSelectedCategoryId(categoryId: string | null): void {
+    this.selectedCategoryId = categoryId;
+  }
+
   setAudioUri(uri: string | null): void {
     this.audioUri = uri;
   }
@@ -61,6 +66,7 @@ class CreateMemoService extends Service {
     this.currentMemo = null;
     this.content = "";
     this.selectedTags = [];
+    this.selectedCategoryId = null;
     this.audioUri = null;
     this.isEditMode = false;
     this.isLoading = false;
@@ -83,6 +89,7 @@ class CreateMemoService extends Service {
       this.currentMemo = memo;
       this.content = memo.content;
       this.selectedTags = memo.tags || [];
+      this.selectedCategoryId = memo.categoryId || null;
     } catch (err) {
       this.error = err instanceof Error ? err.message : "加载数据失败";
       throw err;
@@ -129,6 +136,7 @@ class CreateMemoService extends Service {
         await apiUpdateMemo(memoId, {
           content: memoContent,
           attachments: attachmentIds.length > 0 ? attachmentIds : undefined,
+          categoryId: this.selectedCategoryId || undefined,
         });
 
         await apiUpdateMemoTags(memoId, {
@@ -146,6 +154,7 @@ class CreateMemoService extends Service {
         attachments: attachmentIds.length > 0 ? attachmentIds : undefined,
         tags: newTags.length > 0 ? newTags : undefined,
         tagIds: existingTagIds.length > 0 ? existingTagIds : undefined,
+        categoryId: this.selectedCategoryId || undefined,
       });
 
       if (this.audioUri) {

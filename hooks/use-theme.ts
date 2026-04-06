@@ -3,7 +3,18 @@
  * 提供完整的主题访问能力
  */
 
-import { useColorScheme as useRNColorScheme } from 'react-native';
+import { useColorScheme as useRNColorScheme, ColorSchemeName } from 'react-native';
+
+/**
+ * Normalize ColorSchemeName to 'light' | 'dark'
+ * Handles 'unspecified' value from newer React Native versions
+ */
+function normalizeColorScheme(scheme: ColorSchemeName): 'light' | 'dark' {
+  if (scheme === 'unspecified' || scheme === null || scheme === undefined) {
+    return 'light';
+  }
+  return scheme;
+}
 import { useService } from '@rabjs/react';
 import {
   Colors,
@@ -30,7 +41,7 @@ import ThemeService from '@/services/theme-service';
  * 否则会自动跟随系统主题设置
  */
 export function useTheme() {
-  const systemColorScheme = useRNColorScheme() ?? 'light';
+  const systemColorScheme = normalizeColorScheme(useRNColorScheme());
   
   // 获取 ThemeService 来实现主题切换
   // useService 会自动使 Hook 响应服务的可观测属性变化
@@ -77,7 +88,7 @@ export function useThemeColor(
   props: { light?: string; dark?: string },
   colorName: ColorKey
 ): string {
-  const colorScheme = useRNColorScheme() ?? 'light';
+  const colorScheme = normalizeColorScheme(useRNColorScheme());
   const colorFromProps = props[colorScheme];
 
   if (colorFromProps) {
@@ -91,7 +102,7 @@ export function useThemeColor(
  * 获取当前颜色方案
  */
 export function useColorScheme(): ColorScheme {
-  return useRNColorScheme() ?? 'light';
+  return normalizeColorScheme(useRNColorScheme());
 }
 
 /**

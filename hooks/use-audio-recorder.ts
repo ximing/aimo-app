@@ -1,10 +1,10 @@
 /**
  * 音频录制 Hook
  * 处理语音录制功能，管理录音状态和权限
- * 需要: expo-av, expo-file-system
+ * 需要: expo-audio, expo-file-system
  */
 
-import { Audio } from "expo-av";
+import { AudioModule, RecordingPresets, setAudioModeAsync, useAudioRecorder as useAudioRecorderImpl, useAudioRecorderState } from "expo-audio";
 import { cacheDirectory, copyAsync } from "expo-file-system/legacy";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -37,12 +37,13 @@ export type UseAudioRecorderReturn = AudioRecorderState & AudioRecorderActions;
  * @returns 录音状态和控制方法
  */
 export function useAudioRecorder(): UseAudioRecorderReturn {
-  const [recording, setRecording] = useState(false);
   const [uri, setUri] = useState<string | null>(null);
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  const recordingInstanceRef = useRef<Audio.Recording | null>(null);
+  const recorder = useAudioRecorderImpl(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(recorder);
+
   const durationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
 
@@ -51,15 +52,6 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     if (durationTimerRef.current) {
       clearInterval(durationTimerRef.current);
       durationTimerRef.current = null;
-    }
-
-    if (recordingInstanceRef.current) {
-      try {
-        await recordingInstanceRef.current.stopAndUnloadAsync();
-      } catch {
-        // 忽略停止错误
-      }
-      recordingInstanceRef.current = null;
     }
   }, []);
 
@@ -73,8 +65,8 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   // 请求麦克风权限
   const requestPermissions = useCallback(async (): Promise<boolean> => {
     try {
-      const { status } = await Audio.requestPermissionsAsync();
-      return status === "granted";
+      const { granted } = await AudioModule.requestRecordingPermissionsAsync();
+      return granted;
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "权限请求失败";
       setError(errorMsg);
@@ -85,12 +77,9 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   // 配置音频模式
   const configureAudioMode = useCallback(async () => {
     try {
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: true,
       });
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "音频模式配置失败";
@@ -115,14 +104,12 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       // 配置音频模式
       await configureAudioMode();
 
-      // 创建录音实例
-      const { recording: newRecording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY,
-      );
+      // 准备录音
+      await recorder.prepareToRecordAsync();
 
-      recordingInstanceRef.current = newRecording;
+      // 开始录音
+      recorder.record();
       startTimeRef.current = Date.now();
-      setRecording(true);
 
       // 启动计时器更新录音时长
       durationTimerRef.current = setInterval(() => {
@@ -132,13 +119,12 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "开始录音失败";
       setError(errorMsg);
-      setRecording(false);
     }
-  }, [requestPermissions, configureAudioMode]);
+  }, [requestPermissions, configureAudioMode, recorder]);
 
   // 停止录音
   const stopRecording = useCallback(async (): Promise<string | null> => {
-    if (!recordingInstanceRef.current) {
+    if (!recorderState.isRecording) {
       return null;
     }
 
@@ -150,11 +136,10 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       }
 
       // 停止录音
-      await recordingInstanceRef.current.stopAndUnloadAsync();
+      await recorder.stop();
 
       // 获取录音文件 URI
-      const recordingUri = recordingInstanceRef.current.getURI();
-      recordingInstanceRef.current = null;
+      const recordingUri = recorder.uri;
 
       if (recordingUri) {
         // 将文件复制到持久化目录（cache 目录），避免被系统清理
@@ -167,24 +152,20 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         });
 
         setUri(destUri);
-        setRecording(false);
         return destUri;
       }
 
-      setRecording(false);
       return recordingUri;
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "停止录音失败";
       setError(errorMsg);
-      setRecording(false);
       return null;
     }
-  }, []);
+  }, [recorderState, recorder]);
 
   // 重置状态
   const reset = useCallback(() => {
     cleanup();
-    setRecording(false);
     setUri(null);
     setDuration(0);
     setError(null);
@@ -196,7 +177,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   }, []);
 
   return {
-    recording,
+    recording: recorderState.isRecording,
     uri,
     duration,
     error,

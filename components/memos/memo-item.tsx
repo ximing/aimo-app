@@ -4,7 +4,7 @@
  * 同时保持性能优化
  */
 
-import { AttachmentGrid, ImageViewer, VideoPlayer } from "@/components/memos";
+import { AttachmentGrid, CategoryPickerModal, ImageViewer, VideoPlayer } from "@/components/memos";
 import { useTheme } from "@/hooks/use-theme";
 import CategoryService from "@/services/category-service";
 import MemoService from "@/services/memo-service";
@@ -14,7 +14,7 @@ import { getFileTypeFromMime } from "@/utils/attachment";
 import { showError, showSuccess } from "@/utils/toast";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useService, view } from "@rabjs/react";
-import { Audio } from "expo-av";
+import { useAudioPlayback } from "@/hooks/use-audio-playback";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -61,11 +61,8 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
   const [selectedVideo, setSelectedVideo] = useState<AttachmentDto | null>(
     null,
   );
-  const [playingAttachmentId, setPlayingAttachmentId] = useState<string | null>(
-    null,
-  );
-  // 保存当前音频播放对象，用于停止播放
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const [categoryPickerVisible, setCategoryPickerVisible] = useState(false);
+  const { playingAttachmentId, play: playAudio } = useAudioPlayback();
 
   // 动画值
   const slideAnim = useRef(new Animated.Value(300)).current;
@@ -246,6 +243,23 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
     }
   };
 
+  // 处理修改分类
+  const handleChangeCategory = () => {
+    setMenuVisible(false);
+    setCategoryPickerVisible(true);
+  };
+
+  // 处理分类选择
+  const handleSelectCategory = async (categoryId: string | null) => {
+    try {
+      await memoService.updateMemoCategory(memo.memoId, categoryId);
+      showSuccess(categoryId ? "分类已更新" : "已移除分类");
+    } catch (error) {
+      console.error("更新分类失败:", error);
+      showError("更新分类失败");
+    }
+  };
+
   // 格式化完整时间
   const formatFullDate = (timestamp: number): string => {
     const date = new Date(timestamp);
@@ -278,56 +292,12 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
       setSelectedVideo(attachment);
       setVideoPlayerVisible(true);
     } else if (attachment.type.startsWith("audio/")) {
-      // 音频：直接播放或停止
+      // 音频：使用 playAudio 播放或停止
       try {
-        // 如果当前正在播放这个音频，点击停止
-        if (
-          playingAttachmentId === attachment.attachmentId &&
-          soundRef.current
-        ) {
-          await soundRef.current.stopAsync();
-          await soundRef.current.unloadAsync();
-          soundRef.current = null;
-          setPlayingAttachmentId(null);
-          return;
-        }
-
-        // 先停止当前播放的音频
-        if (soundRef.current) {
-          await soundRef.current.stopAsync();
-          await soundRef.current.unloadAsync();
-          soundRef.current = null;
-        }
-
-        // 设置音频模式
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: false,
-          playsInSilentModeIOS: true,
-        });
-
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: attachment.url },
-          { shouldPlay: true },
-        );
-
-        soundRef.current = sound;
-
-        // 设置正在播放的附件 ID
-        setPlayingAttachmentId(attachment.attachmentId);
-
-        // 播放完成后释放资源
-        sound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded && status.didJustFinish) {
-            sound.unloadAsync();
-            soundRef.current = null;
-            setPlayingAttachmentId(null);
-          }
-        });
+        playAudio(attachment.attachmentId, attachment.url);
       } catch (error) {
         console.error("播放音频失败:", error);
         showError("播放音频失败");
-        setPlayingAttachmentId(null);
-        soundRef.current = null;
       }
     } else {
       // 其他文件类型：直接下载
@@ -684,6 +654,28 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
                   styles.actionButton,
                   { borderBottomColor: theme.colors.border },
                 ]}
+                onPress={handleChangeCategory}
+              >
+                <MaterialIcons
+                  name="folder"
+                  size={22}
+                  color={theme.colors.foreground}
+                />
+                <Text
+                  style={[
+                    styles.actionButtonText,
+                    { color: theme.colors.foreground },
+                  ]}
+                >
+                  修改分类
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.actionButton,
+                  { borderBottomColor: theme.colors.border },
+                ]}
                 onPress={handleToggleVisibility}
               >
                 <MaterialIcons
@@ -829,6 +821,15 @@ const MemoItemComponent = view(({ memo, onPress }: MemoItemProps) => {
           setVideoPlayerVisible(false);
           setSelectedVideo(null);
         }}
+      />
+
+      {/* 分类选择弹窗 */}
+      <CategoryPickerModal
+        visible={categoryPickerVisible}
+        categories={categoryService.categories}
+        selectedCategoryId={memo.categoryId || null}
+        onSelect={handleSelectCategory}
+        onClose={() => setCategoryPickerVisible(false)}
       />
     </TouchableOpacity>
   );

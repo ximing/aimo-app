@@ -162,7 +162,16 @@ class MemoService extends Service {
    */
   async updateMemoVisibility(memoId: string, isPublic: boolean): Promise<void> {
     try {
-      const updatedMemo = await apiUpdateMemo(memoId, { isPublic });
+      // Find the existing memo to get its content (backend requires content field)
+      const existingMemo = this.memos.find((m) => m.memoId === memoId);
+      if (!existingMemo) {
+        throw new Error("Memo not found");
+      }
+
+      const updatedMemo = await apiUpdateMemo(memoId, {
+        content: existingMemo.content,
+        isPublic,
+      });
       // 更新列表中的 memo
       const index = this.memos.findIndex((m) => m.memoId === memoId);
       if (index !== -1) {
@@ -170,6 +179,28 @@ class MemoService extends Service {
       }
     } catch (err) {
       this.error = err instanceof Error ? err.message : "更新公开状态失败";
+      throw err;
+    }
+  }
+
+  /**
+   * 更新 memo 分类
+   */
+  async updateMemoCategory(
+    memoId: string,
+    categoryId: string | null,
+  ): Promise<void> {
+    try {
+      const updatedMemo = await apiUpdateMemo(memoId, {
+        categoryId: categoryId || undefined,
+      });
+      // 更新列表中的 memo
+      const index = this.memos.findIndex((m) => m.memoId === memoId);
+      if (index !== -1) {
+        this.memos[index] = updatedMemo;
+      }
+    } catch (err) {
+      this.error = err instanceof Error ? err.message : "更新分类失败";
       throw err;
     }
   }
