@@ -105,6 +105,7 @@ APK_SRC=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
 [[ -n "$APK_SRC" ]] || fail "未找到 APK，构建可能失败"
 
 VERSION=$(node -p "require('./package.json').version")
+cp "$APK_SRC" "app-release.apk"
 APK_DEST="app-release-v${VERSION}.apk"
 cp "$APK_SRC" "$APK_DEST"
 

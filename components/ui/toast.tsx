@@ -3,21 +3,28 @@
  */
 
 import { useTheme } from "@/hooks/use-theme";
-import { registerToastCallback } from "@/utils/toast";
+import { registerToastCallback, type ToastAction } from "@/utils/toast";
 import React, { useEffect, useRef, useState } from "react";
-import { Animated, SafeAreaView, StyleSheet, Text } from "react-native";
+import { Animated, Pressable, SafeAreaView, StyleSheet, Text } from "react-native";
 
 export const Toast = () => {
   const theme = useTheme();
   const [visible, setVisible] = useState(false);
   const [message, setMessage] = useState("");
+  const [action, setAction] = useState<ToastAction | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 注册全局 Toast 回调
   useEffect(() => {
-    const showToastMessage = (msg: string, duration: number = 2000) => {
-      setMessage(msg);
+    const showToastMessage = (options: {
+      message: string;
+      duration?: number;
+      action?: ToastAction;
+    }) => {
+      const duration = options.duration ?? 2000;
+      setMessage(options.message);
+      setAction(options.action ?? null);
       setVisible(true);
 
       // 显示动画
@@ -41,6 +48,7 @@ export const Toast = () => {
         }).start(() => {
           setVisible(false);
           setMessage("");
+          setAction(null);
         });
       }, duration);
     };
@@ -59,7 +67,7 @@ export const Toast = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} pointerEvents="box-none">
       <Animated.View
         style={[
           styles.toast,
@@ -75,6 +83,21 @@ export const Toast = () => {
         >
           {message}
         </Text>
+        {action ? (
+          <Pressable
+            onPress={() => {
+              const next = action.onPress;
+              setVisible(false);
+              setAction(null);
+              next();
+            }}
+            hitSlop={8}
+          >
+            <Text style={[styles.actionText, { color: theme.colors.primary }]}>
+              {action.label}
+            </Text>
+          </Pressable>
+        ) : null}
       </Animated.View>
     </SafeAreaView>
   );
@@ -89,10 +112,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: "center",
-    pointerEvents: "none",
     paddingBottom: 40,
   },
   toast: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
@@ -107,5 +132,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     textAlign: "center",
+  },
+  actionText: {
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

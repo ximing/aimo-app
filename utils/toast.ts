@@ -2,7 +2,18 @@
  * Toast 提示工具 - 简单的全局 Toast 提示系统
  */
 
-type ToastCallback = (message: string, duration?: number) => void;
+export type ToastAction = {
+  label: string;
+  onPress: () => void;
+};
+
+export type ToastOptions = {
+  message: string;
+  duration?: number;
+  action?: ToastAction;
+};
+
+type ToastCallback = (options: ToastOptions) => void;
 
 let toastCallback: ToastCallback | null = null;
 
@@ -11,14 +22,22 @@ export function registerToastCallback(callback: ToastCallback) {
   toastCallback = callback;
 }
 
+function emit(options: ToastOptions) {
+  if (toastCallback) {
+    toastCallback(options);
+  } else {
+    console.log("[Toast]", options.message);
+  }
+}
+
 // 显示 Toast 提示
 export function showToast(message: string, duration: number = 2000) {
-  if (toastCallback) {
-    toastCallback(message, duration);
-  } else {
-    // 如果没有注册回调，至少输出到控制台
-    console.log("[Toast]", message);
-  }
+  emit({ message, duration });
+}
+
+// 带操作按钮的提示，例如更新下载完成后的「安装」
+export function showToastAction(options: ToastOptions) {
+  emit({ duration: 2000, ...options });
 }
 
 // 显示成功提示

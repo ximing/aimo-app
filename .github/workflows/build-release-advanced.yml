@@ -2,9 +2,14 @@ name: Build and Release Android
 
 on:
   push:
-    branches:
-      - master
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag vMAJOR.MINOR.PATCH"
+        required: true
+        type: string
 
 jobs:
   build-android:
@@ -13,61 +18,75 @@ jobs:
       contents: write
 
     steps:
-      - name: 🏗 Checkout repo
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: 🏗 Setup Node
+      - name: Parse version from tag
+        id: ver
+        run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          if [[ "$tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            major="${BASH_REMATCH[1]}"
+            minor="${BASH_REMATCH[2]}"
+            patch="${BASH_REMATCH[3]}"
+            if (( minor > 99 || patch > 99 )); then
+              echo "::error::minor and patch must be <= 99"
+              exit 1
+            fi
+            version_name="${major}.${minor}.${patch}"
+            version_code=$(( major * 10000 + minor * 100 + patch ))
+            if (( version_code < 1 )); then
+              echo "::error::versionCode must be positive"
+              exit 1
+            fi
+            echo "tag=$tag" >> "$GITHUB_OUTPUT"
+            echo "version_name=$version_name" >> "$GITHUB_OUTPUT"
+            echo "version_code=$version_code" >> "$GITHUB_OUTPUT"
+            {
+              echo "APP_VERSION_NAME=$version_name"
+              echo "APP_VERSION_CODE=$version_code"
+            } >> "$GITHUB_ENV"
+          else
+            echo "::error::Tag '$tag' must match vMAJOR.MINOR.PATCH"
+            exit 1
+          fi
+
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20.x"
           cache: npm
 
-      - name: ☕ Setup Java
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
-      - name: 🤖 Setup Android SDK
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: 📦 Install dependencies
+      - name: Install dependencies
         run: npm install
 
-      - name: 🔧 Prepare update config
-        env:
-          MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
-          MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
-        run: |
-          ENDPOINT_HOST="${MINIO_ENDPOINT#http://}"
-          ENDPOINT_HOST="${ENDPOINT_HOST#https://}"
-          ENDPOINT_HOST="${ENDPOINT_HOST%/}"
-          LATEST_JSON_URL="https://${ENDPOINT_HOST}/${MINIO_BUCKET}/latest.json"
-
-          echo "ENDPOINT_HOST=$ENDPOINT_HOST" >> $GITHUB_ENV
-          echo "LATEST_JSON_URL=$LATEST_JSON_URL" >> $GITHUB_ENV
-          echo "EXPO_PUBLIC_LATEST_JSON_URL=$LATEST_JSON_URL" >> $GITHUB_ENV
-          echo "✅ Update manifest URL: $LATEST_JSON_URL"
-
-      - name: 🔧 Prebuild Android (generate native project)
+      - name: Prebuild Android
         run: npx expo prebuild --platform android --non-interactive --clean
 
-      - name: 🔑 Restore keystore from secret
+      - name: Restore keystore from secret
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/aimo-release.keystore
           ls -lh android/app/aimo-release.keystore
 
-      - name: 🔑 Grant execute permission to gradlew
+      - name: Grant execute permission to gradlew
         run: chmod +x android/gradlew
 
-      - name: ⚙️ Configure JVM memory for Gradle
+      - name: Configure JVM memory for Gradle
         run: |
           echo "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError" >> android/gradle.properties
 
-      - name: 🏗 Build signed Android APK (Release)
+      - name: Build signed Android APK
         working-directory: android
         env:
-          KEYSTORE_PATH: app/aimo-release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -78,90 +97,28 @@ jobs:
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
 
-      - name: 📋 Get version info
-        id: version
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v$VERSION-${{ github.run_number }}" >> $GITHUB_OUTPUT
-
-      - name: 🔍 Locate APK
-        id: apk
+      - name: Rename APK
         run: |
           APK_PATH=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
-          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
-          echo "Found APK: $APK_PATH"
-          ls -lh "$APK_PATH"
-
-      - name: ✅ Check AWS CLI
-        run: aws --version
-
-      - name: ✍️ Rename APK
-        run: |
-          cp "${{ steps.apk.outputs.apk_path }}" app-release.apk
+          test -n "$APK_PATH"
+          cp "$APK_PATH" app-release.apk
           ls -lh app-release.apk
 
-      - name: 📄 Generate latest.json
-        env:
-          MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          BUILD_NUM=${{ github.run_number }}
-          CREATE_TIME=$(date +%s%3N)
-          APK_PATH="${VERSION}-${BUILD_NUM}/app-release.apk"
-          DOWNLOAD_URL="https://${ENDPOINT_HOST}/${MINIO_BUCKET}/${APK_PATH}"
-          cat > latest.json <<EOF
-          {"version":"$VERSION","buildNumber":"$BUILD_NUM","releaseDate":$CREATE_TIME,"path":"$APK_PATH","downloadUrl":"$DOWNLOAD_URL"}
-          EOF
-          cat latest.json
-
-      - name: 🚀 Create GitHub Release and Upload artifacts
+      - name: Attach APK to GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="v${{ steps.version.outputs.version }}-${{ github.run_number }}"
-          gh release create "$TAG" \
-            --title "Release $TAG" \
-            --notes "🤖 Android APK built via GitHub Actions (signed release build)" \
-            app-release.apk \
-            latest.json
+          TAG="${{ steps.ver.outputs.tag }}"
+          NOTES="Android ${{ steps.ver.outputs.version_name }} (versionCode ${{ steps.ver.outputs.version_code }})"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" app-release.apk --clobber
+          else
+            gh release create "$TAG" \
+              --title "AIMO ${{ steps.ver.outputs.version_name }}" \
+              --notes "$NOTES" \
+              app-release.apk
+          fi
 
-      - name: ☁️ Upload to MinIO (S3)
-        if: success()
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.MINIO_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.MINIO_SECRET_KEY }}
-          AWS_DEFAULT_REGION: us-east-1
-          MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
-        run: |
-          set -euo pipefail
-
-          VERSION=$(node -p "require('./package.json').version")
-          BUILD_NUM=${{ github.run_number }}
-          DIST_DIR="${VERSION}-${BUILD_NUM}"
-          ENDPOINT_URL="https://${ENDPOINT_HOST}"
-
-          # Upload APK to versioned directory: {version}-{build}/app-release.apk
-          aws s3 cp app-release.apk "s3://${MINIO_BUCKET}/${DIST_DIR}/app-release.apk" \
-            --endpoint-url "$ENDPOINT_URL"
-
-          # Upload latest.json to bucket root
-          aws s3 cp latest.json "s3://${MINIO_BUCKET}/latest.json" \
-            --endpoint-url "$ENDPOINT_URL"
-
-          echo "✅ Uploaded to MinIO:"
-          echo "   - ${DIST_DIR}/app-release.apk"
-          echo "   - latest.json"
-          echo "   URL(path-style): ${ENDPOINT_URL}/${MINIO_BUCKET}/${DIST_DIR}/app-release.apk"
-          echo "   latest.json: ${LATEST_JSON_URL}"
-
-      - name: 🧹 Clean up keystore
+      - name: Clean up keystore
         if: always()
         run: rm -f android/app/aimo-release.keystore
-
-      - name: 📦 Build Summary
-        if: always()
-        run: |
-          echo "✅ Build completed!"
-          echo "🏷️  Tag: v${{ steps.version.outputs.version }}-${{ github.run_number }}"
-          echo "📦 Release: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}-${{ github.run_number }}"

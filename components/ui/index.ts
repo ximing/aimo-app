@@ -18,8 +18,6 @@ export type { InputProps } from "./input";
 
 export { Toast } from "./toast";
 
-export { UpdateDialog } from "./update-dialog";
-
 export { TagSelector } from "./tag-selector";
 export type { TagSelectorProps } from "./tag-selector";
 

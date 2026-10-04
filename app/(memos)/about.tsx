@@ -4,18 +4,16 @@
  */
 
 import { Button } from "@/components/ui";
-import { Colors } from "@/constants/theme-colors";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
-import UpdateService from "@/services/update-service";
+import { formatProgress, updateActionLabel } from "@/lib/app-update";
+import AppUpdateService from "@/services/app-update.service";
 import { MaterialIcons } from "@expo/vector-icons";
 import { bindServices, useService, view } from "@rabjs/react";
 import Constants from "expo-constants";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React from "react";
 import {
-  Alert,
   Linking,
   ScrollView,
   StyleSheet,
@@ -27,13 +25,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const AboutContent = view(() => {
   const theme = useTheme();
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"];
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const updateService = useService(UpdateService);
-
-  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
+  const updateService = useService(AppUpdateService);
+  const phase = updateService.phase;
+  const remote = updateService.remote;
+  const bytesDownloaded = updateService.bytesDownloaded;
+  const totalBytes = updateService.totalBytes;
+  const updateError = updateService.error;
+  const pendingPermission = updateService.pendingPermission;
 
   // 获取应用信息
   const appName = Constants.expoConfig?.name || "Aimo";
@@ -45,17 +45,14 @@ const AboutContent = view(() => {
     router.back();
   };
 
-  // 检查更新
-  const handleCheckUpdate = async () => {
-    const hasUpdate = await updateService.checkForUpdate();
-    if (hasUpdate) {
-      setShowUpdateDialog(true);
-    } else if (updateService.error) {
-      Alert.alert("检查更新失败", updateService.error);
-    } else {
-      Alert.alert("已是最新版本", `当前版本 ${appVersion} 已是最新版本`);
-    }
+  const handleCheckUpdate = () => {
+    void updateService.pressPrimary();
   };
+  const progress = formatProgress(bytesDownloaded, totalBytes);
+  const actionLabel =
+    phase === "downloading"
+      ? `下载中${progress ? ` ${progress}` : ""}`
+      : updateActionLabel(phase, pendingPermission);
 
   // 跳转到外部链接
   const handleLinkPress = async (url: string) => {
@@ -140,26 +137,35 @@ const AboutContent = view(() => {
             variant="outline"
             size="sm"
             onPress={handleCheckUpdate}
-            loading={updateService.loading}
+            loading={phase === "checking" || phase === "installing"}
+            disabled={phase === "downloading" || phase === "installing"}
             style={styles.updateButton}
           >
-            {updateService.loading ? "检查中..." : "检查更新"}
+            {actionLabel}
           </Button>
 
-          {/* 最新版本提示 */}
-          {updateService.latestVersion && (
+          {remote && phase !== "idle" ? (
             <Text
               style={[
                 styles.latestVersion,
                 { color: theme.colors.foregroundSecondary },
               ]}
             >
-              最新版本: {updateService.latestVersion}
-              {updateService.hasUpdate && (
-                <Text style={{ color: colors.primary }}> (有更新)</Text>
-              )}
+              最新版本 v{remote.versionName}
+              {phase === "ready" ? " · 已下载，点按安装" : ""}
+              {phase === "failed" ? " · 更新失败" : ""}
             </Text>
-          )}
+          ) : null}
+          {pendingPermission ? (
+            <Text style={[styles.latestVersion, { color: theme.colors.foregroundSecondary }]}>
+              请允许安装未知应用后再试
+            </Text>
+          ) : null}
+          {updateError && phase === "failed" ? (
+            <Text style={[styles.latestVersion, { color: theme.colors.destructive }]}>
+              {updateError}
+            </Text>
+          ) : null}
         </View>
 
         {/* 应用信息列表 - 卡片样式 */}
@@ -397,93 +403,6 @@ const AboutContent = view(() => {
         </View>
       </ScrollView>
 
-      {/* 更新对话框 */}
-      {showUpdateDialog && updateService.latestRelease && (
-        <View style={styles.dialogOverlay}>
-          <View
-            style={[
-              styles.dialog,
-              { backgroundColor: theme.colors.card },
-            ]}
-          >
-            <Text
-              style={[styles.dialogTitle, { color: theme.colors.foreground }]}
-            >
-              发现新版本
-            </Text>
-
-            <View style={styles.dialogVersionInfo}>
-              <Text
-                style={[
-                  styles.dialogVersionText,
-                  { color: theme.colors.foregroundSecondary },
-                ]}
-              >
-                当前版本: {appVersion}
-              </Text>
-              <Text
-                style={[
-                  styles.dialogVersionText,
-                  { color: colors.primary },
-                ]}
-              >
-                最新版本: {updateService.latestVersion}
-              </Text>
-            </View>
-
-            {updateService.latestRelease.body && (
-              <View
-                style={[
-                  styles.dialogReleaseNotes,
-                  { backgroundColor: theme.colors.muted },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.dialogReleaseLabel,
-                    { color: theme.colors.foregroundSecondary },
-                  ]}
-                >
-                  更新内容:
-                </Text>
-                <Text
-                  style={[
-                    styles.dialogReleaseText,
-                    { color: theme.colors.foreground },
-                  ]}
-                  numberOfLines={4}
-                >
-                  {updateService.latestRelease.body}
-                </Text>
-              </View>
-            )}
-
-            <View style={styles.dialogButtonGroup}>
-              <Button
-                variant="outline"
-                size="sm"
-                onPress={() => setShowUpdateDialog(false)}
-                style={styles.dialogButton}
-                disabled={updateService.downloading}
-              >
-                稍后再说
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onPress={() => {
-                  updateService.downloadAndInstallApk();
-                }}
-                style={styles.dialogButton}
-                loading={updateService.downloading}
-                disabled={updateService.downloading}
-              >
-                {updateService.downloading ? `下载中 ${updateService.downloadProgress}%` : "下载并安装"}
-              </Button>
-            </View>
-          </View>
-        </View>
-      )}
     </View>
   );
 });
@@ -617,62 +536,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     textAlign: "center",
   },
-  // 对话框样式
-  dialogOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  dialog: {
-    borderRadius: 16,
-    padding: 20,
-    width: "100%",
-    maxWidth: 320,
-  },
-  dialogTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  dialogVersionInfo: {
-    marginBottom: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(128, 128, 128, 0.2)",
-  },
-  dialogVersionText: {
-    fontSize: 13,
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  dialogReleaseNotes: {
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  dialogReleaseLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    marginBottom: 6,
-  },
-  dialogReleaseText: {
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  dialogButtonGroup: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  dialogButton: {
-    flex: 1,
-  },
 });
 
-export default bindServices(AboutContent, [UpdateService]);
+export default bindServices(AboutContent, [AppUpdateService]);

@@ -6,13 +6,26 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const packageJson = require("./package.json");
 
-const latestJsonUrl = process.env.EXPO_PUBLIC_LATEST_JSON_URL || process.env.LATEST_JSON_URL || "";
+// Same formula as the server: major * 10000 + minor * 100 + patch.
+function versionCodeFromName(version) {
+  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(String(version).trim());
+  if (!match) return 1;
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  const patch = Number(match[3]);
+  if (minor > 99 || patch > 99) return 1;
+  const code = major * 10000 + minor * 100 + patch;
+  return code > 0 ? code : 1;
+}
+
+const versionName = process.env.APP_VERSION_NAME || packageJson.version;
+const versionCode = Number(process.env.APP_VERSION_CODE || versionCodeFromName(versionName));
 
 module.exports = {
   expo: {
     name: "aimo",
     slug: "aimo-app",
-    version: packageJson.version,
+    version: versionName,
     orientation: "portrait",
     icon: "./assets/logo.png",
     scheme: "aimoapp",
@@ -23,6 +36,7 @@ module.exports = {
     },
     android: {
       package: "com.delu.aimo",
+      versionCode,
       adaptiveIcon: {
         backgroundColor: "#FFFFFF",
         foregroundImage: "./assets/logo.png",
@@ -36,6 +50,7 @@ module.exports = {
     },
     plugins: [
       "expo-router",
+      "./plugins/with-huawei-push",
       [
         "expo-splash-screen",
         {
@@ -58,9 +73,6 @@ module.exports = {
       router: {},
       eas: {
         projectId: "a9dd2767-f4a6-4412-9543-9e8a0d1595ae",
-      },
-      update: {
-        latestJsonUrl,
       },
     },
     runtimeVersion: {

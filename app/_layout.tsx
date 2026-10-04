@@ -6,14 +6,15 @@ import {
 } from "@react-navigation/native";
 import { Stack, useRootNavigationState, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
-import { Platform } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { AppState, Linking } from "react-native";
 import "react-native-reanimated";
 
 import { getTokenAsync, onUnauthorized, saveToken } from "@/api/common";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { SplashScreen } from "@/components/splash-screen";
-import { Toast, UpdateDialog } from "@/components/ui";
+import { UpdateHost } from "@/components/update-host";
+import { Toast } from "@/components/ui";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import AuthService from "@/services/auth-service";
 import CategoryService from "@/services/category-service";
@@ -24,7 +25,9 @@ import RecommendationService from "@/services/recommendation.service";
 import SearchService from "@/services/search-service";
 import TagService from "@/services/tag-service";
 import ThemeService from "@/services/theme-service";
-import UpdateService from "@/services/update-service";
+import AppUpdateService from "@/services/app-update.service";
+import { syncHuaweiPush } from "@/lib/huawei-push";
+import { parsePushUrl, routeForPushTarget, type PushTarget } from "@/lib/push-target";
 
 register(AuthService);
 register(CategoryService);
@@ -35,17 +38,21 @@ register(OcrService);
 register(RecommendationService);
 register(SearchService);
 register(ThemeService);
-register(UpdateService);
+register(AppUpdateService);
 
 const Layout = view(() => {
   const systemColorScheme = useColorScheme();
   const authService = useService(AuthService);
   const themeService = useService(ThemeService);
-  const updateService = useService(UpdateService);
+  const updateService = useService(AppUpdateService);
   const router = useRouter();
   const navigationState = useRootNavigationState();
   const [isInitialized, setIsInitialized] = useState(false);
-  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
+  const pendingPush = useRef<PushTarget | null>(null);
+  const authedRef = useRef(false);
+  const navReadyRef = useRef(false);
+  authedRef.current = authService.isAuthenticated;
+  navReadyRef.current = Boolean(navigationState?.key);
 
   // 获取实际使用的颜色方案（考虑 ThemeService 的设置）
   const colorScheme = themeService.colorScheme;
@@ -68,13 +75,6 @@ const Layout = view(() => {
           });
         }
 
-        // 检查应用更新（仅 Android 平台）
-        if (Platform.OS === "android") {
-          const hasUpdate = await updateService.checkForUpdate();
-          if (hasUpdate) {
-            setShowUpdateDialog(true);
-          }
-        }
       } catch (err) {
         console.error("Failed to initialize app:", err);
       } finally {
@@ -83,6 +83,8 @@ const Layout = view(() => {
     };
 
     initApp();
+    updateService.start();
+    return () => updateService.stop();
   }, []);
 
   // 监听 401 未授权错误（仅在挂载时注册一次）
@@ -109,13 +111,41 @@ const Layout = view(() => {
     if (!isInitialized) return;
 
     if (authService.isAuthenticated) {
-      // 已认证，导航到 memos
-      router.replace("/(memos)");
+      const target = pendingPush.current;
+      pendingPush.current = null;
+      router.replace(target ? routeForPushTarget(target) : "/(memos)");
+      syncHuaweiPush();
     } else {
       // 未认证，导航到 auth
       router.replace("/auth");
     }
   }, [authService.isAuthenticated, isInitialized]);
+
+  useEffect(() => {
+    const openUrl = (url: string | null) => {
+      const target = parsePushUrl(url);
+      if (!target) return;
+      if (authedRef.current && navReadyRef.current) {
+        router.push(routeForPushTarget(target));
+        return;
+      }
+      pendingPush.current = target;
+    };
+
+    Linking.getInitialURL()
+      .then(openUrl)
+      .catch(() => undefined);
+    const linkSub = Linking.addEventListener("url", (event) => openUrl(event.url));
+    const appSub = AppState.addEventListener("change", (state) => {
+      if (state === "active" && authedRef.current) {
+        syncHuaweiPush();
+      }
+    });
+    return () => {
+      linkSub.remove();
+      appSub.remove();
+    };
+  }, [router]);
 
   if (!isInitialized) {
     return <SplashScreen />;
@@ -135,10 +165,7 @@ const Layout = view(() => {
           <Stack.Screen name="modal" options={{ presentation: "modal" }} />
         </Stack>
         <Toast />
-        <UpdateDialog
-          visible={showUpdateDialog}
-          onClose={() => setShowUpdateDialog(false)}
-        />
+        <UpdateHost />
         <StatusBar style="auto" />
       </ErrorBoundary>
     </ThemeProvider>
