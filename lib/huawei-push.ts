@@ -1,11 +1,13 @@
 import { requireOptionalNativeModule } from 'expo';
-import { PermissionsAndroid, Platform } from 'react-native';
+import { Alert, PermissionsAndroid, Platform } from 'react-native';
 
 import { registerPushDevice } from '@/api/push-device';
 import { createHuaweiRegistrar } from '@/lib/huawei-push-sync';
 
 type NativeHuaweiPush = {
   getToken(): Promise<string>;
+  notificationsEnabled(): boolean;
+  openNotificationSettings(): void;
 };
 
 const native: NativeHuaweiPush | null =
@@ -18,33 +20,55 @@ const registrar = native
     })
   : null;
 
-let permissionAsked = false;
+let promptShown = false;
 
-async function ensureNotificationPermission(): Promise<void> {
-  if (Platform.OS !== 'android') return;
-  const version =
-    typeof Platform.Version === 'number' ? Platform.Version : Number.parseInt(String(Platform.Version), 10);
-  if (!Number.isFinite(version) || version < 33) return;
-  const perm = PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS;
-  if (await PermissionsAndroid.check(perm)) return;
-  if (permissionAsked) return;
-  const result = await PermissionsAndroid.request(perm);
-  if (
-    result === PermissionsAndroid.RESULTS.GRANTED ||
-    result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN
-  ) {
-    permissionAsked = true;
+function androidApi(): number {
+  const version = Platform.Version;
+  return typeof version === 'number' ? version : Number.parseInt(String(version), 10);
+}
+
+function notificationsEnabled(): boolean {
+  if (native) {
+    try {
+      return native.notificationsEnabled();
+    } catch {
+      return false;
+    }
   }
+  return false;
 }
 
-/** Show the system notification prompt. Safe before login. Android 12 and below have no prompt. */
+async function requestSystemPermission(): Promise<void> {
+  const version = androidApi();
+  if (Number.isFinite(version) && version >= 33) {
+    await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+  }
+  if (notificationsEnabled()) return;
+  native?.openNotificationSettings();
+}
+
+/**
+ * Show an in-app prompt first. The system dialog is requested from the button tap,
+ * because Huawei and other vendors drop a permission request that fires on launch.
+ */
 export function askHuaweiNotificationPermission(): Promise<void> {
-  return ensureNotificationPermission().catch(() => undefined);
+  if (Platform.OS !== 'android' || promptShown) return Promise.resolve();
+  if (notificationsEnabled()) return Promise.resolve();
+  promptShown = true;
+  Alert.alert('开启通知', '复习提醒需要系统通知权限。请点「允许」，再在系统弹窗里确认。', [
+    { text: '以后再说', style: 'cancel' },
+    {
+      text: '允许',
+      onPress: () => {
+        void requestSystemPermission().catch(() => undefined);
+      },
+    },
+  ]);
+  return Promise.resolve();
 }
 
-/** Ask for notification permission, then register the Huawei token when one exists. */
+/** Register the Huawei token when one exists. Permission is asked separately. */
 export function syncHuaweiPush(): Promise<void> {
-  const permission = askHuaweiNotificationPermission();
-  if (!registrar) return permission;
-  return permission.then(() => registrar.sync());
+  if (!registrar) return Promise.resolve();
+  return registrar.sync();
 }

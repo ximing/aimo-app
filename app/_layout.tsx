@@ -122,6 +122,14 @@ const Layout = view(() => {
   }, [authService.isAuthenticated, isInitialized]);
 
   useEffect(() => {
+    if (!isInitialized) return;
+    const timer = setTimeout(() => {
+      askHuaweiNotificationPermission();
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [isInitialized]);
+
+  useEffect(() => {
     const openUrl = (url: string | null) => {
       const target = parsePushUrl(url);
       if (!target) return;
@@ -135,15 +143,9 @@ const Layout = view(() => {
     Linking.getInitialURL()
       .then(openUrl)
       .catch(() => undefined);
-    askHuaweiNotificationPermission();
     const linkSub = Linking.addEventListener("url", (event) => openUrl(event.url));
     const appSub = AppState.addEventListener("change", (state) => {
-      if (state !== "active") return;
-      if (authedRef.current) {
-        syncHuaweiPush();
-        return;
-      }
-      askHuaweiNotificationPermission();
+      if (state === "active" && authedRef.current) syncHuaweiPush();
     });
     return () => {
       linkSub.remove();
