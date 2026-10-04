@@ -21,6 +21,7 @@ const registrar = native
   : null;
 
 let promptShown = false;
+let asking = false;
 
 function androidApi(): number {
   const version = Platform.Version;
@@ -38,33 +39,46 @@ function notificationsEnabled(): boolean {
   return false;
 }
 
-async function requestSystemPermission(): Promise<void> {
+async function requestSystemPermission(): Promise<boolean> {
   const version = androidApi();
   if (Number.isFinite(version) && version >= 33) {
-    await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+    const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+    if (result === PermissionsAndroid.RESULTS.GRANTED) return true;
   }
-  if (notificationsEnabled()) return;
-  native?.openNotificationSettings();
+  return notificationsEnabled();
 }
 
-/**
- * Show an in-app prompt first. The system dialog is requested from the button tap,
- * because Huawei and other vendors drop a permission request that fires on launch.
- */
-export function askHuaweiNotificationPermission(): Promise<void> {
-  if (Platform.OS !== 'android' || promptShown) return Promise.resolve();
-  if (notificationsEnabled()) return Promise.resolve();
+function confirmNotificationPermission(): void {
+  if (promptShown) return;
   promptShown = true;
-  Alert.alert('开启通知', '复习提醒需要系统通知权限。请点「允许」，再在系统弹窗里确认。', [
+  Alert.alert('开启通知', '复习提醒需要通知权限。', [
     { text: '以后再说', style: 'cancel' },
     {
       text: '允许',
       onPress: () => {
-        void requestSystemPermission().catch(() => undefined);
+        void requestSystemPermission()
+          .then((granted) => {
+            if (!granted) native?.openNotificationSettings();
+          })
+          .catch(() => undefined);
       },
     },
   ]);
-  return Promise.resolve();
+}
+
+/** Try the system prompt first. Show an in-app confirmation only when that does not grant access. */
+export function askHuaweiNotificationPermission(): Promise<void> {
+  if (Platform.OS !== 'android' || asking || promptShown) return Promise.resolve();
+  if (notificationsEnabled()) return Promise.resolve();
+  asking = true;
+  return requestSystemPermission()
+    .then((granted) => {
+      if (!granted) confirmNotificationPermission();
+    })
+    .catch(() => confirmNotificationPermission())
+    .finally(() => {
+      asking = false;
+    });
 }
 
 /** Register the Huawei token when one exists. Permission is asked separately. */
