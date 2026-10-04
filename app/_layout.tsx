@@ -26,7 +26,7 @@ import SearchService from "@/services/search-service";
 import TagService from "@/services/tag-service";
 import ThemeService from "@/services/theme-service";
 import AppUpdateService from "@/services/app-update.service";
-import { syncHuaweiPush } from "@/lib/huawei-push";
+import { askHuaweiNotificationPermission, syncHuaweiPush } from "@/lib/huawei-push";
 import { parsePushUrl, routeForPushTarget, type PushTarget } from "@/lib/push-target";
 
 register(AuthService);
@@ -135,11 +135,15 @@ const Layout = view(() => {
     Linking.getInitialURL()
       .then(openUrl)
       .catch(() => undefined);
+    askHuaweiNotificationPermission();
     const linkSub = Linking.addEventListener("url", (event) => openUrl(event.url));
     const appSub = AppState.addEventListener("change", (state) => {
-      if (state === "active" && authedRef.current) {
+      if (state !== "active") return;
+      if (authedRef.current) {
         syncHuaweiPush();
+        return;
       }
+      askHuaweiNotificationPermission();
     });
     return () => {
       linkSub.remove();

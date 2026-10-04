@@ -71,6 +71,17 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Restore Huawei agconnect config
+        env:
+          AGCONNECT_SERVICES_JSON_BASE64: ${{ secrets.AGCONNECT_SERVICES_JSON_BASE64 }}
+        run: |
+          if [ -z "$AGCONNECT_SERVICES_JSON_BASE64" ]; then
+            echo "::error::missing AGCONNECT_SERVICES_JSON_BASE64"
+            exit 1
+          fi
+          printf '%s' "$AGCONNECT_SERVICES_JSON_BASE64" | base64 --decode > agconnect-services.json
+          test -s agconnect-services.json
+
       - name: Prebuild Android
         run: npx expo prebuild --platform android --non-interactive --clean
 
@@ -105,6 +116,7 @@ jobs:
           test -n "$APK_PATH"
           cp "$APK_PATH" app-release.apk
           ls -lh app-release.apk
+          python3 -c 'import sys,zipfile; z=zipfile.ZipFile("app-release.apk"); n=b"119209639"; n16="119209639".encode("utf-16le"); found=any((n in d or n16 in d) for d in (z.read(i.filename) for i in z.infolist() if i.file_size<=30000000)); print("Huawei app id is packaged" if found else ""); sys.exit(0 if found else 1)'
 
       - name: Attach APK to GitHub Release
         env:
@@ -123,4 +135,4 @@ jobs:
 
       - name: Clean up keystore
         if: always()
-        run: rm -f android/app/aimo-release.keystore
+        run: rm -f android/app/aimo-release.keystore agconnect-services.json

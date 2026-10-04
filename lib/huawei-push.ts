@@ -28,14 +28,23 @@ async function ensureNotificationPermission(): Promise<void> {
   const perm = PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS;
   if (await PermissionsAndroid.check(perm)) return;
   if (permissionAsked) return;
-  permissionAsked = true;
-  await PermissionsAndroid.request(perm);
+  const result = await PermissionsAndroid.request(perm);
+  if (
+    result === PermissionsAndroid.RESULTS.GRANTED ||
+    result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN
+  ) {
+    permissionAsked = true;
+  }
+}
+
+/** Show the system notification prompt. Safe before login. Android 12 and below have no prompt. */
+export function askHuaweiNotificationPermission(): Promise<void> {
+  return ensureNotificationPermission().catch(() => undefined);
 }
 
 /** Ask for notification permission, then register the Huawei token when one exists. */
 export function syncHuaweiPush(): Promise<void> {
-  if (!registrar) return Promise.resolve();
-  return ensureNotificationPermission()
-    .catch(() => undefined)
-    .then(() => registrar.sync());
+  const permission = askHuaweiNotificationPermission();
+  if (!registrar) return permission;
+  return permission.then(() => registrar.sync());
 }
