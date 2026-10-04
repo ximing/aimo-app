@@ -5,10 +5,10 @@
 
 import { Button } from "@/components/ui";
 import { useTheme } from "@/hooks/use-theme";
-import { formatProgress, updateActionLabel } from "@/lib/app-update";
+import { formatProgress, progressRatio, updateActionLabel } from "@/lib/app-update";
 import AppUpdateService from "@/services/app-update.service";
 import { MaterialIcons } from "@expo/vector-icons";
-import { bindServices, useService, view } from "@rabjs/react";
+import { useService, view } from "@rabjs/react";
 import Constants from "expo-constants";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
@@ -28,12 +28,6 @@ const AboutContent = view(() => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const updateService = useService(AppUpdateService);
-  const phase = updateService.phase;
-  const remote = updateService.remote;
-  const bytesDownloaded = updateService.bytesDownloaded;
-  const totalBytes = updateService.totalBytes;
-  const updateError = updateService.error;
-  const pendingPermission = updateService.pendingPermission;
 
   // 获取应用信息
   const appName = Constants.expoConfig?.name || "Aimo";
@@ -48,7 +42,11 @@ const AboutContent = view(() => {
   const handleCheckUpdate = () => {
     void updateService.pressPrimary();
   };
-  const progress = formatProgress(bytesDownloaded, totalBytes);
+  const phase = updateService.phase;
+  const remote = updateService.remote;
+  const pendingPermission = updateService.pendingPermission;
+  const progress = formatProgress(updateService.bytesDownloaded, updateService.totalBytes);
+  const ratio = progressRatio(updateService.bytesDownloaded, updateService.totalBytes);
   const actionLabel =
     phase === "downloading"
       ? `下载中${progress ? ` ${progress}` : ""}`
@@ -134,7 +132,7 @@ const AboutContent = view(() => {
 
           {/* 检查更新按钮 */}
           <Button
-            variant="outline"
+            variant={phase === "ready" || pendingPermission ? "primary" : "outline"}
             size="sm"
             onPress={handleCheckUpdate}
             loading={phase === "checking" || phase === "installing"}
@@ -143,6 +141,25 @@ const AboutContent = view(() => {
           >
             {actionLabel}
           </Button>
+
+          {phase === "downloading" ? (
+            <View style={styles.progressBlock}>
+              <View style={[styles.track, { backgroundColor: theme.colors.border }]}>
+                <View
+                  style={[
+                    styles.fill,
+                    {
+                      width: `${Math.round(ratio * 100)}%`,
+                      backgroundColor: theme.colors.primary,
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={[styles.latestVersion, { color: theme.colors.foregroundSecondary }]}>
+                {progress ? `正在下载 ${progress}` : "正在下载"}
+              </Text>
+            </View>
+          ) : null}
 
           {remote && phase !== "idle" ? (
             <Text
@@ -161,9 +178,9 @@ const AboutContent = view(() => {
               请允许安装未知应用后再试
             </Text>
           ) : null}
-          {updateError && phase === "failed" ? (
+          {updateService.error && phase === "failed" ? (
             <Text style={[styles.latestVersion, { color: theme.colors.destructive }]}>
-              {updateError}
+              {updateService.error}
             </Text>
           ) : null}
         </View>
@@ -462,6 +479,20 @@ const styles = StyleSheet.create({
   updateButton: {
     minWidth: 120,
   },
+  progressBlock: {
+    alignSelf: "stretch",
+    marginTop: 12,
+    gap: 8,
+  },
+  track: {
+    height: 8,
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  fill: {
+    height: 8,
+    borderRadius: 4,
+  },
   latestVersion: {
     fontSize: 12,
     marginTop: 8,
@@ -538,4 +569,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default bindServices(AboutContent, [AppUpdateService]);
+export default AboutContent;
